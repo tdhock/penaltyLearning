@@ -1,6 +1,7 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
-int modelSelection(double*, double*, int);
+int modelSelection(double*, double*, int,
+		   int*, double*, int);
 
 class breakpoint {
 public:
