@@ -1,0 +1,11 @@
+Algorithms for supervised learning of penalty functions for change detection
+
+** Installation
+
+#+BEGIN_SRC R
+devtools::install_github("tdhock/penaltyLearning")
+#+END_SRC
+
+** Usage
+
+TODO
