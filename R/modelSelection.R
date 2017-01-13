@@ -35,14 +35,14 @@ modelSelection <- structure(function # Exact model selection function
   lambda.vec <- rep(-1, n.models)
   result.list <- .C(
     "modelSelection_interface",
-    as.double(loss.vec),
-    as.double(model.complexity),
-    as.integer(n.models),
-    as.integer(before.vec),
-    as.double(lambda.vec))
+    loss.vec=as.double(loss.vec),
+    model.complexity=as.double(model.complexity),
+    n.models=as.integer(n.models),
+    before.vec=as.integer(before.vec),
+    lambda.vec=as.double(lambda.vec))
   is.out <- 0 < result.list$lambda.vec
   lambda.out <- result.list$lambda.vec[is.out]
-  before.out <- result.list$before.vec[is.out]
+  before.out <- c(result.list$before.vec[is.out]+1, 1)
   min.lambda <- c(0, lambda.out)
   max.lambda <- c(lambda.out, Inf)
   data.frame(

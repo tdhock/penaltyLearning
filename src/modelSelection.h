@@ -7,6 +7,9 @@ class breakpoint {
 public:
   double penalty;
   int optimal_before;
+  breakpoint(double pen, int i){
+    penalty = pen;
+    optimal_before = i;
+  }
 };
-
 
