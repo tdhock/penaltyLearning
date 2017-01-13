@@ -6,10 +6,10 @@ int modelSelection(const double*, const double*, int,
 class breakpoint {
 public:
   double penalty;
-  int optimal_before;
-  breakpoint(double pen, int i){
+  int optimal_after;
+  breakpoint(double pen, int after){
     penalty = pen;
-    optimal_before = i;
+    optimal_after = after;
   }
 };
 

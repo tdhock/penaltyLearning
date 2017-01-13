@@ -17,7 +17,7 @@ change.labels$possible.fp <- ifelse(Inf == change.labels$max.changes, 0, 1)
 change.colors <- paste(change.labels$color)
 names(change.colors) <- rownames(change.labels)
 
-modelSelection <- structure(function # Exact model selection function
+modelSelectionC <- structure(function # Exact model selection function
 ### Given a data.frame with "loss" column L_i, "model.complexity"
 ### column K_i, model selection function i*(lambda) = argmin_i L_i +
 ### lambda*K_i, compute all of the solutions (i, min.lambda,
@@ -31,18 +31,18 @@ modelSelection <- structure(function # Exact model selection function
   stopifnot(length(loss.vec) == length(model.complexity))
   stopifnot(length(model.id) == length(model.complexity))
   n.models <- length(loss.vec)
-  before.vec <- rep(-1L, n.models)
+  after.vec <- rep(-1L, n.models)
   lambda.vec <- rep(-1, n.models)
   result.list <- .C(
     "modelSelection_interface",
     loss.vec=as.double(loss.vec),
     model.complexity=as.double(model.complexity),
     n.models=as.integer(n.models),
-    before.vec=as.integer(before.vec),
+    after.vec=as.integer(after.vec),
     lambda.vec=as.double(lambda.vec))
   is.out <- 0 < result.list$lambda.vec
   lambda.out <- result.list$lambda.vec[is.out]
-  before.out <- c(result.list$before.vec[is.out]+1, 1)
+  i <- c(n.models, result.list$after.vec[is.out]+1)
   min.lambda <- c(0, lambda.out)
   max.lambda <- c(lambda.out, Inf)
   data.frame(
@@ -50,7 +50,10 @@ modelSelection <- structure(function # Exact model selection function
     max.lambda,
     min.log.lambda = log(min.lambda),
     max.log.lambda = log(max.lambda),
-    model.complexity = model.complexity[before.out])
+    model.complexity = model.complexity[i],
+    model.id=model.id[i],
+    model.loss=loss.vec[i],
+    row.names=model.id[i])
 ### data.frame with a row for each model that can be selected for at
 ### least one lambda value, and the following columns. (min.lambda,
 ### max.lambda) and (min.log.lambda, max.log.lambda) are intervals of
@@ -60,47 +63,42 @@ modelSelection <- structure(function # Exact model selection function
 ### values.
 },ex=function(){
 
-  if(require(neuroblastoma) && require(cghseg)){
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
+  pro <- subset(neuroblastoma$profiles, profile.id==1 & chromosome=="X")
+  max.segments <- 20
+  fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
+  seg.vec <- 1:max.segments
+  exact.df <- modelSelectionC(fit$J.est, seg.vec, seg.vec)
+  ## Solve the optimization using grid search.
+  L.grid <- with(exact.df,{
+    seq(min(max.log.lambda)-1,
+        max(min.log.lambda)+1,
+        l=100)
+  })
+  lambda.grid <- exp(L.grid)
+  kstar.grid <- sapply(lambda.grid, function(lambda){
+    crit <- with(exact.df, model.complexity * lambda + model.loss)
+    picked <- which.min(crit)
+    exact.df$model.id[picked]
+  })
+  grid.df <- data.frame(log.lambda=L.grid, segments=kstar.grid)
 
-    data(neuroblastoma, envir=environment())
-    pro <- subset(neuroblastoma$profiles, profile.id==1 & chromosome=="X")
-    max.segments <- 20
-    fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
-    seg.vec <- 1:max.segments
-    exact.df <- modelSelection(fit$J.est, seg.vec, seg.vec)
-
-    ## Solve the optimization using grid search.
-    L.grid <- with(exact.df,{
-      seq(min(max.log.lambda)-1,
-          max(min.log.lambda)+1,
-          l=100)
-    })
-    lambda.grid <- exp(L.grid)
-    kstar.grid <- sapply(lambda.grid, function(lambda){
-      crit <- with(exact.df, model.complexity * lambda + model.loss)
-      picked <- which.min(crit)
-      exact.df$model.id[picked]
-    })
-    grid.df <- data.frame(log.lambda=L.grid, segments=kstar.grid)
-
-    if(require(ggplot2)){
-      ## Compare the results.
-      ggplot()+
-        ggtitle("grid search (red) agrees with exact path computation (black)")+
-        geom_segment(aes(min.log.lambda, model.id,
-                         xend=max.log.lambda, yend=model.id),
-                     data=exact.df)+
-        geom_point(aes(log.lambda, segments),
-                   data=grid.df, color="red", pch=1)+
-        ylab("optimal model complexity (segments)")+
-        xlab("log(lambda)")
-    }
-    
+  if(require(ggplot2)){
+    ## Compare the results.
+    ggplot()+
+      ggtitle("grid search (red) agrees with exact path computation (black)")+
+      geom_segment(aes(min.log.lambda, model.id,
+                       xend=max.log.lambda, yend=model.id),
+                   data=exact.df)+
+      geom_point(aes(log.lambda, segments),
+                 data=grid.df, color="red", pch=1)+
+      ylab("optimal model complexity (segments)")+
+      xlab("log(lambda)")
   }
   
 })
 
-modelSelection.old <- structure(function # Exact model selection function
+modelSelectionR <- structure(function # Exact model selection function
 ### Given a data.frame with "loss" column L_i, "model.complexity"
 ### column K_i, model selection function i*(lambda) = argmin_i L_i +
 ### lambda*K_i, compute all of the solutions (i, min.lambda,
@@ -157,44 +155,29 @@ modelSelection.old <- structure(function # Exact model selection function
 ### values.
 },ex=function(){
 
-  if(require(neuroblastoma) && require(cghseg)){
-
-    data(neuroblastoma, envir=environment())
-    pro <- subset(neuroblastoma$profiles, profile.id==1 & chromosome=="X")
-    max.segments <- 20
-    fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
-    seg.vec <- 1:max.segments
-    exact.df <- modelSelection(fit$J.est, seg.vec, seg.vec)
-
-    ## Solve the optimization using grid search.
-    L.grid <- with(exact.df,{
-      seq(min(max.log.lambda)-1,
-          max(min.log.lambda)+1,
-          l=100)
-    })
-    lambda.grid <- exp(L.grid)
-    kstar.grid <- sapply(lambda.grid, function(lambda){
-      crit <- with(exact.df, model.complexity * lambda + model.loss)
-      picked <- which.min(crit)
-      exact.df$model.id[picked]
-    })
-    grid.df <- data.frame(log.lambda=L.grid, segments=kstar.grid)
-
-    if(require(ggplot2)){
-      ## Compare the results.
-      ggplot()+
-        ggtitle("grid search (red) agrees with exact path computation (black)")+
-        geom_segment(aes(min.log.lambda, model.id,
-                         xend=max.log.lambda, yend=model.id),
-                     data=exact.df)+
-        geom_point(aes(log.lambda, segments),
-                   data=grid.df, color="red", pch=1)+
-        ylab("optimal model complexity (segments)")+
-        xlab("log(lambda)")
-    }
-    
+  library(penaltyLearning)
+  data(neuroblastoma, package="neuroblastoma")
+  one <- subset(neuroblastoma$profiles, profile.id==599 & chromosome=="14")
+  max.segments <- 1000
+  fit <- Segmentor3IsBack::Segmentor(one$logratio, model=2, Kmax=max.segments)
+  lik.df <- data.frame(lik=fit@likelihood, segments=1:max.segments)
+  times.list <- list()
+  for(n.segments in seq(10, max.segments, by=10)){
+    some.lik <- lik.df[1:n.segments,]
+    some.times <- microbenchmark::microbenchmark(
+      R=pathR <- with(some.lik, modelSelectionR(lik, segments, segments)),
+      C=pathC <- with(some.lik, modelSelectionC(lik, segments, segments)),
+      times=5)
+    times.list[[paste(n.segments)]] <- data.frame(n.segments, some.times)
   }
-  
+  times <- do.call(rbind, times.list)
+  ## modelSelectionR and modelSelectionC should give identical results.
+  identical(pathR, pathC)
+  ## However, modelSelectionC is much faster (linear time complexity)
+  ## than modelSelectionR (quadratic time complexity).
+  ggplot()+
+    geom_point(aes(n.segments, time/1e9, color=expr), data=times)
+
 })
 
 largestContinuousMinimum <- structure(function
@@ -218,19 +201,15 @@ largestContinuousMinimum <- structure(function
   list(start=starts[largest],end=ends[largest])
 }, ex=function(){
 
-  if(require(neuroblastoma) && require(cghseg)){
-
-    data(neuroblastoma, envir=environment())
-    pid <- 1
-    chr <- 1
-    pro <- subset(neuroblastoma$profiles, profile.id==pid & chromosome==chr)
-    ann <- subset(neuroblastoma$annotations, profile.id==pid & chromosome==chr)
-    max.segments <- 20
-    fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
-    seg.vec <- 1:max.segments
-    exact.df <- exactModelSelection(fit$J.est, seg.vec, seg.vec)
-
-  }
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
+  pid <- 1
+  chr <- 1
+  pro <- subset(neuroblastoma$profiles, profile.id==pid & chromosome==chr)
+  ann <- subset(neuroblastoma$annotations, profile.id==pid & chromosome==chr)
+  max.segments <- 20
+  fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
+  seg.vec <- 1:max.segments
+  exact.df <- exactModelSelection(fit$J.est, seg.vec, seg.vec)
 
 })
 
