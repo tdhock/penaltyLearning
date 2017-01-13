@@ -4,8 +4,8 @@
 #include <list>
 
 int modelSelection
-(double *loss_vec, double *complexity_vec, int n_input,
- int *optimal_before_vec, double *lambda_vec, int *n_output){
+(const double *loss_vec, const double *complexity_vec, const int n_input,
+ int *optimal_before_vec, double *lambda_vec){
   std::list<breakpoint> break_list;
   return 0;
 }
