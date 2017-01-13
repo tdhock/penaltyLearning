@@ -18,12 +18,18 @@ change.colors <- paste(change.labels$color)
 names(change.colors) <- rownames(change.labels)
 
 modelSelectionC <- structure(function # Exact model selection function
-### Given a data.frame with "loss" column L_i, "model.complexity"
-### column K_i, model selection function i*(lambda) = argmin_i L_i +
-### lambda*K_i, compute all of the solutions (i, min.lambda,
-### max.lambda) with i being the solution for every lambda in
-### (min.lambda, max.lambda).
-(loss.vec, model.complexity, model.id){
+### Given loss.vec L_i, model.complexity K_i, the model selection
+### function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
+### the solutions (i, min.lambda, max.lambda) with i being the
+### solution for every lambda in (min.lambda, max.lambda). This
+### function uses the linear time algorithm implemented in C code.
+ (loss.vec,
+### numeric vector: loss L_i
+  model.complexity,
+### numeric vector: model complexity K_i
+  model.id
+### vector: indices i
+  ){
   stopifnot(is.numeric(loss.vec))
   stopifnot(is.numeric(model.complexity))
   stopifnot(0 < diff(model.complexity))
@@ -99,12 +105,18 @@ modelSelectionC <- structure(function # Exact model selection function
 })
 
 modelSelectionR <- structure(function # Exact model selection function
-### Given a data.frame with "loss" column L_i, "model.complexity"
-### column K_i, model selection function i*(lambda) = argmin_i L_i +
-### lambda*K_i, compute all of the solutions (i, min.lambda,
-### max.lambda) with i being the solution for every lambda in
-### (min.lambda, max.lambda).
-(loss.vec, model.complexity, model.id){
+### Given loss.vec L_i, model.complexity K_i, the model selection
+### function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
+### the solutions (i, min.lambda, max.lambda) with i being the
+### solution for every lambda in (min.lambda, max.lambda). This
+### function uses the quadratic time algorithm implemented in R code.
+ (loss.vec,
+### numeric vector: loss L_i
+  model.complexity,
+### numeric vector: model complexity K_i
+  model.id
+### vector: indices i
+  ){
   stopifnot(is.numeric(loss.vec))
   stopifnot(is.numeric(model.complexity))
   stopifnot(0 < diff(model.complexity))
