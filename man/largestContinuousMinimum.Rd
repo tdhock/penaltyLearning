@@ -27,6 +27,6 @@ ann <- subset(neuroblastoma$annotations, profile.id==pid & chromosome==chr)
 max.segments <- 20
 fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
 seg.vec <- 1:max.segments
-exact.df <- exactModelSelection(fit$J.est, seg.vec, seg.vec)
+##TODO
 
 }

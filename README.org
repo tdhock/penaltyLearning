@@ -1,5 +1,7 @@
 Algorithms for supervised learning of penalty functions for change detection
 
+[[https://travis-ci.org/tdhock/penaltyLearning][https://travis-ci.org/tdhock/penaltyLearning.png?branch=master]]
+
 ** Installation
 
 #+BEGIN_SRC R

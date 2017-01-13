@@ -47,18 +47,16 @@ kstar.grid <- sapply(lambda.grid, function(lambda){
   exact.df$model.id[picked]
 })
 grid.df <- data.frame(log.lambda=L.grid, segments=kstar.grid)
-
-if(require(ggplot2)){
-  ## Compare the results.
-  ggplot()+
-    ggtitle("grid search (red) agrees with exact path computation (black)")+
-    geom_segment(aes(min.log.lambda, model.id,
-                     xend=max.log.lambda, yend=model.id),
-                 data=exact.df)+
-    geom_point(aes(log.lambda, segments),
-               data=grid.df, color="red", pch=1)+
-    ylab("optimal model complexity (segments)")+
-    xlab("log(lambda)")
-}
+library(ggplot2)
+## Compare the results.
+ggplot()+
+  ggtitle("grid search (red) agrees with exact path computation (black)")+
+  geom_segment(aes(min.log.lambda, model.id,
+                   xend=max.log.lambda, yend=model.id),
+               data=exact.df)+
+  geom_point(aes(log.lambda, segments),
+             data=grid.df, color="red", pch=1)+
+  ylab("optimal model complexity (segments)")+
+  xlab("log(lambda)")
 
 }

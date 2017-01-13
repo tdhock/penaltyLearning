@@ -1,7 +1,7 @@
 \name{changeLabel}
 \alias{changeLabel}
 \title{changeLabel}
-
+\description{Describe an annotated region label for supervised change-point detection.}
 \usage{changeLabel(annotation, min.changes, max.changes, color)}
 \arguments{
   \item{annotation}{

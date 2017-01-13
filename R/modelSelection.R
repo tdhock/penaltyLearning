@@ -1,3 +1,4 @@
+### Describe an annotated region label for supervised change-point detection.
 changeLabel <- function(annotation, min.changes, max.changes, color){
   data.frame(annotation, min.changes, max.changes, color, row.names=annotation)
 }
@@ -88,19 +89,17 @@ modelSelectionC <- structure(function # Exact model selection function
     exact.df$model.id[picked]
   })
   grid.df <- data.frame(log.lambda=L.grid, segments=kstar.grid)
-
-  if(require(ggplot2)){
-    ## Compare the results.
-    ggplot()+
-      ggtitle("grid search (red) agrees with exact path computation (black)")+
-      geom_segment(aes(min.log.lambda, model.id,
-                       xend=max.log.lambda, yend=model.id),
-                   data=exact.df)+
-      geom_point(aes(log.lambda, segments),
-                 data=grid.df, color="red", pch=1)+
-      ylab("optimal model complexity (segments)")+
-      xlab("log(lambda)")
-  }
+  library(ggplot2)
+  ## Compare the results.
+  ggplot()+
+    ggtitle("grid search (red) agrees with exact path computation (black)")+
+    geom_segment(aes(min.log.lambda, model.id,
+                     xend=max.log.lambda, yend=model.id),
+                 data=exact.df)+
+    geom_point(aes(log.lambda, segments),
+               data=grid.df, color="red", pch=1)+
+    ylab("optimal model complexity (segments)")+
+    xlab("log(lambda)")
   
 })
 
@@ -168,7 +167,7 @@ modelSelectionR <- structure(function # Exact model selection function
 },ex=function(){
 
   library(penaltyLearning)
-  data(neuroblastoma, package="neuroblastoma")
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
   one <- subset(neuroblastoma$profiles, profile.id==599 & chromosome=="14")
   max.segments <- 1000
   fit <- Segmentor3IsBack::Segmentor(one$logratio, model=2, Kmax=max.segments)
@@ -187,6 +186,7 @@ modelSelectionR <- structure(function # Exact model selection function
   identical(pathR, pathC)
   ## However, modelSelectionC is much faster (linear time complexity)
   ## than modelSelectionR (quadratic time complexity).
+  library(ggplot2)
   ggplot()+
     geom_point(aes(n.segments, time/1e9, color=expr), data=times)
 
@@ -221,7 +221,7 @@ largestContinuousMinimum <- structure(function
   max.segments <- 20
   fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
   seg.vec <- 1:max.segments
-  exact.df <- exactModelSelection(fit$J.est, seg.vec, seg.vec)
+  ##TODO
 
 })
 

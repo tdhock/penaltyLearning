@@ -29,7 +29,7 @@ values.}
 \examples{
 
 library(penaltyLearning)
-data(neuroblastoma, package="neuroblastoma")
+data(neuroblastoma, package="neuroblastoma", envir=environment())
 one <- subset(neuroblastoma$profiles, profile.id==599 & chromosome=="14")
 max.segments <- 1000
 fit <- Segmentor3IsBack::Segmentor(one$logratio, model=2, Kmax=max.segments)
@@ -48,6 +48,7 @@ times <- do.call(rbind, times.list)
 identical(pathR, pathC)
 ## However, modelSelectionC is much faster (linear time complexity)
 ## than modelSelectionR (quadratic time complexity).
+library(ggplot2)
 ggplot()+
   geom_point(aes(n.segments, time/1e9, color=expr), data=times)
 
