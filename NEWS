@@ -1,8 +1,22 @@
 TODOs
 
+APIs for label error and target interval computations.
+
+more informative error messages when arguments to R functions are not
+as expected.
+
+check for errors in C code and return with non-zero status.
+
 2017.01.13
 
-C solver for modelSelection, interface via modelSelectionC function.
+C solver for linear time modelSelection algorithm, interface via
+modelSelectionC function.
+
+modelSelectionR function with original quadratic time algorithm in R
+code.
+
+modelSelection which takes a data.frame as input instead of vectors,
+and uses modelSelectionC.
 
 2017.01.12
 

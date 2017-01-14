@@ -5,7 +5,9 @@
 function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 the solutions (i, min.lambda, max.lambda) with i being the
 solution for every lambda in (min.lambda, max.lambda). This
-function uses the linear time algorithm implemented in C code.}
+function uses the linear time algorithm implemented in C code.
+This function is mostly meant for internal use -- it is instead
+recommended to use modelSelection.}
 \usage{modelSelectionC(loss.vec, model.complexity, model.id)}
 \arguments{
   \item{loss.vec}{numeric vector: loss L_i}

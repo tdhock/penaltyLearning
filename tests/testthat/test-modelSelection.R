@@ -9,6 +9,20 @@ test_that("output intervals computed correctly", {
   expect_identical(df$min.lambda, oneSkip$output$min.lambda)
 })
 
+unsorted <- rbind(
+  data.frame(segments=c(3, 13), peaks=c(1, 6), error=-3e6),
+  oneSkip$input[c(6,4,5,5,3,1,2),])
+test_that("modelSelectionC errors for unsorted data", {
+  expect_error({
+    with(unsorted, modelSelectionC(error, segments, peaks))
+  })
+})
+test_that("modelSelection works for unsorted data", {
+  df <- modelSelection(unsorted, "error", "segments")
+  expect_identical(df$segments, oneSkip$output$model.complexity)
+  expect_identical(df$min.lambda, oneSkip$output$min.lambda)
+})
+
 library(neuroblastoma)
 library(Segmentor3IsBack)
 data(neuroblastoma)

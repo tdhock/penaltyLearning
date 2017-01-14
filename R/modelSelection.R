@@ -24,6 +24,8 @@ modelSelectionC <- structure(function # Exact model selection function
 ### the solutions (i, min.lambda, max.lambda) with i being the
 ### solution for every lambda in (min.lambda, max.lambda). This
 ### function uses the linear time algorithm implemented in C code.
+### This function is mostly meant for internal use -- it is instead
+### recommended to use modelSelection.
  (loss.vec,
 ### numeric vector: loss L_i
   model.complexity,
@@ -109,6 +111,8 @@ modelSelectionR <- structure(function # Exact model selection function
 ### the solutions (i, min.lambda, max.lambda) with i being the
 ### solution for every lambda in (min.lambda, max.lambda). This
 ### function uses the quadratic time algorithm implemented in R code.
+### This function is mostly meant for internal use -- it is instead
+### recommended to use modelSelection.
  (loss.vec,
 ### numeric vector: loss L_i
   model.complexity,
@@ -225,3 +229,45 @@ largestContinuousMinimum <- structure(function
 
 })
 
+modelSelection <- function
+### Given loss.vec L_i, model.complexity K_i, the model selection
+### function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
+### the solutions (i, min.lambda, max.lambda) with i being the
+### solution for every lambda in (min.lambda, max.lambda). This
+### function uses the quadratic time algorithm implemented in R code.
+(models,
+### data.frame with one row per model. There must be at
+### least two columns [[loss]] and [[complexity]], but there can
+### also be other meta-data columns.
+ loss="loss",
+### character: column name of models to interpret as loss L_i.
+ complexity="complexity"
+### character: column name of models to interpret as complexity K_i.
+){
+  stopifnot(is.data.frame(models))
+  stopifnot(1 < nrow(models))
+  for(x in list(loss, complexity)){
+    stopifnot(is.character(x))
+    stopifnot(length(x)==1)
+    stopifnot(x %in% names(models))
+  }
+  ord <- order(models[[complexity]], models[[loss]])
+  sorted <- models[ord,]
+  keep <- c(TRUE, diff(sorted$error) < 0)
+  filtered <- sorted[keep, ]
+  loss.vec <- filtered[[loss]]
+  complexity.vec <- filtered[[complexity]]
+  id.vec <- (1:nrow(models))[ord][keep]
+  result <- modelSelectionC(loss.vec, complexity.vec, id.vec)
+  is.new <- names(result) %in% c(
+    "model.complexity", "model.loss", "model.id")
+  data.frame(
+    result[!is.new],
+    models[result$model.id,],
+    row.names=rownames(models)[result$model.id])
+### data.frame with a row for each model that can be selected for at
+### least one lambda value, and the following columns. (min.lambda,
+### max.lambda) and (min.log.lambda, max.log.lambda) are intervals of
+### optimal penalty constants, on the original and log scale;
+### the other columns (and rownames) are taken from models.
+}
