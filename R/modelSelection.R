@@ -262,113 +262,59 @@ largestContinuousMinimumR <- structure(function
   changes <- segs[1 < start,]
   error.list <- labelError(
     selection, ann, changes,
-    prefix.vars="chromosome", # for all three data sets.
+    problem.vars="chromosome", # for all three data sets.
     model.vars="n.segments", # for changes and selection.
     change.var="chromStart", # column of changes with breakpoint position.
     label.vars=c("min", "max")) # limit of labels in ann.
+
+  one.problem.error <- error.list$model.errors[chromosome=="14", ]
+  indices <- one.problem.error[, largestContinuousMinimumR(
+    errors, max.log.lambda-min.log.lambda)]
+  one.problem.error[indices$start:indices$end,]
   
 })
 
-### WANT: output list of two data.tables: label.errors has one row for
-### every combination of models and labels, with status column that
-### indicates whether or not that model commits an error in that
-### particular label; model.errors has one row per row of models, with
-### columns for computing error and ROC curves.
-labelError <- structure(function
+targetIntervals <- structure(function # Compute target intervals
+### Compute target intervals of log(penalty) values that result in
+### predicted changepoint models with minimum incorrect labels.
 (models,
-  labels,
-  changes,
-  change.var="chromStart",
-  label.vars=c("min", "max"),
-  model.vars=character(0), 
-  prefix.vars=character(0)
+### data.table with columns errors, min.log.lambda, max.log.lambda
+  problem.vars
+### character: column names used to identify data set / segmentation
+### problem.
 ){
-  stopifnot(is.character(prefix.vars))
-  stopifnot(is.character(model.vars))
-  stopifnot(is.character(change.var))
-  stopifnot(is.character(label.vars))
-  stopifnot(length(change.var)==1)
-  stopifnot(length(label.vars)==2)
   stopifnot(is.data.frame(models))
-  stopifnot(is.data.frame(labels))
-  stopifnot(is.data.frame(changes))
-  if(length(prefix.vars)==0){
-    stop("Need at least one column name in prefix.vars")
-  }
-  if(length(model.vars)==0){
-    stop("Need at least one column name in model.vars")
-  }
-  stopifnot(label.vars %in% names(labels))
-  stopifnot(change.var %in% names(changes))
-  stopifnot(prefix.vars %in% names(changes))
-  stopifnot(prefix.vars %in% names(labels))
-  stopifnot(prefix.vars %in% names(models))
-  stopifnot(model.vars %in% names(models))
-  stopifnot(model.vars %in% names(changes))
-  new.key <- paste0(change.var, ".after")
-  if(new.key %in% names(changes)){
-    stop("changes should not have a column named ", new.key)
-  }
-  labels.dt <- data.table(labels)
-  setkey(labels.dt, annotation)
-  labels.info <- change.labels[labels.dt]
-  stopifnot(nrow(labels.info)==nrow(labels.dt))
-  setkeyv(labels.info, prefix.vars)
-  models.dt <- data.table(models)
-  setkeyv(models.dt, prefix.vars)
-  model.labels <- labels.info[models.dt, allow.cartesian=TRUE]
-  changes.dt <- data.table(changes)
-  changes.dt[[new.key]] <- changes.dt[[change.var]]+1
-  changes.key <- c(prefix.vars, model.vars, change.var, new.key)
-  setkeyv(changes.dt, changes.key)
-  labels.key <- c(prefix.vars, model.vars, label.vars)
-  setkeyv(model.labels, labels.key)
-  over.dt <- foverlaps(changes.dt, model.labels, nomatch=0L)
-  long.key <- c(
-    labels.key, "annotation",
-    "min.changes", "max.changes", "possible.fp", "possible.fn")
-  setkeyv(over.dt, long.key)
-  setkeyv(model.labels, long.key)
-  changes.per.label <- over.dt[model.labels, list(
-    pred.changes=.N
-  ), by=.EACHI]
-  changes.per.label[, fp := ifelse(max.changes < pred.changes, 1, 0)]
-  changes.per.label[, fn := ifelse(pred.changes < min.changes, 1, 0)]
-  changes.per.label[, status := ifelse(
-    fp, "false positive", ifelse(
-      fn, "false negative", "correct"))]
-  setkeyv(models.dt, c(prefix.vars, model.vars))
-  setkeyv(changes.per.label, c(prefix.vars, model.vars))
-  error.totals <- changes.per.label[models.dt, list(
-    possible.fp=sum(possible.fp),
-    fp=sum(fp),
-    possible.fn=sum(possible.fn),
-    fn=sum(fn),
-    labels=.N,
-    errors=sum(fp+fn)),
-    by=.EACHI][models.dt]
-  list(model.errors=error.totals, label.errors=changes.per.label)
+  stopifnot(is.character(problem.vars))
+  stopifnot(problem.vars %in% names(models))
+  error.dt <- data.table(models)
+  setkey(error.dt, min.log.lambda)
+  error.dt[, {
+    L <- largestContinuousMinimumR(errors, max.log.lambda-min.log.lambda)
+    data.table(
+      min.log.lambda=min.log.lambda[L$start],
+      max.log.lambda=max.log.lambda[L$end])
+  }, by=problem.vars]
 }, ex=function(){
 
-  library(penaltyLearning)
   data(neuroblastoma, package="neuroblastoma", envir=environment())
   pro4 <- subset(neuroblastoma$profiles, profile.id==4)
   ann4 <- subset(neuroblastoma$annotations, profile.id==4)
   label <- function(annotation, min, max){
-    data.table(profile.id=4, chromosome="14", min, max, annotation)
+    data.frame(profile.id=4, chromosome="14", min, max, annotation)
   }
   ann <- rbind(
     ann4,
     label("1change", 70e6, 80e6),
     label("0changes", 20e6, 60e6))
-  max.segments <- 5
+  max.segments <- 20
   segs.list <- list()
-  models.list <- list()
+  selection.list <- list()
   for(chr in unique(ann$chromosome)){
     pro <- subset(pro4, chromosome==chr)
     fit <- Segmentor3IsBack::Segmentor(pro$logratio, model=2, Kmax=max.segments)
     model.df <- data.frame(loss=fit@likelihood, n.segments=1:max.segments)
-    models.list[[chr]] <- data.table(chromosome=chr, model.df)
+    selection.df <- modelSelection(model.df, complexity="n.segments")
+    selection.list[[chr]] <- data.table(chromosome=chr, selection.df)
     for(n.segments in 1:max.segments){
       end <- fit@breaks[n.segments, 1:n.segments]
       data.before.change <- end[-n.segments]
@@ -389,16 +335,120 @@ labelError <- structure(function
     }
   }
   segs <- do.call(rbind, segs.list)
-  models <- do.call(rbind, models.list)
+  selection <- do.call(rbind, selection.list)
 
   changes <- segs[1 < start,]
   error.list <- labelError(
-    models, ann, changes,
-    prefix.vars="chromosome", # for all three data sets.
+    selection, ann, changes,
+    problem.vars="chromosome", # for all three data sets.
     model.vars="n.segments", # for changes and selection.
     change.var="chromStart", # column of changes with breakpoint position.
     label.vars=c("min", "max")) # limit of labels in ann.
+  targetIntervals(error.list$model.errors, "chromosome")
 
+})
+
+ROChange <- structure(function # ROC curve for changepoints
+### Compute a ROC curve for a penalty function.
+(models,
+### data.frame describing the number of incorrect labels as a function
+### of log(lambda), with columns min.log.lambda, max.log.lambda, fp,
+### fn, possible.fp, possible.fn, etc. This can be computed via
+### labelError(modelSelection(...), ...)$model.errors -- see examples.
+  predictions,
+### data.frame with the predicted log(lambda) value for each
+### segmentation problem.
+  problem.vars=character()
+### character: column names used to identify data set / segmentation
+### problem. 
+){
+  pred <- data.table(predictions)
+  err <- data.table(models)
+  setkey(err, min.log.lambda)
+  thresh.dt <- err[, {
+    fp.diff <- diff(fp)
+    fp.change <- fp.diff != 0
+    fn.diff <- diff(fn)
+    fn.change <- fn.diff != 0
+    fp.dt <- if(any(fp.change))data.table(
+      log.lambda=max.log.lambda[c(fp.change, FALSE)],
+      fp=fp.diff[fp.change],
+      fn=0)
+    fn.dt <- if(any(fn.change))data.table(
+      log.lambda=max.log.lambda[c(fn.change, FALSE)],
+      fp=0,
+      fn=fn.diff[fn.change])
+    rbind(fp.dt, fn.dt)
+  }, by=problem.vars]
+  setkey(thresh.dt, log.lambda)
+  total.dt <- err[, .SD[1,], by=problem.vars][, list(
+    labels=sum(labels),
+    possible.fp=sum(possible.fp),
+    possible.fn=sum(possible.fn))]
+  setkeyv(thresh.dt, problem.vars)
+  setkeyv(pred, problem.vars)
+  pred.with.thresh <- pred[thresh.dt]
+  pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
+  setkey(pred.with.thresh, thresh)
+  interval.dt <- pred.with.thresh[, data.table(
+    total.dt,
+    min.thresh=c(-Inf, thresh),
+    max.thresh=c(thresh, Inf),
+    fp=total.dt$possible.fp + cumsum(c(0, fp)),
+    fn=cumsum(c(0, fn)))]
+  interval.dt[, errors := fp+fn]
+  interval.dt[, FPR := fp/possible.fp]
+  interval.dt[, tp := possible.fn - fn]
+  interval.dt[, TPR := tp/possible.fn]
+  interval.dt[, error.percent := 100*errors/labels]
+  interval.dt
+}, ex=function(){
+
+  library(penaltyLearning)
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
+  pid <- 81
+  pro <- subset(neuroblastoma$profiles, profile.id==pid)
+  ann <- subset(neuroblastoma$annotations, profile.id==pid)
+  max.segments <- 20
+  segs.list <- list()
+  selection.list <- list()
+  for(chr in unique(ann$chromosome)){
+    pro.chr <- subset(pro, chromosome==chr)
+    fit <- Segmentor3IsBack::Segmentor(
+      pro.chr$logratio, model=2, Kmax=max.segments)
+    model.df <- data.frame(loss=fit@likelihood, n.segments=1:max.segments)
+    selection.df <- modelSelection(model.df, complexity="n.segments")
+    selection.list[[chr]] <- data.table(chromosome=chr, selection.df)
+    for(n.segments in 1:max.segments){
+      end <- fit@breaks[n.segments, 1:n.segments]
+      data.before.change <- end[-n.segments]
+      data.after.change <- data.before.change+1
+      pos.before.change <- as.integer(
+      (pro.chr$position[data.before.change]+
+       pro.chr$position[data.after.change])/2)
+      start <- c(1, data.after.change)
+      chromStart <- c(pro.chr$position[1], pos.before.change)
+      chromEnd <- c(pos.before.change, max(pro.chr$position))
+      segs.list[[paste(chr, n.segments)]] <- data.table(
+        chromosome=chr,
+        n.segments,
+        start,
+        end,
+        chromStart,
+        chromEnd,
+        mean=fit@parameters[n.segments, 1:n.segments])
+    }
+  }
+  segs <- do.call(rbind, segs.list)
+  selection <- do.call(rbind, selection.list)
+  changes <- segs[1 < start,]
+  error.list <- labelError(
+    selection, ann, changes,
+    problem.vars="chromosome", # for all three data sets.
+    model.vars="n.segments", # for changes and selection.
+    change.var="chromStart", # column of changes with breakpoint position.
+    label.vars=c("min", "max")) # limit of labels in ann.
+  pro.with.ann <- data.table(pro)[chromosome %in% ann$chromosome, ]
   ggplot()+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "lines"))+
@@ -409,6 +459,206 @@ labelError <- structure(function
                                    "false negative"=3,
                                    "false positive"=1))+
     scale_fill_manual("label", values=change.colors)+
+    geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6),
+                  color="grey",
+                  fill=NA,
+                  data=error.list$label.errors)+
+    geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6,
+                      fill=annotation, linetype=status),
+                  data=error.list$label.errors)+
+    geom_point(aes(position/1e6, logratio),
+               data=pro.with.ann,
+               shape=1)+
+    geom_segment(aes(chromStart/1e6, mean, xend=chromEnd/1e6, yend=mean),
+                 data=segs,
+                 color="green",
+                 size=1)+
+    geom_vline(aes(xintercept=chromStart/1e6),
+               data=changes,
+               linetype="dashed",
+               color="green")
+  ## The BIC model selection criterion is lambda = log(n), where n is
+  ## the number of data points to segment. This implies log(lambda) =
+  ## log(log(n)) = the log2.n feature in all.features.mat.
+  pred <- pro.with.ann[, list(pred.log.lambda=log(log(.N))), by=chromosome]
+  roc <- ROChange(error.list$model.errors, pred, "chromosome")
+
+  pred.thresh <- roc[min.thresh < 0 & 0 < max.thresh,]
+  ggplot()+
+    geom_path(aes(FPR, TPR), data=roc)+
+    geom_point(aes(FPR, TPR), data=pred.thresh, shape=1)
+
+  ggplot()+
+    geom_segment(aes(
+      min.thresh, errors,
+      xend=max.thresh, yend=errors),
+      data=roc)+
+    geom_point(aes(0, errors), data=pred.thresh, shape=1)+
+    xlab("log(penalty) constant added to BIC penalty")
+
+})
+
+labelError <- structure(function # Compute incorrect labels
+### Compute incorrect labels for several change-point detection
+### problems and models.
+(models,
+### data.frame with one row per (problem,model) combination.
+  labels,
+### data.frame with one row per (problem,label).
+  changes,
+### data.frame with one row per (problem,model,change).
+  change.var="chromStart",
+### character(length=1): column name of predicted change-point
+### position (refers to the changes argument). The default
+### "chromStart" is useful for genomic data with segment start/end
+### positions stored in columns named chromStart/chromEnd.
+  label.vars=c("min", "max"),
+### character(length=2): column names of start and end positions of
+### labeled regions, in same units as change-point positions (refers
+### to the labels argument). The default is c("min", "max").
+  model.vars="n.segments",
+### character: column names used to identify model complexity. The
+### default "n.segments" is for change-point models such as in the
+### Segmentor3IsBack and cghseg packages.
+  problem.vars=character(0)
+### character: column names used to identify data set / segmentation
+### problem. 
+){
+  stopifnot(is.character(problem.vars))
+  stopifnot(is.character(model.vars))
+  stopifnot(is.character(change.var))
+  stopifnot(is.character(label.vars))
+  stopifnot(length(change.var)==1)
+  stopifnot(length(label.vars)==2)
+  stopifnot(is.data.frame(models))
+  stopifnot(is.data.frame(labels))
+  stopifnot(is.data.frame(changes))
+  if(length(problem.vars)==0){
+    stop("Need at least one column name in problem.vars")
+  }
+  if(length(model.vars)==0){
+    stop("Need at least one column name in model.vars")
+  }
+  stopifnot(label.vars %in% names(labels))
+  stopifnot(change.var %in% names(changes))
+  stopifnot(problem.vars %in% names(changes))
+  stopifnot(problem.vars %in% names(labels))
+  stopifnot(problem.vars %in% names(models))
+  stopifnot(model.vars %in% names(models))
+  stopifnot(model.vars %in% names(changes))
+  new.key <- paste0(change.var, ".after")
+  if(new.key %in% names(changes)){
+    stop("changes should not have a column named ", new.key)
+  }
+  labels.dt <- data.table(labels)
+  setkey(labels.dt, annotation)
+  labels.info <- change.labels[labels.dt]
+  stopifnot(nrow(labels.info)==nrow(labels.dt))
+  setkeyv(labels.info, problem.vars)
+  models.dt <- data.table(models)
+  setkeyv(models.dt, problem.vars)
+  model.labels <- labels.info[models.dt, allow.cartesian=TRUE]
+  changes.dt <- data.table(changes)
+  changes.dt[[new.key]] <- changes.dt[[change.var]]+1
+  changes.key <- c(problem.vars, model.vars, change.var, new.key)
+  setkeyv(changes.dt, changes.key)
+  labels.key <- c(problem.vars, model.vars, label.vars)
+  setkeyv(model.labels, labels.key)
+  over.dt <- foverlaps(changes.dt, model.labels, nomatch=0L)
+  long.key <- c(
+    labels.key, "annotation",
+    "min.changes", "max.changes", "possible.fp", "possible.fn")
+  setkeyv(over.dt, long.key)
+  setkeyv(model.labels, long.key)
+  changes.per.label <- over.dt[model.labels, list(
+    pred.changes=.N
+  ), by=.EACHI]
+  changes.per.label[, fp := ifelse(max.changes < pred.changes, 1, 0)]
+  changes.per.label[, fn := ifelse(pred.changes < min.changes, 1, 0)]
+  changes.per.label[, status := ifelse(
+    fp, "false positive", ifelse(
+      fn, "false negative", "correct"))]
+  setkeyv(models.dt, c(problem.vars, model.vars))
+  setkeyv(changes.per.label, c(problem.vars, model.vars))
+  error.totals <- changes.per.label[models.dt, list(
+    possible.fp=sum(possible.fp),
+    fp=sum(fp),
+    possible.fn=sum(possible.fn),
+    fn=sum(fn),
+    labels=.N,
+    errors=sum(fp+fn)),
+    by=.EACHI][models.dt]
+  list(model.errors=error.totals, label.errors=changes.per.label)
+### list of two data.tables: label.errors has one row for every
+### combination of models and labels, with status column that
+### indicates whether or not that model commits an error in that
+### particular label; model.errors has one row per row of models, with
+### columns for computing error and ROC curves.
+}, ex=function(){
+  
+  library(penaltyLearning)
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
+  pro4 <- subset(neuroblastoma$profiles, profile.id==4)
+  ann4 <- subset(neuroblastoma$annotations, profile.id==4)
+  label <- function(annotation, min, max){
+    data.table(profile.id=4, chromosome="14", min, max, annotation)
+  }
+  ann <- rbind(
+      ann4,
+      label("1change", 70e6, 80e6),
+      label("0changes", 20e6, 60e6))
+  max.segments <- 5
+  segs.list <- list()
+  models.list <- list()
+  for(chr in unique(ann$chromosome)){
+    pro <- subset(pro4, chromosome==chr)
+    fit <- Segmentor3IsBack::Segmentor(pro$logratio, model=2, Kmax=max.segments)
+    model.df <- data.frame(loss=fit@likelihood, n.segments=1:max.segments)
+    models.list[[chr]] <- data.table(chromosome=chr, model.df)
+    for(n.segments in 1:max.segments){
+      end <- fit@breaks[n.segments, 1:n.segments]
+      data.before.change <- end[-n.segments]
+      data.after.change <- data.before.change+1
+      pos.before.change <- as.integer(
+      (pro$position[data.before.change]+pro$position[data.after.change])/2)
+      start <- c(1, data.after.change)
+      chromStart <- c(pro$position[1], pos.before.change)
+      chromEnd <- c(pos.before.change, max(pro$position))
+      segs.list[[paste(chr, n.segments)]] <- data.table(
+          chromosome=chr,
+          n.segments,
+          start,
+          end,
+          chromStart,
+          chromEnd,
+          mean=fit@parameters[n.segments, 1:n.segments])
+    }
+  }
+  segs <- do.call(rbind, segs.list)
+  models <- do.call(rbind, models.list)
+  
+  changes <- segs[1 < start,]
+  error.list <- labelError(
+      models, ann, changes,
+      problem.vars="chromosome", # for all three data sets.
+      model.vars="n.segments", # for changes and selection.
+      change.var="chromStart", # column of changes with breakpoint position.
+      label.vars=c("min", "max")) # limit of labels in ann.
+  
+  ggplot()+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "lines"))+
+    facet_grid(n.segments ~ chromosome, scales="free", space="free")+
+    scale_x_continuous(breaks=c(100, 200))+
+    scale_linetype_manual("error type",
+                          values=c(correct=0,
+                                   "false negative"=3,
+                                   "false positive"=1))+
+    scale_fill_manual("label", values=change.colors)+
+    geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6),
+                  color="grey",
+                  fill=NA,
+                  data=error.list$label.errors)+
     geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6,
                       fill=annotation, linetype=status),
                   data=error.list$label.errors)+
