@@ -1,6 +1,6 @@
 ### Describe an annotated region label for supervised change-point detection.
 changeLabel <- function(annotation, min.changes, max.changes, color){
-  data.frame(annotation, min.changes, max.changes, color, row.names=annotation)
+  data.table(annotation, min.changes, max.changes, color)
 }
 change.labels <- rbind(
   changeLabel("breakpoint", 1, Inf, "#a445ee"),
@@ -17,6 +17,7 @@ change.labels$possible.fn <- ifelse(0 < change.labels$min.changes, 1, 0)
 change.labels$possible.fp <- ifelse(Inf == change.labels$max.changes, 0, 1)
 change.colors <- paste(change.labels$color)
 names(change.colors) <- rownames(change.labels)
+setkey(change.labels, annotation)
 
 modelSelectionC <- structure(function # Exact model selection function
 ### Given loss.vec L_i, model.complexity K_i, the model selection
@@ -196,7 +197,7 @@ modelSelectionR <- structure(function # Exact model selection function
 
 })
 
-largestContinuousMinimum <- structure(function
+largestContinuousMinimumR <- structure(function
 ### Find the run of minimum cost with the largest size.
 (cost,
  size
@@ -218,16 +219,130 @@ largestContinuousMinimum <- structure(function
 }, ex=function(){
 
   data(neuroblastoma, package="neuroblastoma", envir=environment())
-  pid <- 1
-  chr <- 1
-  pro <- subset(neuroblastoma$profiles, profile.id==pid & chromosome==chr)
-  ann <- subset(neuroblastoma$annotations, profile.id==pid & chromosome==chr)
+  pro4 <- subset(neuroblastoma$profiles, profile.id==4)
+  ann4 <- subset(neuroblastoma$annotations, profile.id==4)
+  label <- function(annotation, min, max){
+    data.frame(profile.id=4, chromosome="14", min, max, annotation)
+  }
+  ann <- rbind(
+    ann4,
+    label("1change", 70e6, 80e6),
+    label("0changes", 20e6, 60e6))
   max.segments <- 20
-  fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
-  seg.vec <- 1:max.segments
-  ##TODO
+  segs.list <- list()
+  selection.list <- list()
+  for(chr in unique(ann$chromosome)){
+    pro <- subset(pro4, chromosome==chr)
+    fit <- Segmentor3IsBack::Segmentor(pro$logratio, model=2, Kmax=max.segments)
+    model.df <- data.frame(loss=fit@likelihood, n.segments=1:max.segments)
+    selection.df <- modelSelection(model.df, complexity="n.segments")
+    selection.list[[chr]] <- data.table(chromosome=chr, selection.df)
+    for(n.segments in 1:max.segments){
+      end <- fit@breaks[n.segments, 1:n.segments]
+      data.before.change <- end[-n.segments]
+      data.after.change <- data.before.change+1
+      pos.before.change <- as.integer(
+      (pro$position[data.before.change]+pro$position[data.after.change])/2)
+      start <- c(1, data.after.change)
+      chromStart <- c(pro$position[1], pos.before.change)
+      chromEnd <- c(pos.before.change, max(pro$position))
+      segs.list[[paste(chr, n.segments)]] <- data.table(
+        chromosome=chr,
+        n.segments,
+        start,
+        end,
+        chromStart,
+        chromEnd,
+        mean=fit@parameters[n.segments, 1:n.segments])
+    }
+  }
+  segs <- do.call(rbind, segs.list)
+  selection <- do.call(rbind, selection.list)
 
+  changes <- segs[1 < start,]
+  error.list <- labelError(
+    selection, ann, changes,
+    prefix.vars="chromosome", # for all three data sets.
+    model.vars="n.segments", # for changes and selection.
+    change.var="chromStart", # column of changes with breakpoint position.
+    label.vars=c("min", "max")) # limit of labels in ann.
+  
 })
+
+### WANT: output list of two data.tables: label.errors has one row for
+### every combination of models and labels, with status column that
+### indicates whether or not that model commits an error in that
+### particular label; model.errors has one row per row of models, with
+### columns for computing error and ROC curves.
+labelError <- function
+(models,
+  labels,
+  changes,
+  change.var="chromStart",
+  label.vars=c("min", "max"),
+  model.vars=character(0), 
+  prefix.vars=character(0)
+){
+  stopifnot(is.character(prefix.vars))
+  stopifnot(is.character(model.vars))
+  stopifnot(is.character(change.var))
+  stopifnot(is.character(label.vars))
+  stopifnot(length(change.var)==1)
+  stopifnot(length(label.vars)==2)
+  stopifnot(is.data.frame(models))
+  stopifnot(is.data.frame(labels))
+  stopifnot(is.data.frame(changes))
+  stopifnot(label.vars %in% names(labels))
+  stopifnot(change.var %in% names(changes))
+  stopifnot(prefix.vars %in% names(changes))
+  stopifnot(prefix.vars %in% names(labels))
+  stopifnot(prefix.vars %in% names(models))
+  stopifnot(model.vars %in% names(models))
+  stopifnot(model.vars %in% names(changes))
+  new.key <- paste0(change.var, ".copy")
+  if(new.key %in% names(changes)){
+    stop("changes should not have a column named ", new.key)
+  }
+  labels.dt <- data.table(labels)
+  setkey(labels.dt, annotation)
+  labels.info <- change.labels[labels.dt]
+  stopifnot(nrow(labels.info)==nrow(labels.dt))
+  setkeyv(labels.info, prefix.vars)
+  models.dt <- data.table(models)
+  setkeyv(models.dt, prefix.vars)
+  model.labels <- labels.info[models.dt, allow.cartesian=TRUE]
+  changes.dt <- data.table(changes)
+  changes.dt[[new.key]] <- changes.dt[[change.var]]
+  changes.key <- c(prefix.vars, model.vars, change.var, new.key)
+  setkeyv(changes.dt, changes.key)
+  labels.key <- c(prefix.vars, model.vars, label.vars)
+  setkeyv(model.labels, labels.key)
+  over.dt <- foverlaps(changes.dt, model.labels, nomatch=0L)
+  long.key <- c(
+    labels.key, "annotation",
+    "min.changes", "max.changes", "possible.fp", "possible.fn")
+  setkeyv(over.dt, long.key)
+  setkeyv(model.labels, long.key)
+  changes.per.label <- over.dt[model.labels, list(
+    pred.changes=.N
+  ), by=.EACHI]
+  changes.per.label[, fp := ifelse(max.changes < pred.changes, 1, 0)]
+  changes.per.label[, fn := ifelse(pred.changes < min.changes, 1, 0)]
+  changes.per.label[, status := ifelse(
+    fp, "false positive", ifelse(
+      fn, "false negative", "correct"))]
+  setkeyv(models.dt, c(prefix.vars, model.vars))
+  setkeyv(changes.per.label, c(prefix.vars, model.vars))
+  error.totals <- changes.per.label[models.dt, list(
+    possible.fp=sum(possible.fp),
+    fp=sum(fp),
+    possible.fn=sum(possible.fn),
+    fn=sum(fn),
+    labels=.N,
+    errors=sum(fp+fn)),
+    by=.EACHI][models.dt]
+  list(model.errors=error.totals, label.errors=changes.per.label)
+}
 
 modelSelection <- function
 ### Given loss.vec L_i, model.complexity K_i, the model selection
