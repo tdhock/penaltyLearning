@@ -1,13 +1,14 @@
 ROChange <- structure(function # ROC curve for changepoints
-### Compute a ROC curve for a penalty function.
+### Compute a Receiver Operating Characteristic curve for a penalty
+### function.
 (models,
 ### data.frame describing the number of incorrect labels as a function
 ### of log(lambda), with columns min.log.lambda, max.log.lambda, fp,
 ### fn, possible.fp, possible.fn, etc. This can be computed via
 ### labelError(modelSelection(...), ...)$model.errors -- see examples.
   predictions,
-### data.frame with the predicted log(lambda) value for each
-### segmentation problem.
+### data.frame with a column named pred.log.lambda, the predicted
+### log(lambda) value for each segmentation problem.
   problem.vars=character()
 ### character: column names used to identify data set / segmentation
 ### problem. 
@@ -51,7 +52,29 @@ ROChange <- structure(function # ROC curve for changepoints
   interval.dt[, tp := possible.fn - fn]
   interval.dt[, TPR := tp/possible.fn]
   interval.dt[, error.percent := 100*errors/labels]
-  interval.dt
+  roc.polygon <- interval.dt[, {
+    has11 <- FPR[1]==1 & TPR[1]==1
+    has00 <- FPR[.N]==0 & TPR[.N]==0
+    list(
+      FPR=c(if(!has11)1, FPR, if(!has00)0, 1, 1),
+      TPR=c(if(!has11)1, TPR, if(!has00)0, 0, 1)
+      )
+  }]
+  list(
+    roc=interval.dt,
+    thresholds=rbind(
+      data.table(threshold="predicted", interval.dt[min.thresh < 0 & 0 < max.thresh, ]),
+      data.table(threshold="min.error", interval.dt[which.min(errors), ])),
+    auc.polygon=roc.polygon,
+    auc=roc.polygon[, geometry::polyarea(FPR, TPR)]
+    )
+### list of results describing ROC curve: roc is a data.table with one
+### row for each point on the ROC curve; thresholds is the two rows of
+### roc which correspond to the predicted and minimal error
+### thresholds; auc.polygon is a data.table with one row for each
+### vertex of the polygon used to compute AUC; auc is the numeric Area
+### Under the ROC curve, actually computed via geometry::polyarea as
+### the area inside the auc.polygon.
 }, ex=function(){
 
   library(penaltyLearning)
@@ -131,19 +154,20 @@ ROChange <- structure(function # ROC curve for changepoints
   ## the number of data points to segment. This implies log(lambda) =
   ## log(log(n)) = the log2.n feature in all.features.mat.
   pred <- pro.with.ann[, list(pred.log.lambda=log(log(.N))), by=chromosome]
-  roc <- ROChange(error.list$model.errors, pred, "chromosome")
+  result <- ROChange(error.list$model.errors, pred, "chromosome")
 
-  pred.thresh <- roc[min.thresh < 0 & 0 < max.thresh,]
   ggplot()+
-    geom_path(aes(FPR, TPR), data=roc)+
-    geom_point(aes(FPR, TPR), data=pred.thresh, shape=1)
+    geom_path(aes(FPR, TPR), data=result$roc)+
+    geom_point(aes(FPR, TPR, color=threshold), data=result$thresholds, shape=1)
 
   ggplot()+
     geom_segment(aes(
       min.thresh, errors,
       xend=max.thresh, yend=errors),
-      data=roc)+
-    geom_point(aes(0, errors), data=pred.thresh, shape=1)+
+      data=result$roc)+
+    geom_point(aes((min.thresh+max.thresh)/2, errors, color=threshold),
+               data=result$thresholds,
+               shape=1)+
     xlab("log(penalty) constant added to BIC penalty")
 
 })
