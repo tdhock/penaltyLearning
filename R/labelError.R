@@ -51,6 +51,12 @@ labelError <- structure(function # Compute incorrect labels
     stop("changes should not have a column named ", new.key)
   }
   labels.dt <- data.table(labels)
+  if("weight" %in% names(labels.dt)){
+    stopifnot(is.numeric(labels.dt$weight))
+    stopifnot(0 < labels.dt$weight)
+  }else{
+    labels.dt$weight <- 1
+  }
   setkey(labels.dt, annotation)
   labels.info <- change.labels[labels.dt]
   stopifnot(nrow(labels.info)==nrow(labels.dt))
@@ -67,25 +73,25 @@ labelError <- structure(function # Compute incorrect labels
   over.dt <- foverlaps(changes.dt, model.labels, nomatch=0L)
   long.key <- c(
     labels.key, "annotation",
-    "min.changes", "max.changes", "possible.fp", "possible.fn")
+    "min.changes", "max.changes", "possible.fp", "possible.fn", "weight")
   setkeyv(over.dt, long.key)
   setkeyv(model.labels, long.key)
   changes.per.label <- over.dt[model.labels, list(
     pred.changes=.N
-  ), by=.EACHI]
-  changes.per.label[, fp := ifelse(max.changes < pred.changes, 1, 0)]
-  changes.per.label[, fn := ifelse(pred.changes < min.changes, 1, 0)]
+    ), by=.EACHI]
+  changes.per.label[, fp := ifelse(max.changes < pred.changes, weight, 0)]
+  changes.per.label[, fn := ifelse(pred.changes < min.changes, weight, 0)]
   changes.per.label[, status := ifelse(
     fp, "false positive", ifelse(
       fn, "false negative", "correct"))]
   setkeyv(models.dt, c(problem.vars, model.vars))
   setkeyv(changes.per.label, c(problem.vars, model.vars))
   error.totals <- changes.per.label[models.dt, list(
-    possible.fp=sum(possible.fp),
+    possible.fp=sum(possible.fp*weight),
     fp=sum(fp),
-    possible.fn=sum(possible.fn),
+    possible.fn=sum(possible.fn*weight),
     fn=sum(fn),
-    labels=.N,
+    labels=sum(weight),
     errors=sum(fp+fn)),
     by=.EACHI][models.dt]
   list(model.errors=error.totals, label.errors=changes.per.label)

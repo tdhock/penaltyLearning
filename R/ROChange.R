@@ -15,6 +15,16 @@ ROChange <- structure(function # ROC curve for changepoints
 ){
   pred <- data.table(predictions)
   err <- data.table(models)
+  total.dt <- err[, .SD[1,], by=problem.vars][, list(
+    labels=sum(labels),
+    possible.fp=sum(possible.fp),
+    possible.fn=sum(possible.fn))]
+  if(total.dt$possible.fp==0){
+    stop("no negative labels")
+  }
+  if(total.dt$possible.fn==0){
+    stop("no positive labels")
+  }
   setkey(err, min.log.lambda)
   thresh.dt <- err[, {
     fp.diff <- diff(fp)
@@ -31,17 +41,16 @@ ROChange <- structure(function # ROC curve for changepoints
       fn=fn.diff[fn.change])
     rbind(fp.dt, fn.dt)
   }, by=problem.vars]
-  setkey(thresh.dt, log.lambda)
-  total.dt <- err[, .SD[1,], by=problem.vars][, list(
-    labels=sum(labels),
-    possible.fp=sum(possible.fp),
-    possible.fn=sum(possible.fn))]
   setkeyv(thresh.dt, problem.vars)
   setkeyv(pred, problem.vars)
   pred.with.thresh <- pred[thresh.dt]
   pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
-  setkey(pred.with.thresh, thresh)
-  interval.dt <- pred.with.thresh[, data.table(
+  uniq.thresh <- pred.with.thresh[, list(
+    fp=sum(fp),
+    fn=sum(fn)
+    ), by=thresh]
+  setkey(uniq.thresh, thresh)
+  interval.dt <- uniq.thresh[, data.table(
     total.dt,
     min.thresh=c(-Inf, thresh),
     max.thresh=c(thresh, Inf),
@@ -122,6 +131,7 @@ ROChange <- structure(function # ROC curve for changepoints
     change.var="chromStart", # column of changes with breakpoint position.
     label.vars=c("min", "max")) # limit of labels in ann.
   pro.with.ann <- data.table(pro)[chromosome %in% ann$chromosome, ]
+  library(ggplot2)
   ggplot()+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "lines"))+
