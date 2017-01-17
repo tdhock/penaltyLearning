@@ -150,7 +150,8 @@ labelError <- structure(function # Compute incorrect labels
       model.vars="n.segments", # for changes and selection.
       change.var="chromStart", # column of changes with breakpoint position.
       label.vars=c("min", "max")) # limit of labels in ann.
-  
+
+  library(ggplot2)
   ggplot()+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "lines"))+
@@ -186,6 +187,8 @@ labelError <- structure(function # Compute incorrect labels
 changeLabel <- function(annotation, min.changes, max.changes, color){
   data.table(annotation, min.changes, max.changes, color)
 }
+
+### data.table of meta-data for label types.
 change.labels <- rbind(
   changeLabel("breakpoint", 1, Inf, "#a445ee"),
   changeLabel(">0breakpoints", 1, Inf, "#a445ee"),
@@ -200,6 +203,9 @@ stopifnot(0 <= change.labels$min.changes)
 change.labels$possible.fn <- ifelse(0 < change.labels$min.changes, 1, 0)
 change.labels$possible.fp <- ifelse(Inf == change.labels$max.changes, 0, 1)
 setkey(change.labels, annotation)
+
+### character vector of change-point label colors, to be used with
+### ggplot2::scale_*_manual
 change.colors <- paste(change.labels$color)
 names(change.colors) <- change.labels$annotation
 

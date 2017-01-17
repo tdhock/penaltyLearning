@@ -8,4 +8,5 @@ Description: Algorithms for supervised learning
  of penalty functions for change detection.
 Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, cghseg,
  ggplot2, testthat
-Depends: data.table (>= 1.9.6), geometry
+Depends: data.table (>= 1.9.6)
+Imports: geometry

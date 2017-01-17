@@ -1,2 +1,4 @@
 useDynLib(penaltyLearning)
 exportPattern("^[[:alpha:]]")
+import(data.table)
+import(geometry)

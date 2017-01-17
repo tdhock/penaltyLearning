@@ -86,6 +86,7 @@ error.list <- labelError(
     change.var="chromStart", # column of changes with breakpoint position.
     label.vars=c("min", "max")) # limit of labels in ann.
 
+library(ggplot2)
 ggplot()+
   theme_bw()+
   theme(panel.margin=grid::unit(0, "lines"))+

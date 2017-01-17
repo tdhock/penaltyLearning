@@ -75,6 +75,7 @@ error.list <- labelError(
   change.var="chromStart", # column of changes with breakpoint position.
   label.vars=c("min", "max")) # limit of labels in ann.
 pro.with.ann <- data.table(pro)[chromosome \%in\% ann$chromosome, ]
+library(ggplot2)
 ggplot()+
   theme_bw()+
   theme(panel.margin=grid::unit(0, "lines"))+
