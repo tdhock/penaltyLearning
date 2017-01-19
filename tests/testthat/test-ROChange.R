@@ -1,5 +1,5 @@
 library(testthat)
-context("modelSelection")
+context("ROChange")
 library(penaltyLearning)
 
 data(neuroblastoma, package="neuroblastoma", envir=environment())

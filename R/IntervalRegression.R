@@ -1,0 +1,431 @@
+### The squared hinge loss.
+squared.hinge <- function(x){
+  ifelse(x<1,(x-1)^2,0)
+}
+
+IntervalRegressionCV <- function
+### Use cross-validation to estimate the optimal regularization, by
+### picking the value that minimizes the number of incorrectly
+### predicted target intervals.
+(feature.mat,
+### Numeric feature matrix.
+ target.mat,
+### Numeric target matrix.
+ n.folds=ifelse(nrow(feature.mat) < 10, 3, 5),
+### Number of cross-validation folds.
+ fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
+### Integer vector of fold id numbers.
+ verbose=0,
+### numeric: bigger numbers for more output.
+ min.observations=10
+### stop with an error if there are fewer than this many observations.
+ ){
+  stopifnot(is.numeric(feature.mat))
+  stopifnot(is.matrix(feature.mat))
+  n.observations <- nrow(feature.mat)
+  stopifnot(is.numeric(target.mat))
+  stopifnot(is.matrix(target.mat))
+  stopifnot(nrow(target.mat) == n.observations)
+  stopifnot(ncol(target.mat) == 2)
+  stopifnot(is.integer(fold.vec))
+  stopifnot(length(fold.vec) == n.observations)
+  ##validation.error.mat.list <- list()
+  chosen.reg <- if(n.observations < min.observations){
+    stop(
+      n.observations,
+      " in data set but minimum of ",
+      min.observations,
+      "; decrease min.observations or use a larger data set")
+  }
+  best.reg.list <- list()
+  validation.data.list <- list()
+  for(validation.fold in unique(fold.vec)){
+    ##print(validation.fold)
+    is.validation <- fold.vec == validation.fold
+    is.train <- !is.validation
+    train.features <- feature.mat[is.train, , drop=FALSE]
+    train.targets <- target.mat[is.train, , drop=FALSE]
+    fit <- IntervalRegressionRegularized(
+      train.features, train.targets, max.iterations=1e3, verbose=verbose)
+    validation.features <- feature.mat[is.validation, , drop=FALSE]
+    pred.log.lambda <- fit$predict(validation.features)
+    validation.targets <- target.mat[is.validation, , drop=FALSE]
+    too.small <- pred.log.lambda < validation.targets[, 1]
+    too.big <- validation.targets[, 2] < pred.log.lambda
+    is.error <- too.small | too.big
+    left.term <- squared.hinge(pred.log.lambda-validation.targets[, 1])
+    right.term <- squared.hinge(validation.targets[, 2]-pred.log.lambda)
+    loss.vec <- colMeans(left.term+right.term)
+    error.vec <- colSums(is.error)
+    best.reg.vec <- fit$regularization.vec[loss.vec == min(loss.vec)]
+    fold.name <- paste("fold", validation.fold)
+    validation.data.list[[fold.name]] <- data.table(
+      validation.fold,
+      regularization=fit$regularization.vec,
+      loss=loss.vec,
+      error=error.vec)
+    best.reg.list[[fold.name]] <- max(best.reg.vec) #simplest model
+  }
+  validation.data <- do.call(rbind, validation.data.list)
+  vtall <- melt(validation.data, measure.vars=c("loss", "error"))
+  stats <- validation.data[, list(
+    mean.loss=mean(loss),
+    sd.loss=sd(loss)
+    ), by=regularization]
+  min.mean <- stats[which.min(mean.loss), ]
+  upper.loss.limit <- min.mean[, mean.loss+sd.loss]
+  simplest.within.1sd <-
+    stats[mean.loss < upper.loss.limit, ][which.max(regularization),]
+  min.dt <- data.table(
+    type=c("mean(min(loss))", "min(mean(loss))", "1sd"),
+    regularization=c(
+      mean(unlist(best.reg.list)),
+      min.mean$regularization,
+      simplest.within.1sd$regularization))
+  fit <- IntervalRegressionRegularized(
+    feature.mat, target.mat,
+    initial.regularization=simplest.within.1sd$regularization,
+    factor.regularization=NULL,
+    verbose=verbose)
+  fit$plot <- ggplot()+
+    theme_bw()+
+    geom_vline(aes(xintercept=-log(regularization), color=type),data=min.dt)+
+    geom_hline(aes(yintercept=mean.loss, color=type),
+               data=data.table(
+                 variable="loss",
+                 simplest.within.1sd, type="1sd"))+
+    theme(panel.margin=grid::unit(0, "lines"))+
+    facet_grid(variable ~ ., scales="free")+
+    geom_ribbon(aes(
+      -log(regularization),
+      ymin=mean.loss-sd.loss,
+      ymax=mean.loss+sd.loss),
+                fill="grey",
+                alpha=0.5,
+                data=data.table(stats, variable="loss"))+
+    geom_line(aes(
+      -log(regularization),
+      mean.loss),
+              data=data.table(stats, variable="loss"))+
+    geom_line(aes(-log(regularization), value, group=validation.fold),
+              color="grey50",
+              data=vtall)
+  fit
+}
+
+IntervalRegressionUnregularized <- function
+### Use IntervalRegressionRegularized with initial.regularization=0
+### and factor.regularization=NULL, meaning fit one un-regularized
+### interval regression model.
+(...
+### passed to IntervalRegressionRegularized.
+ ){
+  IntervalRegressionRegularized(
+    ..., 
+    initial.regularization=0,
+    factor.regularization=NULL)
+### List representing fit model, see
+### help(IntervalRegressionRegularized) for details.
+}
+
+IntervalRegressionRegularized <- function
+### Repeatedly use IntervalRegressionInternal to solve interval
+### regression problems for a path of regularization parameters. This
+### function does not perform automatic selection of the
+### regularization parameter; instead, it returns regression models
+### for a range of regularization parameters, and it is up to you to
+### select which one to use. For automatic regularization parameter
+### selection, use IntervalRegressionCV.
+(feature.mat,
+### Numeric feature matrix.
+ target.mat,
+### Numeric target matrix.
+ initial.regularization=0.001,
+### Initial regularization parameter.
+ factor.regularization=1.2,
+### Increase regularization by this factor after finding an optimal
+### solution. Or NULL to compute just one model
+### (initial.regularization).
+ verbose=0,
+### Print messages if >= 1.
+ ...
+### Other parameters to pass to IntervalRegressionInternal.
+ ){
+  stopifnot(is.numeric(feature.mat))
+  stopifnot(is.matrix(feature.mat))
+  n.observations <- nrow(feature.mat)
+  stopifnot(is.numeric(target.mat))
+  stopifnot(is.matrix(target.mat))
+  stopifnot(nrow(target.mat) == n.observations)
+  stopifnot(ncol(target.mat) == 2)
+  stopifnot(is.numeric(initial.regularization))
+  stopifnot(length(initial.regularization)==1)
+  stopifnot(is.finite(initial.regularization))
+
+  is.trivial.target <- apply(!is.finite(target.mat), 1, all)
+  nontrivial.features <- feature.mat[!is.trivial.target, , drop=FALSE]
+  nontrivial.targets <- target.mat[!is.trivial.target, , drop=FALSE]
+  is.finite.feature <- apply(is.finite(nontrivial.features), 2, all)
+  finite.features <- nontrivial.features[, is.finite.feature, drop=FALSE]
+  all.mean.vec <- colMeans(finite.features)
+  all.sd.vec <- if(nrow(finite.features)==1){
+    1
+  }else{
+    apply(finite.features, 2, sd)
+  }
+  is.invariant <- all.sd.vec == 0
+  train.feature.i <- which(!is.invariant)
+  train.feature.names <- colnames(finite.features)[train.feature.i]
+  mean.vec <- all.mean.vec[train.feature.names]
+  sd.vec <- all.sd.vec[train.feature.names]
+  invariant.features <- finite.features[, train.feature.names, drop=FALSE]
+  mean.mat <- matrix(
+    mean.vec, nrow(invariant.features), ncol(invariant.features), byrow=TRUE)
+  sd.mat <- matrix(
+    sd.vec, nrow(invariant.features), ncol(invariant.features), byrow=TRUE)
+  norm.features <- (invariant.features-mean.mat)/sd.mat
+  intercept.features <- cbind("(Intercept)"=1, norm.features)
+  apply(intercept.features, 2, mean)
+  apply(intercept.features, 2, sd)
+
+  regularization <- initial.regularization
+  n.features <- ncol(intercept.features)
+  param.vec <- rep(0, n.features)
+  n.nonzero <- n.features
+
+  param.vec.list <- list()
+  regularization.vec.list <- list()
+  while(n.nonzero > 1){
+    param.vec <-
+      IntervalRegressionInternal(
+        intercept.features, nontrivial.targets,
+        param.vec,
+        regularization,
+        verbose=verbose,
+        ...)
+    n.zero <- sum(param.vec == 0)
+    n.nonzero <- sum(param.vec != 0)
+    l1.norm <- sum(abs(param.vec[-1]))
+    if(verbose >= 1){
+      cat(sprintf("regularization=%8.4f L1norm=%8.4f zeros=%d\n",
+                  regularization, l1.norm, n.zero))
+    }
+    param.vec.list[[paste(regularization)]] <- param.vec
+    regularization.vec.list[[paste(regularization)]] <- regularization
+    if(is.null(factor.regularization)){
+      n.nonzero <- 1 #stops while loop.
+    }else{
+      stopifnot(is.numeric(factor.regularization))
+      stopifnot(length(factor.regularization)==1)
+      regularization <- regularization * factor.regularization
+    }
+  }
+  param.mat <- do.call(cbind, param.vec.list)
+  if(verbose >= 1){
+    cat(paste0("Done computing parameter matrix (",
+               nrow(param.mat), " features x ",
+               ncol(param.mat), " regularization parameters)\n"))
+  }
+  feature.not.used <- apply(param.mat[-1, , drop=FALSE] == 0, 1, all)
+  pred.feature.names <- train.feature.names[!feature.not.used]
+  pred.param.mat <-
+    param.mat[c("(Intercept)", pred.feature.names),,drop=FALSE]
+  list(param.mat=param.mat,
+       regularization.vec=do.call(c, regularization.vec.list),
+       mean.vec=mean.vec,
+       sd.vec=sd.vec,
+       train.feature.names=train.feature.names,
+       pred.feature.names=pred.feature.names,
+       pred.param.mat=pred.param.mat,
+       predict=function(mat){
+         stopifnot(is.matrix(mat))
+         stopifnot(is.numeric(mat))
+         stopifnot(pred.feature.names %in% colnames(mat))
+         raw.mat <- mat[, pred.feature.names, drop=FALSE]
+         raw.mat[!is.finite(raw.mat)] <- 0 
+         mean.mat <- matrix(
+           mean.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         sd.mat <- matrix(
+           sd.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         norm.mat <- (raw.mat-mean.mat)/sd.mat
+         intercept.mat <- cbind("(Intercept)"=1, norm.mat)
+         intercept.mat %*% pred.param.mat
+       })
+### List representing fit model. You can do
+### fit$predict(feature.matrix) to get a matrix of predicted log
+### penalty values. The mean.vec and sd.vec were used for scaling the
+### training data matrices. The param.mat is the n.features *
+### n.regularization numeric matrix of optimal coefficients.
+}
+
+IntervalRegressionInternal <- function
+### Solve the squared hinge loss interval regression problem for one
+### regularization parameter: w* = argmin_w L(w) + regularization *
+### ||w||_1 where L(w) is the average squared hinge loss with respect
+### to the targets, and ||w||_1 is the L1-norm of the weight vector
+### (excluding the first element, which is the un-regularized
+### intercept or bias term). This function performs no scaling of
+### input features, and is meant for internal use only! To learn a
+### regression model, try IntervalRegressionCV or
+### IntervalRegressionUnregularized.
+(features,
+### Scaled numeric feature matrix (problems x features). The first
+### column/feature should be all ones and will not be regularized.
+ targets,
+### Numeric target matrix (problems x 2).
+ initial.param.vec,
+### initial guess for weight vector (features).
+ regularization,
+### Degree of L1-regularization.
+ threshold=1e-3,
+### When the stopping criterion gets below this threshold, the
+### algorithm stops and declares the solution as optimal.
+ max.iterations=1e5,
+### Error if the algorithm has not found an optimal solution after
+### this many iterations.
+ weight.vec=NULL,
+### A numeric vector of weights for each training example.
+ Lipschitz=NULL,
+### A numeric scalar or NULL, which means to compute Lipschitz as the
+### mean of the squared L2-norms of the rows of the feature matrix.
+ verbose=2
+### Cat messages: for restarts and at the end if >= 1, and for every
+### iteration if >= 2.
+ ){
+  stopifnot(is.matrix(features))
+  stopifnot(is.numeric(features))
+  n.features <- ncol(features)
+  n.problems <- nrow(features)
+
+  stopifnot(is.matrix(targets))
+  stopifnot(nrow(targets) == n.problems)
+  stopifnot(ncol(targets) == 2)
+
+  if(is.null(weight.vec)){
+    weight.vec <- rep(1, n.problems)
+  }
+  stopifnot(is.numeric(weight.vec))
+  stopifnot(length(weight.vec) == n.problems)
+
+  if(is.null(Lipschitz)){
+    Lipschitz <- mean(rowSums(features * features) * weight.vec)
+  }
+  stopifnot(is.numeric(Lipschitz))
+  stopifnot(length(Lipschitz) == 1)
+
+  stopifnot(is.numeric(max.iterations))
+  stopifnot(length(max.iterations) == 1)
+
+  stopifnot(is.numeric(threshold))
+  stopifnot(length(threshold) == 1)
+
+  stopifnot(is.numeric(initial.param.vec))
+  stopifnot(length(initial.param.vec) == n.features)
+
+  ## Return 0 for a negative number and the same value otherwise.
+  positive.part <- function(x){
+    ifelse(x<0, 0, x)
+  }
+  squared.hinge.deriv <- function(x){
+    ifelse(x<1,2*(x-1),0)
+  }  
+  calc.loss <- function(x){
+    linear.predictor <- as.numeric(features %*% x)
+    left.term <- squared.hinge(linear.predictor-targets[,1])
+    right.term <- squared.hinge(targets[,2]-linear.predictor)
+    both.terms <- left.term+right.term
+    weighted.loss.vec <- both.terms * weight.vec
+    mean(weighted.loss.vec)
+  }
+  calc.grad <- function(x){
+    linear.predictor <- as.numeric(features %*% x)
+    left.term <- squared.hinge.deriv(linear.predictor-targets[,1])
+    right.term <- squared.hinge.deriv(targets[,2]-linear.predictor)
+    full.grad <- features * (left.term-right.term) * weight.vec
+    colSums(full.grad)/nrow(full.grad)
+  }    
+  calc.penalty <- function(x){
+    regularization * sum(abs(x[-1]))
+  }
+  calc.cost <- function(x){
+    calc.loss(x) + calc.penalty(x)
+  }
+  soft.threshold <- function(x,thresh){
+    ifelse(abs(x) < thresh, 0, x-thresh*sign(x))
+  }
+  ## do not threshold the intercept.
+  prox <- function(x,thresh){
+    x[-1] <- soft.threshold(x[-1],thresh)
+    x
+  }
+  ## p_L from the fista paper.
+  pL <- function(x,L){
+    grad <- calc.grad(x)
+    prox(x - grad/L, regularization/L)
+  }
+  dist2subdiff.opt <- function(w,g){
+    ifelse(w==0,positive.part(abs(g)-regularization),
+           ifelse(w<0,abs(-regularization+g),abs(regularization+g)))
+  }
+
+  iterate.count <- 1
+  stopping.crit <- threshold
+  last.iterate <- this.iterate <- y <- initial.param.vec
+  this.t <- 1
+  while({
+    ##browser(expr=is.na(stopping.crit))
+    ##str(stopping.crit)
+    stopping.crit >= threshold
+  }){
+    ## here we implement the FISTA method with constant step size, as
+    ## described by in the Beck and Tebolle paper.
+    last.iterate <- this.iterate
+    this.iterate <- pL(y, Lipschitz)
+    last.t <- this.t
+    this.t <- (1+sqrt(1+4*last.t^2))/2
+    y <- this.iterate + (last.t - 1)/this.t*(this.iterate-last.iterate)
+    ## here we calculate the subgradient optimality condition, which
+    ## requires 1 more gradient evaluation per iteration.
+    after.grad <- calc.grad(this.iterate)
+    w.dist <- dist2subdiff.opt(this.iterate[-1],after.grad[-1])
+    zero.at.optimum <- c(abs(after.grad[1]),w.dist)
+    stopping.crit <- max(zero.at.optimum)
+
+    if(verbose >= 2){
+      cost <- calc.cost(this.iterate)
+      cat(sprintf("%10d cost %10f crit %10.7f\n",
+                  iterate.count,
+                  cost,
+                  stopping.crit))
+    }
+    iterate.count <- iterate.count + 1
+    if(any(!is.finite(this.iterate)) || 1e20 < stopping.crit){
+      if(verbose >= 1){
+        cat("restarting with bigger Lipschitz.\n")
+      }
+      iterate.count <- 1
+      stopping.crit <- threshold
+      last.iterate <- this.iterate <- y <- initial.param.vec
+      this.t <- 1
+      Lipschitz <- Lipschitz * 1.5
+    }
+    if(iterate.count > max.iterations){
+      Lipschitz <- Lipschitz * 1.5
+      iterate.count <- 1
+      if(verbose >= 1){
+        cat(max.iterations, "iterations, increasing Lipschitz.",
+            "crit =", stopping.crit, "\n")
+      }
+    }
+  }
+  if(verbose >= 1){
+    cat("solution with crit =", stopping.crit, "\n")
+  }
+  this.iterate
+### Numeric vector of scaled weights w of the affine function f_w(X) =
+### X %*% w for a scaled feature matrix X with the first row entirely
+### ones.
+}
+

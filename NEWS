@@ -1,5 +1,7 @@
 TODOs
 
+tests for peak model and for IntervalRegression functions.
+
 more informative error messages when arguments to R functions are not
 as expected.
 
