@@ -11,9 +11,10 @@ targetIntervalResidual <- function
   stopifnot(is.numeric(target.mat))
   stopifnot(target.mat[,1] < target.mat[,2])
   stopifnot(is.numeric(pred))
+  pred.vec <- as.numeric(pred)
   ifelse(
-    pred < target.mat[, 1], pred - target.mat[, 1], ifelse(
-      target.mat[, 2] < pred, pred - target.mat[, 2], 0))
+    pred.vec < target.mat[, 1], pred.vec - target.mat[, 1], ifelse(
+      target.mat[, 2] < pred.vec, pred.vec - target.mat[, 2], 0))
 ### numeric vector of n residuals. Predictions that are too high
 ### (above target.mat[,2]) get positive residuals (too few
 ### changepoints), and predictions that are too low (below

@@ -14,8 +14,10 @@ ROChange <- structure(function # ROC curve for changepoints
 ### problem. 
 ){
   pred <- data.table(predictions)
+  setkeyv(pred, problem.vars)
   err <- data.table(models)
-  total.dt <- err[, .SD[1,], by=problem.vars][, list(
+  setkeyv(err, problem.vars)
+  total.dt <- err[pred, .SD[1,], by=problem.vars][, list(
     labels=sum(labels),
     possible.fp=sum(possible.fp),
     possible.fn=sum(possible.fn))]
@@ -42,8 +44,7 @@ ROChange <- structure(function # ROC curve for changepoints
     rbind(fp.dt, fn.dt)
   }, by=problem.vars]
   setkeyv(thresh.dt, problem.vars)
-  setkeyv(pred, problem.vars)
-  pred.with.thresh <- pred[thresh.dt]
+  pred.with.thresh <- thresh.dt[pred]
   pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
   uniq.thresh <- pred.with.thresh[, list(
     fp=sum(fp),

@@ -7,6 +7,10 @@ as expected.
 
 check for errors in C code and return with non-zero status.
 
+2017.01.20
+
+IntervalRegression* functions.
+
 2017.01.17
 
 labelError, targetIntervals, ROChange.
