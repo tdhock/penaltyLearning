@@ -52,8 +52,8 @@ pro.with.ann <- data.table(pro)[chromosome %in% ann$chromosome, ]
 pred <- pro.with.ann[, list(pred.log.lambda=log(log(.N))), by=chromosome]
 result <- ROChange(error.list$model.errors, pred, "chromosome")
 test_that("seven rows for six labels", {
-  expect_equal(result$roc$fp, c(3, 2, 1, 0, 0, 0, 0))
-  expect_equal(result$roc$fn, c(0, 0, 0, 0, 1, 2, 3))
+  expect_equal(result$roc$fn, c(3, 2, 1, 0, 0, 0, 0))
+  expect_equal(result$roc$fp, c(0, 0, 0, 0, 1, 2, 3))
 })
 test_that("perfect prediction achieved", {
   expect_equal(result$thresholds$errors, c(3, 0))
@@ -75,8 +75,8 @@ tie.pred <- data.table(pred)
 tie.pred$pred.log.lambda[1:2] <- error.list$model.errors[some, min.log.lambda - 2]
 tie.result <- ROChange(error.list$model.errors, tie.pred, "chromosome")
 test_that("six rows for six labels with one tie", {
-  fp.vec <- c(3, 2, 1, 0, 0, 0)
-  fn.vec <- c(0, 0, 0, 1, 2, 3)
+  fn.vec <- c(3, 2, 1, 0, 0, 0)
+  fp.vec <- c(0, 0, 0, 1, 2, 3)
   expect_equal(tie.result$roc$fp, fp.vec)
   expect_equal(tie.result$roc$fn, fn.vec)
   expect_equal(tie.result$roc$FPR, fp.vec/3)
@@ -97,8 +97,8 @@ error.breakBad <- labelError(
   label.vars=c("min", "max")) # limit of labels in ann.
 result.breakBad <- ROChange(error.breakBad$model.errors, tie.pred, "chromosome")
 test_that("six rows for six labels with one tie, fn worse", {
-  fp.vec <- c(3, 2, 1, 0, 0, 0)
-  fn.vec <- c(0, 0, 0, 2, 4, 6)
+  fn.vec <- c(6, 4, 2, 0, 0, 0)
+  fp.vec <- c(0, 0, 0, 1, 2, 3)
   expect_equal(result.breakBad$roc$fp, fp.vec)
   expect_equal(result.breakBad$roc$fn, fn.vec)
   expect_equal(result.breakBad$roc$FPR, fp.vec/3)
@@ -121,8 +121,8 @@ error.normBad <- labelError(
   label.vars=c("min", "max")) # limit of labels in ann.
 result.normBad <- ROChange(error.normBad$model.errors, tie.pred, "chromosome")
 test_that("six rows for six labels with one tie, fn worse", {
-  fp.vec <- c(6, 4, 2, 0, 0, 0)
-  fn.vec <- c(0, 0, 0, 1, 2, 3)
+  fn.vec <- c(3, 2, 1, 0, 0, 0)
+  fp.vec <- c(0, 0, 0, 2, 4, 6)
   expect_equal(result.normBad$roc$fp, fp.vec)
   expect_equal(result.normBad$roc$fn, fn.vec)
   expect_equal(result.normBad$roc$FPR, fp.vec/6)

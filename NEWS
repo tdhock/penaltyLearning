@@ -1,11 +1,13 @@
 TODOs
 
-tests for peak model and for IntervalRegression functions.
-
 more informative error messages when arguments to R functions are not
 as expected.
 
 check for errors in C code and return with non-zero status.
+
+2017.01.21
+
+tests for peak model and for IntervalRegression functions.
 
 2017.01.20
 

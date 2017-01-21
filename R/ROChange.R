@@ -27,20 +27,20 @@ ROChange <- structure(function # ROC curve for changepoints
   if(total.dt$possible.fn==0){
     stop("no positive labels")
   }
-  setkey(err, min.log.lambda)
-  thresh.dt <- err[, {
+  thresh.dt <- err[order(-min.log.lambda), {
     fp.diff <- diff(fp)
     fp.change <- fp.diff != 0
     fn.diff <- diff(fn)
     fn.change <- fn.diff != 0
     fp.dt <- if(any(fp.change))data.table(
-      log.lambda=max.log.lambda[c(fp.change, FALSE)],
-      fp=fp.diff[fp.change],
+      log.lambda=min.log.lambda[c(fp.change, FALSE)],
+      fp=as.numeric(fp.diff[fp.change]),
       fn=0)
     fn.dt <- if(any(fn.change))data.table(
-      log.lambda=max.log.lambda[c(fn.change, FALSE)],
+      log.lambda=min.log.lambda[c(fn.change, FALSE)],
       fp=0,
-      fn=fn.diff[fn.change])
+      fn=as.numeric(fn.diff[fn.change]))
+    ##browser(expr=sample.id=="McGill0322")
     rbind(fp.dt, fn.dt)
   }, by=problem.vars]
   setkeyv(thresh.dt, problem.vars)
@@ -49,25 +49,24 @@ ROChange <- structure(function # ROC curve for changepoints
   uniq.thresh <- pred.with.thresh[, list(
     fp=sum(fp),
     fn=sum(fn)
-    ), by=thresh]
-  setkey(uniq.thresh, thresh)
-  interval.dt <- uniq.thresh[, data.table(
+  ), by=thresh]
+  interval.dt <- uniq.thresh[order(-thresh), data.table(
     total.dt,
-    min.thresh=c(-Inf, thresh),
-    max.thresh=c(thresh, Inf),
-    fp=total.dt$possible.fp + cumsum(c(0, fp)),
-    fn=cumsum(c(0, fn)))]
+    min.thresh=c(thresh, -Inf),
+    max.thresh=c(Inf, thresh),
+    fp=cumsum(c(0, fp)),
+    fn=total.dt$possible.fn+cumsum(c(0, fn)))]
   interval.dt[, errors := fp+fn]
   interval.dt[, FPR := fp/possible.fp]
   interval.dt[, tp := possible.fn - fn]
   interval.dt[, TPR := tp/possible.fn]
   interval.dt[, error.percent := 100*errors/labels]
   roc.polygon <- interval.dt[, {
-    has11 <- FPR[1]==1 & TPR[1]==1
-    has00 <- FPR[.N]==0 & TPR[.N]==0
+    has11 <- FPR[.N]==1 & TPR[.N]==1
+    has00 <- FPR[1]==0 & TPR[1]==0
     list(
-      FPR=c(if(!has11)1, FPR, if(!has00)0, 1, 1),
-      TPR=c(if(!has11)1, TPR, if(!has00)0, 0, 1)
+      FPR=c(if(!has00)0, FPR, if(!has11)1, 1),
+      TPR=c(if(!has00)0, TPR, if(!has11)1, 0)
       )
   }]
   list(

@@ -1,12 +1,13 @@
 Package: penaltyLearning
 Maintainer: Toby Dylan Hocking <toby.hocking@r-project.org>
 Author: Toby Dylan Hocking
-Version: 2017.01.20
+Version: 2017.01.21
 License: GPL-3
 Title: Penalty Learning
 Description: Algorithms for supervised learning
  of penalty functions for change detection.
 Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, cghseg,
- testthat, doParallel, iregnet
+ testthat, doParallel, iregnet, PeakSegDP, PeakError
 Depends: R (>= 2.10), data.table (>= 1.9.6)
 Imports: geometry, foreach, ggplot2
+Remotes: anujkhare/iregnet, tdhock/PeakSegDP, tdhock/PeakError

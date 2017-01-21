@@ -58,7 +58,7 @@ IntervalRegressionCV <- structure(function
     train.features <- feature.mat[is.train, , drop=FALSE]
     train.targets <- target.mat[is.train, , drop=FALSE]
     fit <- IntervalRegressionRegularized(
-      train.features, train.targets, max.iterations=1e3, verbose=verbose)
+      train.features, train.targets, verbose=verbose)
     validation.features <- feature.mat[is.validation, , drop=FALSE]
     pred.log.lambda <- fit$predict(validation.features)
     validation.targets <- target.mat[is.validation, , drop=FALSE]
@@ -355,7 +355,7 @@ IntervalRegressionInternal <- function
  threshold=1e-3,
 ### When the stopping criterion gets below this threshold, the
 ### algorithm stops and declares the solution as optimal.
- max.iterations=1e5,
+ max.iterations=1e3,
 ### Error if the algorithm has not found an optimal solution after
 ### this many iterations.
  weight.vec=NULL,
