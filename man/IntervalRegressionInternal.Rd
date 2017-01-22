@@ -11,7 +11,7 @@ input features, and is meant for internal use only! To learn a
 regression model, try IntervalRegressionCV or
 IntervalRegressionUnregularized.}
 \usage{IntervalRegressionInternal(features, targets, initial.param.vec, 
-    regularization, threshold = 0.001, max.iterations = 1e+05, 
+    regularization, threshold = 0.001, max.iterations = 1000, 
     weight.vec = NULL, Lipschitz = NULL, verbose = 2)}
 \arguments{
   \item{features}{Scaled numeric feature matrix (problems x features). The first
