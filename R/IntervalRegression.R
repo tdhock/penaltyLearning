@@ -51,44 +51,46 @@ IntervalRegressionCV <- structure(function
       min.observations,
       "; decrease min.observations or use a larger data set")
   }
-  validation.data <- foreach(validation.fold=unique(fold.vec), .combine=rbind) %dopar% {
-    ##print(validation.fold)
-    is.validation <- fold.vec == validation.fold
-    is.train <- !is.validation
-    train.features <- feature.mat[is.train, , drop=FALSE]
-    train.targets <- target.mat[is.train, , drop=FALSE]
-    fit <- IntervalRegressionRegularized(
-      train.features, train.targets, verbose=verbose)
-    validation.features <- feature.mat[is.validation, , drop=FALSE]
-    pred.log.lambda <- fit$predict(validation.features)
-    validation.targets <- target.mat[is.validation, , drop=FALSE]
-    too.small <- pred.log.lambda < validation.targets[, 1]
-    too.big <- validation.targets[, 2] < pred.log.lambda
-    is.error <- too.small | too.big
-    left.term <- squared.hinge(pred.log.lambda-validation.targets[, 1])
-    right.term <- squared.hinge(validation.targets[, 2]-pred.log.lambda)
-    loss.vec <- colMeans(left.term+right.term)
-    error.vec <- colSums(is.error)
-    dt <- data.table(
-      validation.fold,
-      regularization=fit$regularization.vec,
-      loss=loss.vec,
-      incorrect.intervals=error.vec)
-    if(!is.null(incorrect.labels.db)){
-      dt$neg.auc <- NA_real_
-      dt$incorrect.labels <- NA_real_
-      for(regularization.i in seq_along(fit$regularization.vec)){
-        pred.dt <- data.table(
-          pred.log.lambda=pred.log.lambda[, regularization.i])
-        pred.dt[[key(incorrect.labels.db)]] <- rownames(feature.mat)[is.validation]
-        roc <- ROChange(incorrect.labels.db, pred.dt, key(incorrect.labels.db))
-        dt[regularization.i, neg.auc := -roc$auc]
-        predicted.thresh <- roc$thresholds[threshold=="predicted", ]
-        dt[regularization.i, incorrect.labels := predicted.thresh$errors]
+  validation.data <- foreach(
+    validation.fold=unique(fold.vec), .combine=rbind) %dopar% {
+      ##print(validation.fold)
+      is.validation <- fold.vec == validation.fold
+      is.train <- !is.validation
+      train.features <- feature.mat[is.train, , drop=FALSE]
+      train.targets <- target.mat[is.train, , drop=FALSE]
+      fit <- IntervalRegressionRegularized(
+        train.features, train.targets, verbose=verbose)
+      validation.features <- feature.mat[is.validation, , drop=FALSE]
+      pred.log.lambda <- fit$predict(validation.features)
+      validation.targets <- target.mat[is.validation, , drop=FALSE]
+      too.small <- pred.log.lambda < validation.targets[, 1]
+      too.big <- validation.targets[, 2] < pred.log.lambda
+      is.error <- too.small | too.big
+      left.term <- squared.hinge(pred.log.lambda-validation.targets[, 1])
+      right.term <- squared.hinge(validation.targets[, 2]-pred.log.lambda)
+      loss.vec <- colMeans(left.term+right.term)
+      error.vec <- colSums(is.error)
+      dt <- data.table(
+        validation.fold,
+        regularization=fit$regularization.vec,
+        loss=loss.vec,
+        incorrect.intervals=error.vec)
+      if(!is.null(incorrect.labels.db)){
+        dt$neg.auc <- NA_real_
+        dt$incorrect.labels <- NA_real_
+        for(regularization.i in seq_along(fit$regularization.vec)){
+          pred.dt <- data.table(
+            pred.log.lambda=pred.log.lambda[, regularization.i])
+          pred.dt[[key(incorrect.labels.db)]] <-
+            rownames(feature.mat)[is.validation]
+          roc <- ROChange(incorrect.labels.db, pred.dt, key(incorrect.labels.db))
+          dt[regularization.i, neg.auc := -roc$auc]
+          predicted.thresh <- roc$thresholds[threshold=="predicted", ]
+          dt[regularization.i, incorrect.labels := predicted.thresh$errors]
+        }
       }
+      dt
     }
-    dt
-  }
   if(!is.null(incorrect.labels.db)){
     variable.name <- "neg.auc"
   }else{
@@ -98,8 +100,9 @@ IntervalRegressionCV <- structure(function
   variable.data <- vtall[variable==variable.name, ]
   stats <- variable.data[, list(
     mean=mean(value),
-    sd=sd(value)
-    ), by=.(variable, regularization)]
+    sd=sd(value),
+    folds=.N
+    ), by=.(variable, regularization)][folds==max(folds),]
   min.each <- variable.data[, {
     .SD[which.min(value), ]
   }, by=validation.fold]
