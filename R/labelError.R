@@ -63,7 +63,10 @@ labelError <- structure(function # Compute incorrect labels
   setkeyv(labels.info, problem.vars)
   models.dt <- data.table(models)
   setkeyv(models.dt, problem.vars)
-  model.labels <- labels.info[models.dt, allow.cartesian=TRUE]
+  model.labels <- models.dt[labels.info, allow.cartesian=TRUE]
+  if(any(is.na(model.labels))){
+    stop("some labels have no models")
+  }
   changes.dt <- data.table(changes)
   changes.dt[[new.key]] <- changes.dt[[change.var]]+1
   changes.key <- c(problem.vars, model.vars, change.var, new.key)
@@ -84,17 +87,20 @@ labelError <- structure(function # Compute incorrect labels
   changes.per.label[, status := ifelse(
     fp, "false positive", ifelse(
       fn, "false negative", "correct"))]
+  setkeyv(model.labels, c(problem.vars, model.vars))
   setkeyv(models.dt, c(problem.vars, model.vars))
   setkeyv(changes.per.label, c(problem.vars, model.vars))
-  error.totals <- changes.per.label[models.dt, list(
+  error.totals <- changes.per.label[model.labels, list(
     possible.fp=sum(possible.fp*weight),
     fp=sum(fp),
     possible.fn=sum(possible.fn*weight),
     fn=sum(fn),
     labels=sum(weight),
     errors=sum(fp+fn)),
-    by=.EACHI][models.dt]
-  list(model.errors=error.totals, label.errors=changes.per.label)
+    by=.EACHI]
+  list(
+    model.errors=models.dt[error.totals],
+    label.errors=changes.per.label)
 ### list of two data.tables: label.errors has one row for every
 ### combination of models and labels, with status column that
 ### indicates whether or not that model commits an error in that

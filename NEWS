@@ -3,6 +3,8 @@ TODOs
 more informative error messages when arguments to R functions are not
 as expected.
 
+check for bigger/smaller data sets in ROChange and labelError.
+
 check for errors in C code and return with non-zero status.
 
 2017.01.21
