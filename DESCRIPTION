@@ -1,7 +1,7 @@
 Package: penaltyLearning
 Maintainer: Toby Dylan Hocking <toby.hocking@r-project.org>
 Author: Toby Dylan Hocking
-Version: 2017.01.21
+Version: 2017.01.31
 License: GPL-3
 Title: Penalty Learning
 Description: Algorithms for supervised learning

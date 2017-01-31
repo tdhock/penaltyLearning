@@ -7,6 +7,12 @@ check for bigger/smaller data sets in ROChange and labelError.
 
 check for errors in C code and return with non-zero status.
 
+2017.01.31
+
+labelError works when there are more models than labels, and gives an
+informative error when there are no corresponding models for a given
+label.
+
 2017.01.21
 
 tests for peak model and for IntervalRegression functions.

@@ -28,6 +28,7 @@ data and labels, for a subset of 6 profiles.
   breakpoint.colors <- c(
     "breakpoint"="#a445ee",
     "normal"="#f6f4bf")
+  library(ggplot2)
   ggplot()+
     ggtitle("supervised change-point detection = data + labels")+
     theme_bw()+
