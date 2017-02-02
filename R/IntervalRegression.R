@@ -73,10 +73,10 @@ IntervalRegressionCV <- structure(function
       dt <- data.table(
         validation.fold,
         regularization=fit$regularization.vec,
-        loss=loss.vec,
+        squared.hinge.loss=loss.vec,
         incorrect.intervals=error.vec)
       if(!is.null(incorrect.labels.db)){
-        dt$neg.auc <- NA_real_
+        dt$negative.auc <- NA_real_
         dt$incorrect.labels <- NA_real_
         for(regularization.i in seq_along(fit$regularization.vec)){
           pred.dt <- data.table(
@@ -84,17 +84,17 @@ IntervalRegressionCV <- structure(function
           pred.dt[[key(incorrect.labels.db)]] <-
             rownames(feature.mat)[is.validation]
           roc <- ROChange(incorrect.labels.db, pred.dt, key(incorrect.labels.db))
-          dt[regularization.i, neg.auc := -roc$auc]
+          dt[regularization.i, negative.auc := -roc$auc]
           predicted.thresh <- roc$thresholds[threshold=="predicted", ]
           dt[regularization.i, incorrect.labels := predicted.thresh$errors]
         }
       }
       dt
     }
-  if(!is.null(incorrect.labels.db)){
-    variable.name <- "neg.auc"
+  variable.name <- if(!is.null(incorrect.labels.db)){
+    "negative.auc"
   }else{
-    variable.name <- "loss"
+    "squared.hinge.loss"
   }
   vtall <- melt(validation.data, id.vars=c("validation.fold", "regularization"))
   variable.data <- vtall[variable==variable.name, ]
@@ -112,6 +112,7 @@ IntervalRegressionCV <- structure(function
     stats[mean < upper.limit, ][which.max(regularization),]
   min.dt <- data.table(
     type=c("mean(min)", "min(mean)", "1sd"),
+    vjust=c(1,2,1),
     regularization=c(
       mean(min.each$regularization),
       min.mean$regularization,
@@ -127,11 +128,11 @@ IntervalRegressionCV <- structure(function
       theme_bw()+
       geom_vline(aes(xintercept=-log(regularization), color=type),data=min.dt)+
       guides(color="none")+
-      geom_text(aes(-log(regularization), max(variable.data$value),
+    geom_text(aes(-log(regularization), max(variable.data$value),
+                  vjust=vjust,
                     label=paste0(type, " "),
                     color=type),
                 hjust=1,
-                vjust=1,
                 data=min.dt)+
       geom_hline(aes(yintercept=mean, color=type),
                  data=data.table(
@@ -151,7 +152,9 @@ IntervalRegressionCV <- structure(function
                 data=stats)+
       geom_line(aes(-log(regularization), value, group=validation.fold),
                 color="grey50",
-                data=vtall[variable!="auc",])
+                data=vtall[variable!="auc",])+
+    xlab("model complexity -log(regularization)")+
+    ylab("")
   fit$plot.data <- validation.data
   fit
 }, ex=function(){
