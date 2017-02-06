@@ -5,7 +5,7 @@
 function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 the solutions (i, min.lambda, max.lambda) with i being the
 solution for every lambda in (min.lambda, max.lambda). This
-function uses the quadratic time algorithm implemented in R code.}
+function uses the linear time algorithm implemented in C code.}
 \usage{modelSelection(models, loss = "loss", complexity = "complexity")}
 \arguments{
   \item{models}{data.frame with one row per model. There must be at

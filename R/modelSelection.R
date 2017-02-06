@@ -181,7 +181,7 @@ modelSelection <- function
 ### function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 ### the solutions (i, min.lambda, max.lambda) with i being the
 ### solution for every lambda in (min.lambda, max.lambda). This
-### function uses the quadratic time algorithm implemented in R code.
+### function uses the linear time algorithm implemented in C code.
 (models,
 ### data.frame with one row per model. There must be at
 ### least two columns [[loss]] and [[complexity]], but there can
