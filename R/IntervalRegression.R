@@ -266,12 +266,10 @@ IntervalRegressionRegularized <- function
   intercept.features <- cbind("(Intercept)"=1, norm.features)
   apply(intercept.features, 2, mean)
   apply(intercept.features, 2, sd)
-
   regularization <- initial.regularization
   n.features <- ncol(intercept.features)
   param.vec <- rep(0, n.features)
   n.nonzero <- n.features
-
   param.vec.list <- list()
   regularization.vec.list <- list()
   while(n.nonzero > 1){
@@ -289,7 +287,17 @@ IntervalRegressionRegularized <- function
       cat(sprintf("regularization=%8.4f L1norm=%8.4f zeros=%d\n",
                   regularization, l1.norm, n.zero))
     }
-    param.vec.list[[paste(regularization)]] <- param.vec
+    weight.vec <- param.vec[-1]
+    ## training is done in the centered and scaled space
+    ## (intercept.features), but we report coefficients for the
+    ## original space.
+    orig.param.vec <- c(
+      param.vec[1] - sum(weight.vec*mean.vec/sd.vec)
+      weight.vec/sd.vec)
+    pred.vec <- intercept.features %*% param.vec
+    orig.pred.vec <- cbind(1, invariant.features) %*% orig.param.vec
+    stopifnot(all.equal(pred.vec, orig.pred.vec))
+    param.vec.list[[paste(regularization)]] <- orig.param.vec
     regularization.vec.list[[paste(regularization)]] <- regularization
     if(is.null(factor.regularization)){
       n.nonzero <- 1 #stops while loop.
@@ -311,8 +319,6 @@ IntervalRegressionRegularized <- function
     param.mat[c("(Intercept)", pred.feature.names),,drop=FALSE]
   list(param.mat=param.mat,
        regularization.vec=do.call(c, regularization.vec.list),
-       mean.vec=mean.vec,
-       sd.vec=sd.vec,
        train.feature.names=train.feature.names,
        pred.feature.names=pred.feature.names,
        pred.param.mat=pred.param.mat,
@@ -320,23 +326,12 @@ IntervalRegressionRegularized <- function
          stopifnot(is.matrix(mat))
          stopifnot(is.numeric(mat))
          stopifnot(pred.feature.names %in% colnames(mat))
-         raw.mat <- mat[, pred.feature.names, drop=FALSE]
-         raw.mat[!is.finite(raw.mat)] <- 0 
-         mean.mat <- matrix(
-           mean.vec[pred.feature.names],
-           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
-         sd.mat <- matrix(
-           sd.vec[pred.feature.names],
-           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
-         norm.mat <- (raw.mat-mean.mat)/sd.mat
-         intercept.mat <- cbind("(Intercept)"=1, norm.mat)
-         intercept.mat %*% pred.param.mat
+         cbind(1, mat[, pred.feature.names, drop=FALSE]) %*% pred.param.mat
        })
 ### List representing fit model. You can do
 ### fit$predict(feature.matrix) to get a matrix of predicted log
-### penalty values. The mean.vec and sd.vec were used for scaling the
-### training data matrices. The param.mat is the n.features *
-### n.regularization numeric matrix of optimal coefficients.
+### penalty values. The param.mat is the n.features * n.regularization
+### numeric matrix of optimal coefficients (on the original scale).
 }
 
 IntervalRegressionInternal <- function

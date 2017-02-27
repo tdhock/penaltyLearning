@@ -82,19 +82,19 @@ compute models from 1 to 10 segments.
       data.before.change <- end[-n.segments]
       data.after.change <- data.before.change+1
       pos.before.change <- as.integer(
-	(pro$position[data.before.change]+pro$position[data.after.change])/2)
+        (pro$position[data.before.change]+pro$position[data.after.change])/2)
       start <- c(1, data.after.change)
       chromStart <- c(pro$position[1], pos.before.change)
       chromEnd <- c(pos.before.change, max(pro$position))
       seg.mean.vec <- fit@parameters[n.segments, 1:n.segments]
       segs.list[[paste(problem.name, n.segments)]] <- data.table(
-	meta,
-	n.segments,
-	start,
-	end,
-	chromStart,
-	chromEnd,
-	mean=seg.mean.vec)
+        meta,
+        n.segments,
+        start,
+        end,
+        chromStart,
+        chromEnd,
+        mean=seg.mean.vec)
     }
     loss.list[[paste(problem.name, n.segments)]] <- data.table(
       meta,
@@ -229,8 +229,8 @@ are consistent with the labels.
       "position on chromosome (mega bases)",
       breaks=c(100, 200))+
     geom_segment(aes(chromStart/1e6, mean, xend=chromEnd/1e6, yend=mean),
-		 data=pred.segs,
-		 color="green")+
+                 data=pred.segs,
+                 color="green")+
     geom_vline(aes(xintercept=chromStart/1e6),
                data=pred.changes,
                color="green",
