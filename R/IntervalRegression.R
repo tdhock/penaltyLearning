@@ -20,6 +20,10 @@ IntervalRegressionCV <- structure(function
 ### numeric: bigger numbers for more output.
  min.observations=10,
 ### stop with an error if there are fewer than this many observations.
+ reg.type="1sd",
+### Either "1sd", "min(mean)" or "mean(min)" which specifies how the
+### regularization parameter is chosen during the interval
+### cross-validation loop.
  incorrect.labels.db=NULL
 ### either NULL or a data.table, which specifies what to compute to
 ### select the regularization parameter on the validation set. NULL
@@ -44,6 +48,10 @@ IntervalRegressionCV <- structure(function
   stopifnot(is.integer(n.folds))
   stopifnot(is.integer(fold.vec))
   stopifnot(length(fold.vec) == n.observations)
+  stopifnot(
+    is.character(reg.type),
+    length(reg.type)==1,
+    reg.type %in% c("1sd", "mean(min)", "min(mean)"))
   if(n.observations < min.observations){
     stop(
       n.observations,
@@ -120,7 +128,7 @@ IntervalRegressionCV <- structure(function
     variable=variable.name)
   fit <- IntervalRegressionRegularized(
     feature.mat, target.mat,
-    initial.regularization=simplest.within.1sd$regularization,
+    initial.regularization=min.dt[type==reg.type, regularization],
     factor.regularization=NULL,
     verbose=verbose)
   fit$plot <-
@@ -156,6 +164,7 @@ IntervalRegressionCV <- structure(function
     xlab("model complexity -log(regularization)")+
     ylab("")
   fit$plot.data <- validation.data
+  fit$plot.vlines <- min.dt
   fit
 }, ex=function(){
   library(penaltyLearning)
