@@ -292,7 +292,7 @@ IntervalRegressionRegularized <- function
     ## (intercept.features), but we report coefficients for the
     ## original space.
     orig.param.vec <- c(
-      param.vec[1] - sum(weight.vec*mean.vec/sd.vec)
+      param.vec[1] - sum(weight.vec*mean.vec/sd.vec),
       weight.vec/sd.vec)
     pred.vec <- intercept.features %*% param.vec
     orig.pred.vec <- cbind(1, invariant.features) %*% orig.param.vec
