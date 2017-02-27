@@ -325,7 +325,11 @@ IntervalRegressionRegularized <- function
        predict=function(mat){
          stopifnot(is.matrix(mat))
          stopifnot(is.numeric(mat))
-         stopifnot(pred.feature.names %in% colnames(mat))
+         is.missing <- ! pred.feature.names %in% colnames(mat)
+         if(any(is.missing)){
+           stop("need some missing features for prediction: ",
+                paste(pred.feature.names[is.missing], collapse=", "))
+         }
          cbind(1, mat[, pred.feature.names, drop=FALSE]) %*% pred.param.mat
        })
 ### List representing fit model. You can do
