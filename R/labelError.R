@@ -160,7 +160,7 @@ labelError <- structure(function # Compute incorrect labels
   library(ggplot2)
   ggplot()+
     theme_bw()+
-    theme(panel.margin=grid::unit(0, "lines"))+
+    theme(panel.spacing=grid::unit(0, "lines"))+
     facet_grid(n.segments ~ chromosome, scales="free", space="free")+
     scale_x_continuous(breaks=c(100, 200))+
     scale_linetype_manual("error type",

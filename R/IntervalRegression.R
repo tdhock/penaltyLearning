@@ -145,7 +145,7 @@ IntervalRegressionCV <- structure(function
       geom_hline(aes(yintercept=mean, color=type),
                  data=data.table(
                    simplest.within.1sd, type="1sd"))+
-      theme(panel.margin=grid::unit(0, "lines"))+
+      theme(panel.spacing=grid::unit(0, "lines"))+
       facet_grid(variable ~ ., scales="free")+
       geom_ribbon(aes(
         -log(regularization),
