@@ -7,7 +7,8 @@ predicted target intervals. K-fold cross-validation is
 parallelized using the foreach package.}
 \usage{IntervalRegressionCV(feature.mat, target.mat, n.folds = ifelse(nrow(feature.mat) < 
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
-    verbose = 0, min.observations = 10, incorrect.labels.db = NULL)}
+    verbose = 0, min.observations = 10, reg.type = "1sd", 
+    incorrect.labels.db = NULL)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix.}
   \item{target.mat}{Numeric target matrix.}
@@ -15,6 +16,9 @@ parallelized using the foreach package.}
   \item{fold.vec}{Integer vector of fold id numbers.}
   \item{verbose}{numeric: bigger numbers for more output.}
   \item{min.observations}{stop with an error if there are fewer than this many observations.}
+  \item{reg.type}{Either "1sd", "min(mean)" or "mean(min)" which specifies how the
+regularization parameter is chosen during the interval
+cross-validation loop.}
   \item{incorrect.labels.db}{either NULL or a data.table, which specifies what to compute to
 select the regularization parameter on the validation set. NULL
 means to minimize the squared hinge loss, which measures how far

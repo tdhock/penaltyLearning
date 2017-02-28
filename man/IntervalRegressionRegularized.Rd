@@ -24,9 +24,8 @@ solution. Or NULL to compute just one model
 
 \value{List representing fit model. You can do
 fit$predict(feature.matrix) to get a matrix of predicted log
-penalty values. The mean.vec and sd.vec were used for scaling the
-training data matrices. The param.mat is the n.features *
-n.regularization numeric matrix of optimal coefficients.}
+penalty values. The param.mat is the n.features * n.regularization
+numeric matrix of optimal coefficients (on the original scale).}
 
 \author{Toby Dylan Hocking}
 
