@@ -20,20 +20,27 @@ IntervalRegressionCV <- structure(function
 ### numeric: bigger numbers for more output.
  min.observations=10,
 ### stop with an error if there are fewer than this many observations.
- reg.type="1sd",
+ reg.type="min(mean)",
 ### Either "1sd", "min(mean)" or "mean(min)" which specifies how the
-### regularization parameter is chosen during the interval
-### cross-validation loop.
+### regularization parameter is chosen during the internal
+### cross-validation loop. min(mean): first take the mean of the K-CV
+### error functions, then minimize it (this is the default since it
+### tends to yield the least test error). 1sd: take the least complex
+### model which is within one standard deviation of that minimum (this
+### model is typical a bit less accurate, but much less complex, so
+### better if you want to interpret the coefficients). mean(min): take
+### the min of each K-CV error function, and then take their mean.
  incorrect.labels.db=NULL
-### either NULL or a data.table, which specifies what to compute to
-### select the regularization parameter on the validation set. NULL
-### means to minimize the squared hinge loss, which measures how far
-### the predicted log(penalty) values are from the target
-### intervals. If a data.table is specified, it should have one key
-### which corresponds to the rownames of feature.mat, and columns
+### either NULL or a data.table, which specifies the error function to
+### compute for selecting the regularization parameter on the
+### validation set. NULL means to minimize the squared hinge loss,
+### which measures how far the predicted log(penalty) values are from
+### the target intervals. If a data.table is specified, its first key
+### should correspond to the rownames of feature.mat, and columns
 ### min.log.lambda, max.log.lambda, fp, fn, possible.fp, possible.fn;
 ### these will be used with ROChange to compute the AUC for each
-### regularization parameter, and the maximimum will be selected. This
+### regularization parameter, and the maximimum will be selected (in
+### the plot this is negative.auc, which is minimized). This
 ### data.table can be computed via
 ### labelError(modelSelection(...),...)$model.errors -- see
 ### example(ROChange).
