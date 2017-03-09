@@ -2,6 +2,8 @@ library(testthat)
 context("demo8")
 library(penaltyLearning)
 
+data(demo8, package="penaltyLearning")
+
 test_that("valid CV model for 8 train data", {
   fit <- with(demo8, IntervalRegressionCV(
     feature.mat, target.mat, min.observations=8))
