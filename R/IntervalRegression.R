@@ -67,8 +67,9 @@ IntervalRegressionCV <- structure(function
       "; decrease min.observations or use a larger data set")
   }
   all.finite <- apply(is.finite(feature.mat), 2, all)
+  validation.fold.vec <- unique(fold.vec)
   validation.data <- foreach(
-    validation.fold=unique(fold.vec), .combine=rbind) %dopar% {
+    validation.fold=validation.fold.vec, .combine=rbind) %dopar% {
       ##print(validation.fold)
       is.validation <- fold.vec == validation.fold
       is.train <- !is.validation
@@ -99,7 +100,8 @@ IntervalRegressionCV <- structure(function
             pred.log.lambda=pred.log.lambda[, regularization.i])
           pred.dt[[key(incorrect.labels.db)]] <-
             rownames(feature.mat)[is.validation]
-          roc <- ROChange(incorrect.labels.db, pred.dt, key(incorrect.labels.db))
+          roc <- ROChange(
+            incorrect.labels.db, pred.dt, key(incorrect.labels.db))
           dt[regularization.i, negative.auc := -roc$auc]
           predicted.thresh <- roc$thresholds[threshold=="predicted", ]
           dt[regularization.i, incorrect.labels := predicted.thresh$errors]
@@ -112,7 +114,9 @@ IntervalRegressionCV <- structure(function
   }else{
     "squared.hinge.loss"
   }
-  vtall <- melt(validation.data, id.vars=c("validation.fold", "regularization"))
+  vtall <- melt(
+    validation.data,
+    id.vars=c("validation.fold", "regularization"))
   variable.data <- vtall[variable==variable.name, ]
   stats <- variable.data[, list(
     mean=mean(value),
@@ -134,9 +138,10 @@ IntervalRegressionCV <- structure(function
       min.mean$regularization,
       simplest.within.1sd$regularization),
     variable=variable.name)
+  min.dt[, status := ifelse(type == reg.type, "selected", "not")]
   fit <- IntervalRegressionRegularized(
     feature.mat, target.mat,
-    initial.regularization=min.dt[type==reg.type, regularization],
+    initial.regularization=min.dt[status=="selected", regularization],
     factor.regularization=NULL,
     verbose=verbose)
   theme_spacing <- tryCatch({
@@ -144,36 +149,58 @@ IntervalRegressionCV <- structure(function
   }, error=function(e){
     theme(panel.margin=grid::unit(0, "lines"))
   })
-  fit$plot <-
-    ggplot()+
-      theme_bw()+
-      geom_vline(aes(xintercept=-log(regularization), color=type),data=min.dt)+
-      guides(color="none")+
+  fit$plot <- ggplot()+
+    ggtitle(paste0(
+      "Regularization parameter selection using ",
+      length(validation.fold.vec),
+      "-fold cross-validation"
+      ))+
+    theme_bw()+
+    geom_vline(aes(xintercept=-log(regularization)),
+               data=min.dt[status=="selected",],
+               color="grey",
+               size=2)+
+    geom_vline(aes(xintercept=-log(regularization), color=type),
+               data=min.dt)+
+    guides(color="none")+
     geom_text(aes(-log(regularization), max(variable.data$value),
                   vjust=vjust,
-                    label=paste0(type, " "),
-                    color=type),
-                hjust=1,
-                data=min.dt)+
-      geom_hline(aes(yintercept=mean, color=type),
-                 data=data.table(
-                   simplest.within.1sd, type="1sd"))+
-      theme_spacing+
-      facet_grid(variable ~ ., scales="free")+
-      geom_ribbon(aes(
-        -log(regularization),
-        ymin=mean-sd,
-        ymax=mean+sd),
-                  fill="grey",
-                  alpha=0.5,
-                  data=stats)+
-      geom_line(aes(
-        -log(regularization),
-        mean),
+                  label=paste0(type, " "),
+                  color=type),
+              hjust=1,
+              data=min.dt)+
+    geom_segment(aes(
+      -log(regularization), mean,
+      xend=-log(min.mean$regularization), yend=mean,
+      color=type),
+               data=data.table(
+                 simplest.within.1sd, type="1sd"))+
+    theme_spacing+
+    facet_grid(variable ~ ., scales="free")+
+    scale_color_manual(values=c(
+                         "1sd"="red",
+                         "mean(min)"="blue",
+                         "min(mean)"="black"))+
+    geom_ribbon(aes(
+      -log(regularization),
+      ymin=mean-sd,
+      ymax=mean+sd),
+                fill="grey",
+                alpha=0.5,
                 data=stats)+
-      geom_line(aes(-log(regularization), value, group=validation.fold),
-                color="grey50",
-                data=vtall[variable!="auc",])+
+    geom_line(aes(
+      -log(regularization),
+      mean,
+      color="min(mean)"),
+              data=stats)+
+    geom_line(aes(-log(regularization), value, group=validation.fold),
+              color="grey50",
+              data=vtall[variable!="auc",])+
+    geom_point(aes(
+      -log(regularization),
+      value,
+      color="mean(min)"),
+               data=min.each)+
     xlab("model complexity -log(regularization)")+
     ylab("")
   fit$plot.data <- validation.data
@@ -349,7 +376,7 @@ IntervalRegressionRegularized <- function
          stopifnot(is.numeric(mat))
          is.missing <- ! pred.feature.names %in% colnames(mat)
          if(any(is.missing)){
-           stop("need some missing features for prediction: ",
+           stop("columns needed for prediction but not present: ",
                 paste(pred.feature.names[is.missing], collapse=", "))
          }
          cbind(1, mat[, pred.feature.names, drop=FALSE]) %*% pred.param.mat

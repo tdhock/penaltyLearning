@@ -9,7 +9,7 @@ no.name.mat <- matrix(c(1, 1, 1, NA), 2, 2)
 test_that("predict without all pred col names is an error", {
   expect_error({
     fit$predict(no.name.mat)
-  }, "need some missing features for prediction: log.hall, log.n")
+  }, "columns needed for prediction but not present: log.hall, log.n")
 })
 
 named.mat <- no.name.mat
