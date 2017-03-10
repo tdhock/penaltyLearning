@@ -66,12 +66,13 @@ IntervalRegressionCV <- structure(function
       min.observations,
       "; decrease min.observations or use a larger data set")
   }
+  all.finite <- apply(is.finite(feature.mat), 2, all)
   validation.data <- foreach(
     validation.fold=unique(fold.vec), .combine=rbind) %dopar% {
       ##print(validation.fold)
       is.validation <- fold.vec == validation.fold
       is.train <- !is.validation
-      train.features <- feature.mat[is.train, , drop=FALSE]
+      train.features <- feature.mat[is.train, all.finite, drop=FALSE]
       train.targets <- target.mat[is.train, , drop=FALSE]
       fit <- IntervalRegressionRegularized(
         train.features, train.targets, verbose=verbose)
@@ -138,6 +139,11 @@ IntervalRegressionCV <- structure(function
     initial.regularization=min.dt[type==reg.type, regularization],
     factor.regularization=NULL,
     verbose=verbose)
+  theme_spacing <- tryCatch({
+    theme(panel.spacing=grid::unit(0, "lines"))
+  }, error=function(e){
+    theme(panel.margin=grid::unit(0, "lines"))
+  })
   fit$plot <-
     ggplot()+
       theme_bw()+
@@ -152,7 +158,7 @@ IntervalRegressionCV <- structure(function
       geom_hline(aes(yintercept=mean, color=type),
                  data=data.table(
                    simplest.within.1sd, type="1sd"))+
-      theme(panel.spacing=grid::unit(0, "lines"))+
+      theme_spacing+
       facet_grid(variable ~ ., scales="free")+
       geom_ribbon(aes(
         -log(regularization),
