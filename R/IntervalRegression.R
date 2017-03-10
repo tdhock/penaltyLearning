@@ -30,7 +30,7 @@ IntervalRegressionCV <- structure(function
 ### model is typical a bit less accurate, but much less complex, so
 ### better if you want to interpret the coefficients). mean(min): take
 ### the min of each K-CV error function, and then take their mean.
- incorrect.labels.db=NULL
+ incorrect.labels.db=NULL,
 ### either NULL or a data.table, which specifies the error function to
 ### compute for selecting the regularization parameter on the
 ### validation set. NULL means to minimize the squared hinge loss,
@@ -44,6 +44,8 @@ IntervalRegressionCV <- structure(function
 ### data.table can be computed via
 ### labelError(modelSelection(...),...)$model.errors -- see
 ### example(ROChange).
+ initial.regularization=0.001
+### Passed to IntervalRegressionRegularized.
  ){
   stopifnot(is.numeric(feature.mat))
   stopifnot(is.matrix(feature.mat))
@@ -76,7 +78,8 @@ IntervalRegressionCV <- structure(function
       train.features <- feature.mat[is.train, all.finite, drop=FALSE]
       train.targets <- target.mat[is.train, , drop=FALSE]
       fit <- IntervalRegressionRegularized(
-        train.features, train.targets, verbose=verbose)
+        train.features, train.targets, verbose=verbose,
+        initial.regularization=initial.regularization)
       validation.features <- feature.mat[is.validation, , drop=FALSE]
       pred.log.lambda <- fit$predict(validation.features)
       validation.targets <- target.mat[is.validation, , drop=FALSE]
