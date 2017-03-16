@@ -8,7 +8,7 @@ parallelized using the foreach package.}
 \usage{IntervalRegressionCV(feature.mat, target.mat, n.folds = ifelse(nrow(feature.mat) < 
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
     verbose = 0, min.observations = 10, reg.type = "min(mean)", 
-    incorrect.labels.db = NULL)}
+    incorrect.labels.db = NULL, initial.regularization = 0.001)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix.}
   \item{target.mat}{Numeric target matrix.}
@@ -38,6 +38,7 @@ the plot this is negative.auc, which is minimized). This
 data.table can be computed via
 labelError(modelSelection(...),...)$model.errors -- see
 example(ROChange).}
+  \item{initial.regularization}{Passed to IntervalRegressionRegularized.}
 }
 
 
