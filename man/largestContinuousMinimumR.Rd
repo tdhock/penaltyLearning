@@ -4,10 +4,8 @@
 \description{Find the run of minimum cost with the largest size.}
 \usage{largestContinuousMinimumR(cost, size)}
 \arguments{
-  \item{cost}{
-}
-  \item{size}{
-}
+  \item{cost}{numeric vector of cost values.}
+  \item{size}{numeric vector of interval size values.}
 }
 
 
