@@ -219,8 +219,10 @@ IntervalRegressionCV <- structure(function
   errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
   setkey(errors.per.model, pid.chr)
   set.seed(1)
+  n.train <- 500
+  i.train <- 1:n.train
   fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
-    feature.mat, target.mat,
+    feature.mat[i.train,], target.mat[i.train,],
     incorrect.labels.db=errors.per.model))
   fit$plot
 
@@ -228,15 +230,19 @@ IntervalRegressionCV <- structure(function
     data("penalty.learning", package="iregnet")
     set.seed(1)
     is.test <- grepl("chr1:", rownames(penalty.learning$X.mat))
-    pfit <- with(penalty.learning, IntervalRegressionCV(X.mat[!is.test,], y.mat[!is.test,]))
+    pfit <- with(penalty.learning, IntervalRegressionCV(
+      X.mat[!is.test,], y.mat[!is.test,]))
     print(pfit$plot)
     pred.log.lambda <- pfit$predict(penalty.learning$X.mat)
     residual <- targetIntervalResidual(penalty.learning$y.mat, pred.log.lambda)
     residual.tall <- data.table(is.test, residual)[, list(
       mean.residual=mean(residual),
       intervals=.N
-      ), by=.(set=ifelse(is.test, "test", "train"), sign.residual=sign(residual))]
-    residual.tall[, set.intervals := ifelse(set=="train", sum(!is.test), sum(is.test))]
+      ), by=.(
+           set=ifelse(is.test, "test", "train"),
+           sign.residual=sign(residual))]
+    residual.tall[, set.intervals := ifelse(
+      set=="train", sum(!is.test), sum(is.test))]
     residual.tall[, percent.intervals := 100 * intervals / set.intervals]
     dcast(residual.tall, set ~ sign.residual, value.var="mean.residual")
     dcast(residual.tall, set ~ sign.residual, value.var="percent.intervals")

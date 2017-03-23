@@ -72,7 +72,9 @@ ROChange <- structure(function # ROC curve for changepoints
   list(
     roc=interval.dt,
     thresholds=rbind(
-      data.table(threshold="predicted", interval.dt[min.thresh < 0 & 0 < max.thresh, ]),
+      data.table(
+        threshold="predicted",
+        interval.dt[min.thresh < 0 & 0 < max.thresh, ]),
       data.table(threshold="min.error", interval.dt[which.min(errors), ])),
     auc.polygon=roc.polygon,
     auc=roc.polygon[, geometry::polyarea(FPR, TPR)]
