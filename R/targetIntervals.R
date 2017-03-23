@@ -36,7 +36,7 @@ targetIntervals <- structure(function # Compute target intervals
   error.dt <- data.table(models)
   setkey(error.dt, min.log.lambda)
   error.dt[, {
-    L <- largestContinuousMinimumR(errors, max.log.lambda-min.log.lambda)
+    L <- largestContinuousMinimumC(errors, max.log.lambda-min.log.lambda)
     data.table(
       min.log.lambda=min.log.lambda[L[["start"]]],
       max.log.lambda=max.log.lambda[L[["end"]]])
