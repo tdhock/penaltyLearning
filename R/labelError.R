@@ -90,7 +90,7 @@ labelError <- structure(function # Compute incorrect labels
   setkeyv(model.labels, c(problem.vars, model.vars))
   setkeyv(models.dt, c(problem.vars, model.vars))
   setkeyv(changes.per.label, c(problem.vars, model.vars))
-  error.totals <- changes.per.label[model.labels, list(
+  error.totals <- changes.per.label[models.dt, list(
     possible.fp=sum(possible.fp*weight),
     fp=sum(fp),
     possible.fn=sum(possible.fn*weight),
