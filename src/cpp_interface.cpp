@@ -1,7 +1,7 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
 #include "modelSelection.h"
-#include "R.h"
+#include <R.h>
 
 extern "C" {
 
