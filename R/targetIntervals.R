@@ -98,8 +98,15 @@ targetIntervals <- structure(function # Compute target intervals
 largestContinuousMinimumR <- structure(function
 ### Find the run of minimum cost with the largest size.
 (cost,
- size
- ){
+### numeric vector of cost values.
+  size
+### numeric vector of interval size values.
+){
+  stopifnot(
+    is.numeric(cost),
+    is.numeric(size),
+    length(cost)==length(size),
+    0 < size)
   m <- min(cost)
   is.min <- cost == m
   d <- c(diff(c(FALSE,is.min,FALSE)))
@@ -111,9 +118,12 @@ largestContinuousMinimumR <- structure(function
   runs$size <- sapply(seq_along(starts),function(i){
     sum(size[ starts[i]:ends[i] ])
   })
-  ##print(runs)
-  largest <- which.max(runs$size)
-  list(start=starts[largest],end=ends[largest])
+  if(1 < sum(runs$size==Inf)){
+    list(start=1, end=length(cost))
+  }else{
+    largest <- which.max(runs$size)
+    list(start=starts[largest],end=ends[largest])
+  }
 }, ex=function(){
 
   data(neuroblastoma, package="neuroblastoma", envir=environment())
