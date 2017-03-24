@@ -1,6 +1,8 @@
 TODOs
 
-2017.03.xx
+2017.03.24
+
+IntervalRegression S3 class with plot, print, and predict methods.
 
 largestContinuousMinimum C implementation.
 
