@@ -78,9 +78,8 @@ errors <- labelError(
   problem.vars=c("profile.id", "chromosome"))
 model.counts <- selection[, list(models=.N), by=.(profile.id, chromosome)]
 label.counts <- labels[, list(labels=.N), by=.(profile.id, chromosome)]
-setkey(model.counts, profile.id, chromosome)
-setkey(label.counts, profile.id, chromosome)
-labeled.model.counts <- model.counts[label.counts]
+labeled.model.counts <- model.counts[label.counts, on=list(
+  profile.id, chromosome)]
 test_that("label error OK when more models than labels", {
   expect_equal(nrow(errors$model.errors), sum(labeled.model.counts$models))
 })
