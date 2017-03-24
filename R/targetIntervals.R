@@ -42,7 +42,7 @@ targetIntervals <- structure(function # Compute target intervals
       max.log.lambda=max.log.lambda[L[["end"]]])
   }, by=problem.vars]
 }, ex=function(){
-
+  
   data(neuroblastoma, package="neuroblastoma", envir=environment())
   pro4 <- subset(neuroblastoma$profiles, profile.id==4)
   ann4 <- subset(neuroblastoma$annotations, profile.id==4)
@@ -83,7 +83,7 @@ targetIntervals <- structure(function # Compute target intervals
   }
   segs <- do.call(rbind, segs.list)
   selection <- do.call(rbind, selection.list)
-
+  
   changes <- segs[1 < start,]
   error.list <- labelError(
     selection, ann, changes,
@@ -92,11 +92,14 @@ targetIntervals <- structure(function # Compute target intervals
     change.var="chromStart", # column of changes with breakpoint position.
     label.vars=c("min", "max")) # limit of labels in ann.
   targetIntervals(error.list$model.errors, "chromosome")
-
+  
 })
 
 largestContinuousMinimumR <- structure(function
 ### Find the run of minimum cost with the largest size.
+### This function uses a two pass R implementation,
+### and is meant for internal use.
+### Use targetIntervals for real data.
 (cost,
 ### numeric vector of cost values.
   size
@@ -186,6 +189,9 @@ largestContinuousMinimumR <- structure(function
 
 largestContinuousMinimumC <- structure(function
 ### Find the run of minimum cost with the largest size.
+### This function use a linear time C implementation,
+### and is meant for internal use.
+### Use targetIntervals for real data.
 (cost,
 ### numeric vector of cost values.
   size

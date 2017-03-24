@@ -27,9 +27,7 @@ labelError <- structure(function # Compute incorrect labels
   stopifnot(is.character(problem.vars))
   stopifnot(is.character(model.vars))
   stopifnot(is.character(change.var))
-  stopifnot(is.character(label.vars))
   stopifnot(length(change.var)==1)
-  stopifnot(length(label.vars)==2)
   stopifnot(is.data.frame(models))
   stopifnot(is.data.frame(labels))
   stopifnot(is.data.frame(changes))
@@ -39,7 +37,13 @@ labelError <- structure(function # Compute incorrect labels
   if(length(model.vars)==0){
     stop("Need at least one column name in model.vars")
   }
-  stopifnot(label.vars %in% names(labels))
+  if(!(
+    is.character(label.vars) &
+    length(label.vars)==2 &
+    all(label.vars %in% names(labels))
+  )){
+    stop("label.vars should be a 2-element character vector of labels column names (start and end of labeled region)")
+  }
   stopifnot(change.var %in% names(changes))
   stopifnot(problem.vars %in% names(changes))
   stopifnot(problem.vars %in% names(labels))

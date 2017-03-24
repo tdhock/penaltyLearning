@@ -66,6 +66,7 @@ for(problem.i in seq_along(problem.list)){
 }
 loss <- do.call(rbind, loss.list)
 segs <- do.call(rbind, segs.list)
+
 selection <- loss[, {
   penaltyLearning::modelSelection(.SD, "loss", "n.segments")
 }, by=.(profile.id, chromosome)]
@@ -106,7 +107,7 @@ ann <- rbind(
   label("1change", 70e6, 80e6),
   label("0changes", 20e6, 60e6))
 max.segments <- 20
-segs.list <- list()
+segs4.list <- list()
 selection.list <- list()
 for(chr in unique(ann$chromosome)){
   pro <- subset(pro4, chromosome==chr)
@@ -123,7 +124,7 @@ for(chr in unique(ann$chromosome)){
     start <- c(1, data.after.change)
     chromStart <- c(pro$position[1], pos.before.change)
     chromEnd <- c(pos.before.change, max(pro$position))
-    segs.list[[paste(chr, n.segments)]] <- data.table(
+    segs4.list[[paste(chr, n.segments)]] <- data.table(
       chromosome=chr,
       n.segments,
       start,
@@ -133,9 +134,9 @@ for(chr in unique(ann$chromosome)){
       mean=fit@parameters[n.segments, 1:n.segments])
   }
 }
-segs <- do.call(rbind, segs.list)
+segs4 <- do.call(rbind, segs4.list)
 selection <- do.call(rbind, selection.list)
-changes <- segs[1 < start,]
+changes <- segs4[1 < start,]
 error.list <- labelError(
   selection, ann, changes,
   problem.vars="chromosome", # for all three data sets.
@@ -145,3 +146,46 @@ error.list <- labelError(
 test_that("same number of model.errors as selection", {
   expect_equal(nrow(error.list$model.errors), nrow(selection))
 })
+
+## Trivial edge cases.
+## 123456789
+##  (-0-]
+##      (1]
+##  | OK
+##   | FP
+##      | FP
+##       | TP
+##        | TP
+##         | FN
+label <- function(annotation, start, end){
+  data.frame(prob="five", start, end, annotation)
+}
+ann.trivial <- rbind(
+  label("1change", 6, 8),
+  label("0changes", 2, 6))
+models <- data.table(
+  prob="five",
+  complexity=c(-1, -3, -5))
+changes <- data.table(
+  prob="five",
+  pos=c(1, 7)
+)
+test_that("labelError throws informative errors", {
+  expect_error({
+    labelError(models, ann.trivial, changes)
+  }, "Need at least one column name in problem.vars")
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob")
+  }, "label.vars should be a 2-element character vector of labels column names (start and end of labeled region)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=character())
+  }, "label.vars should be a 2-element character vector of labels column names (start and end of labeled region)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("foo", "bar"))
+  }, "label.vars should be a 2-element character vector of labels column names (start and end of labeled region)", fixed=TRUE)
+})
+ann.overlap <- rbind(
+  label("1change", 5, 8),
+  label("0changes", 2, 6))
