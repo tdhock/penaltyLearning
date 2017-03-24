@@ -136,7 +136,7 @@ ROChange <- structure(function # ROC curve for changepoints
   library(ggplot2)
   ggplot()+
     theme_bw()+
-    theme(panel.spacing=grid::unit(0, "lines"))+
+    theme_no_space+
     facet_grid(n.segments ~ chromosome, scales="free", space="free")+
     scale_x_continuous(breaks=c(100, 200))+
     scale_linetype_manual("error type",
