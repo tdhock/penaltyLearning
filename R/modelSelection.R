@@ -28,7 +28,8 @@ modelSelectionC <- structure(function # Exact model selection function
     model.complexity=as.double(model.complexity),
     n.models=as.integer(n.models),
     after.vec=as.integer(after.vec),
-    lambda.vec=as.double(lambda.vec))
+    lambda.vec=as.double(lambda.vec),
+    PACKAGE="penaltyLearning")
   is.out <- 0 < result.list$lambda.vec
   lambda.out <- result.list$lambda.vec[is.out]
   i <- c(n.models, result.list$after.vec[is.out]+1)
