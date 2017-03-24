@@ -14,13 +14,14 @@ ROChange <- structure(function # ROC curve for changepoints
 ### problem. 
 ){
   pred <- data.table(predictions)
-  setkeyv(pred, problem.vars)
   err <- data.table(models)
-  setkeyv(err, problem.vars)
-  total.dt <- err[pred, .SD[1,], by=problem.vars][, list(
+  total.dt <- err[pred, on=problem.vars, .SD[1,], by=problem.vars][, list(
     labels=sum(labels),
     possible.fp=sum(possible.fp),
     possible.fn=sum(possible.fn))]
+  if(is.na(total.dt$labels)){
+    stop("some predictions do not exist in models")
+  }
   if(total.dt$possible.fp==0){
     stop("no negative labels")
   }
@@ -43,8 +44,7 @@ ROChange <- structure(function # ROC curve for changepoints
     ##browser(expr=sample.id=="McGill0322")
     rbind(fp.dt, fn.dt)
   }, by=problem.vars]
-  setkeyv(thresh.dt, problem.vars)
-  pred.with.thresh <- thresh.dt[pred]
+  pred.with.thresh <- thresh.dt[pred, on=problem.vars]
   pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
   uniq.thresh <- pred.with.thresh[, list(
     fp=sum(fp),
