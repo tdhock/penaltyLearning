@@ -1,7 +1,10 @@
 \name{largestContinuousMinimumR}
 \alias{largestContinuousMinimumR}
 \title{largestContinuousMinimumR}
-\description{Find the run of minimum cost with the largest size.}
+\description{Find the run of minimum cost with the largest size.
+This function uses a two pass R implementation,
+and is meant for internal use.
+Use targetIntervals for real data.}
 \usage{largestContinuousMinimumR(cost, size)}
 \arguments{
   \item{cost}{numeric vector of cost values.}
