@@ -15,6 +15,16 @@ test_that("predict without all pred col names is an error", {
 named.mat <- no.name.mat
 colnames(named.mat) <- c("log.hall", "log.n")
 test_that("predict NA results in NA", {
-  pred.vec <- fit$predict(named.mat)
+  pred.vec <- predict(fit, named.mat)#also tests S3 method.
   expect_identical(as.logical(is.na(pred.vec)), c(FALSE, TRUE))
+})
+
+test_that("S3 print method returns numeric matrix with dimnames", {
+  expect_is(fit, "IntervalRegression")
+  result <- print(fit)
+  expect_is(result, "matrix")
+  expect_true(is.numeric(result))
+  expect_identical(dimnames(result), list(
+    c("(Intercept)", "log.hall", "log.n"),
+    "0"))
 })

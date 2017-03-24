@@ -147,12 +147,7 @@ IntervalRegressionCV <- structure(function
     initial.regularization=min.dt[status=="selected", regularization],
     factor.regularization=NULL,
     verbose=verbose)
-  theme_spacing <- tryCatch({
-    theme(panel.spacing=grid::unit(0, "lines"))
-  }, error=function(e){
-    theme(panel.margin=grid::unit(0, "lines"))
-  })
-  fit$plot <- ggplot()+
+  fit$plot.selectRegularization <- fit$plot <- ggplot()+
     ggtitle(paste0(
       "Regularization parameter selection using ",
       length(validation.fold.vec),
@@ -178,7 +173,7 @@ IntervalRegressionCV <- structure(function
       color=type),
                data=data.table(
                  simplest.within.1sd, type="1sd"))+
-    theme_spacing+
+    theme_no_space+
     facet_grid(variable ~ ., scales="free")+
     scale_color_manual(values=c(
                          "1sd"="red",
@@ -206,8 +201,8 @@ IntervalRegressionCV <- structure(function
                data=min.each)+
     xlab("model complexity -log(regularization)")+
     ylab("")
-  fit$plot.data <- validation.data
-  fit$plot.vlines <- min.dt
+  fit$plot.selectRegularization.data <- validation.data
+  fit$plot.selectRegularization.vlines <- min.dt
   fit
 }, ex=function(){
   library(penaltyLearning)
@@ -298,7 +293,6 @@ IntervalRegressionRegularized <- function
   stopifnot(is.numeric(initial.regularization))
   stopifnot(length(initial.regularization)==1)
   stopifnot(is.finite(initial.regularization))
-
   is.trivial.target <- apply(!is.finite(target.mat), 1, all)
   nontrivial.features <- feature.mat[!is.trivial.target, , drop=FALSE]
   nontrivial.targets <- target.mat[!is.trivial.target, , drop=FALSE]
@@ -329,6 +323,7 @@ IntervalRegressionRegularized <- function
   param.vec <- rep(0, n.features)
   n.nonzero <- n.features
   param.vec.list <- list()
+  scaled.vec.list <- list()
   regularization.vec.list <- list()
   while(n.nonzero > 1){
     param.vec <-
@@ -355,6 +350,7 @@ IntervalRegressionRegularized <- function
     pred.vec <- intercept.features %*% param.vec
     orig.pred.vec <- cbind(1, invariant.features) %*% orig.param.vec
     stopifnot(all.equal(pred.vec, orig.pred.vec))
+    scaled.vec.list[[paste(regularization)]] <- weight.vec
     param.vec.list[[paste(regularization)]] <- orig.param.vec
     regularization.vec.list[[paste(regularization)]] <- regularization
     if(is.null(factor.regularization)){
@@ -365,6 +361,7 @@ IntervalRegressionRegularized <- function
       regularization <- regularization * factor.regularization
     }
   }
+  scaled.mat <- do.call(cbind, scaled.vec.list)
   param.mat <- do.call(cbind, param.vec.list)
   if(verbose >= 1){
     cat(paste0("Done computing parameter matrix (",
@@ -375,25 +372,88 @@ IntervalRegressionRegularized <- function
   pred.feature.names <- train.feature.names[!feature.not.used]
   pred.param.mat <-
     param.mat[c("(Intercept)", pred.feature.names),,drop=FALSE]
-  list(param.mat=param.mat,
-       regularization.vec=do.call(c, regularization.vec.list),
-       train.feature.names=train.feature.names,
-       pred.feature.names=pred.feature.names,
-       pred.param.mat=pred.param.mat,
-       predict=function(mat){
-         stopifnot(is.matrix(mat))
-         stopifnot(is.numeric(mat))
-         is.missing <- ! pred.feature.names %in% colnames(mat)
-         if(any(is.missing)){
-           stop("columns needed for prediction but not present: ",
-                paste(pred.feature.names[is.missing], collapse=", "))
-         }
-         cbind(1, mat[, pred.feature.names, drop=FALSE]) %*% pred.param.mat
-       })
+  L <- list(
+    param.mat=param.mat,
+    regularization.vec=do.call(c, regularization.vec.list),
+    train.feature.names=train.feature.names,
+    pred.feature.names=pred.feature.names,
+    pred.param.mat=pred.param.mat,
+    plot.weight.data=data.table(
+      normalized.weight=as.numeric(scaled.mat),
+      original.weight=as.numeric(param.mat[-1,]),
+      variable=rownames(scaled.mat)[row(scaled.mat)],
+      regularization=as.numeric(colnames(scaled.mat)[col(scaled.mat)])),
+    predict=function(mat){
+      if(missing(mat))mat <- feature.mat
+      stopifnot(is.matrix(mat))
+      stopifnot(is.numeric(mat))
+      is.missing <- ! pred.feature.names %in% colnames(mat)
+      if(any(is.missing)){
+        stop("columns needed for prediction but not present: ",
+             paste(pred.feature.names[is.missing], collapse=", "))
+      }
+      cbind(1, mat[, pred.feature.names, drop=FALSE]) %*% pred.param.mat
+    })
+  class(L) <- c("IntervalRegression", "list")
+  pred.log.penalty <- predict(L)
+  lower.limit <- -Inf < target.mat[,1]
+  upper.limit <- target.mat[,2] < Inf
+  pred.dt <- data.table(
+    pred.log.penalty=as.numeric(pred.log.penalty),
+    regularization=as.numeric(
+      colnames(pred.log.penalty)[col(pred.log.penalty)]),
+    model.i=as.integer(col(pred.log.penalty)),
+    observation=as.integer(row(pred.log.penalty)),
+    residual=targetIntervalResidual(target.mat, pred.log.penalty),
+    lower.limit, upper.limit, type=ifelse(
+      upper.limit, ifelse(lower.limit, "both", "upper"), "lower")
+  )[lower.limit | upper.limit]
+  L$plot.residual.data <- pred.dt
+  L$plot.residual <- ggplot()+
+    theme_bw()+
+    theme_no_space+
+    facet_wrap("model.i")+
+    geom_hline(yintercept=0, color="grey")+
+    geom_point(aes(
+      pred.log.penalty, residual, color=type),
+      data=pred.dt,
+      shape=1)
+  gg <- ggplot()+
+    geom_line(aes(
+      -log10(regularization), normalized.weight, color=variable),
+      data=L$plot.weight.data)
+  L$plot.weight <- if(require(directlabels)){
+    direct.label(gg, "lasso.labels")
+  }else{
+    message('install.packages("directlabels") for more informative labels on plot.weight')
+    gg
+  }
+  L$plot <- if(ncol(L$pred.param.mat)==1)L$plot.residual else L$plot.weight
+  L
 ### List representing fit model. You can do
 ### fit$predict(feature.matrix) to get a matrix of predicted log
 ### penalty values. The param.mat is the n.features * n.regularization
 ### numeric matrix of optimal coefficients (on the original scale).
+}
+
+### print learned model parameters.
+print.IntervalRegression <- function(x, ...){
+  x$pred.param.mat
+### numeric matrix of learned parameters (on the original feature
+### scale), can be used for prediction via cbind(1,features) %*%
+### parameters.
+}
+
+### Plot an IntervalRegression model.
+plot.IntervalRegression <- function(x, ...){
+  x$plot
+### a ggplot.
+}
+
+### Compute model predictions.
+predict.IntervalRegression <- function(object, X, ...){
+  object$predict(X)
+### numeric matrix of predicted log(penalty) values.
 }
 
 IntervalRegressionInternal <- function
