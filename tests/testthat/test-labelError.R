@@ -165,15 +165,15 @@ ann.trivial <- rbind(
   label("0changes", 2, 6))
 models <- data.table(
   prob="five",
-  complexity=c(-1, -3, -5))
+  complexity=c(-1, -3, -5, -6))
 changes <- data.table(
   prob="five",
-  pos=c(1, 7)
-)
+  pos=c(1, 7, 1, 6),
+  complexity=c(-3, -5, -5, -6))
 test_that("labelError throws informative errors", {
   expect_error({
     labelError(models, ann.trivial, changes)
-  }, "Need at least one column name in problem.vars")
+  }, "problem.vars should be a character vector of column names present in models, changes, and labels (ID for separate changepoint detection problems)", fixed=TRUE)
   expect_error({
     labelError(models, ann.trivial, changes, problem.vars="prob")
   }, "label.vars should be a 2-element character vector of labels column names (start and end of labeled region)", fixed=TRUE)
@@ -185,7 +185,66 @@ test_that("labelError throws informative errors", {
     labelError(models, ann.trivial, changes, problem.vars="prob",
                label.vars=c("foo", "bar"))
   }, "label.vars should be a 2-element character vector of labels column names (start and end of labeled region)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("start", "end"))
+  }, "change.var should be a column name of changes (position of predicted changepoints)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("start", "end"),
+               change.var=c("foo1"))
+  }, "change.var should be a column name of changes (position of predicted changepoints)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("start", "end"),
+               change.var=c("pos", "end"))
+  }, "change.var should be a column name of changes (position of predicted changepoints)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("start", "end"),
+               change.var="pos")
+  }, "model.vars should be a column name of both models and changes (ID for model complexity, typically the number of changepoints or segments)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("start", "end"),
+               change.var="pos")
+  }, "model.vars should be a column name of both models and changes (ID for model complexity, typically the number of changepoints or segments)", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("end", "start"),
+               change.var="pos",
+               model.vars="complexity")
+  }, "label start must be less than end", fixed=TRUE)
 })
+
+trivial.list <- labelError(
+  models, ann.trivial, changes,
+  problem.vars="prob",
+  label.vars=c("start", "end"),
+  change.var="pos",
+  model.vars="complexity")
+test_that("1 TP for complexity=-5, 2 errors for -6", {
+  trivial.list$model.errors[, {
+    expect_equal(complexity, c(-1, -3, -5, -6))
+    expect_equal(labels, c(2, 2, 2, 2))
+    expect_equal(errors, c(1, 1, 0, 2))
+    expect_equal(possible.fp, c(2, 2, 2, 2))
+    expect_equal(fp, c(0, 0, 0, 1))
+    expect_equal(possible.fn, c(1, 1, 1, 1))
+    expect_equal(fn, c(1, 1, 0, 1))
+  }]
+})
+
 ann.overlap <- rbind(
   label("1change", 5, 8),
   label("0changes", 2, 6))
+test_that("error for overlapping labels", {
+  expect_error({
+    labelError(
+      models, ann.overlap, changes,
+      problem.vars="prob",
+      label.vars=c("start", "end"),
+      change.var="pos",
+      model.vars="complexity")
+  }, "each label end must be <= next label start", fixed=TRUE)
+})
