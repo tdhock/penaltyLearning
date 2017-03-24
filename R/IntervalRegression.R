@@ -207,8 +207,9 @@ IntervalRegressionCV <- structure(function
 }, ex=function(){
   library(penaltyLearning)
   data(neuroblastomaProcessed, package="penaltyLearning")
-  library(doParallel)
-  registerDoParallel()
+  if(interactive() && require(doParallel)){
+    registerDoParallel()
+  }
 
   errors.per.model <- data.table(neuroblastomaProcessed$errors)
   errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
