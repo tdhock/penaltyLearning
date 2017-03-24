@@ -10,6 +10,12 @@ extern "C" {
    int *before, double *lambda
    ){
     int status = modelSelection(loss, complexity, *n_models, before, lambda);
+    if(status == ERROR_LOSS_NOT_DECREASING){
+      error("loss not decreasing");
+    }
+    if(status == ERROR_COMPLEXITY_NOT_INCREASING){
+      error("complexity not increasing");
+    }
     if(status != 0){
       error("error code %d", status);
     }

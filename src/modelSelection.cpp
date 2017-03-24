@@ -7,6 +7,14 @@
 int modelSelection
 (const double *loss_vec, const double *complexity_vec, const int n_input,
  int *optimal_after_vec, double *lambda_vec){
+  for(int i=1; i<n_input; i++){
+    if(loss_vec[i-1] <= loss_vec[i]){
+      return ERROR_LOSS_NOT_DECREASING;
+    }
+    if(complexity_vec[i] <= complexity_vec[i-1]){
+      return ERROR_COMPLEXITY_NOT_INCREASING;
+    }
+  }
   std::list<breakpoint> break_list;
   int lo=n_input-2, hi=n_input-1;
   double last_lambda = 0;

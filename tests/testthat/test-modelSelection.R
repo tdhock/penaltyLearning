@@ -36,3 +36,35 @@ test_that("C code agrees with R code for big data set", {
   expect_identical(pathR, pathC)
 })
 
+## trivial.
+loss.vec <- c(5,4,4)
+model.complexity <- c(1,2,3)
+n.models <- 3
+test_that("loss not decreasing error in C code", {
+  expect_error({
+    .C(
+      "modelSelection_interface",
+      loss.vec=as.double(loss.vec),
+      model.complexity=as.double(model.complexity),
+      n.models=as.integer(n.models),
+      after.vec=integer(n.models),
+      lambda.vec=double(n.models),
+      PACKAGE="penaltyLearning")
+  }, "loss not decreasing")
+})
+
+loss.vec <- c(5,4,3)
+model.complexity <- c(1,2,2)
+n.models <- 3
+test_that("complexity not increasing error in C code", {
+  expect_error({
+    .C(
+      "modelSelection_interface",
+      loss.vec=as.double(loss.vec),
+      model.complexity=as.double(model.complexity),
+      n.models=as.integer(n.models),
+      after.vec=integer(n.models),
+      lambda.vec=double(n.models),
+      PACKAGE="penaltyLearning")
+  }, "complexity not increasing")
+})
