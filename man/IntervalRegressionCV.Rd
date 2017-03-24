@@ -49,11 +49,13 @@ example(ROChange).}
 
 
 \examples{
+
 library(penaltyLearning)
 data(neuroblastomaProcessed, package="penaltyLearning")
-library(doParallel)
-registerDoParallel()
-
+if(interactive() && require(doParallel)){
+  registerDoParallel()
+}
+library(ggplot2)
 errors.per.model <- data.table(neuroblastomaProcessed$errors)
 errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
 setkey(errors.per.model, pid.chr)
@@ -63,7 +65,7 @@ i.train <- 1:n.train
 fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
   feature.mat[i.train,], target.mat[i.train,],
   incorrect.labels.db=errors.per.model))
-fit$plot
+plot(fit)
 
 if(require(iregnet)){
   data("penalty.learning", package="iregnet")

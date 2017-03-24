@@ -205,12 +205,13 @@ IntervalRegressionCV <- structure(function
   fit$plot.selectRegularization.vlines <- min.dt
   fit
 }, ex=function(){
+
   library(penaltyLearning)
   data(neuroblastomaProcessed, package="penaltyLearning")
   if(interactive() && require(doParallel)){
     registerDoParallel()
   }
-
+  library(ggplot2)
   errors.per.model <- data.table(neuroblastomaProcessed$errors)
   errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
   setkey(errors.per.model, pid.chr)
@@ -220,8 +221,8 @@ IntervalRegressionCV <- structure(function
   fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
     feature.mat[i.train,], target.mat[i.train,],
     incorrect.labels.db=errors.per.model))
-  fit$plot
-
+  plot(fit)
+  
   if(require(iregnet)){
     data("penalty.learning", package="iregnet")
     set.seed(1)
