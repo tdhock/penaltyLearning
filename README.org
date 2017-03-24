@@ -10,10 +10,12 @@ devtools::install_github("tdhock/penaltyLearning")
 
 ** Usage
 
-This R package provides a practical method to learn a penalty function
-for predicting change-points in labeled data sets such as
-https://cran.r-project.org/package=neuroblastoma Below we plot the
-data and labels, for a subset of 6 profiles.
+This R package provides a practical implementation of the algorithms
+described in our ICML'13 paper, [[http://jmlr.org/proceedings/papers/v28/hocking13.html][Learning Sparse Penalties for
+Change-point Detection using Max Margin Interval Regression]]. This
+package can be used to learn a penalty function for predicting
+change-points in labeled data sets such as [[https://cran.r-project.org/package=neuroblastoma][neuroblastoma]]. Below we
+plot the data and labels, for a subset of 6 profiles.
 
 #+BEGIN_SRC R
   library(penaltyLearning)
@@ -82,19 +84,19 @@ compute models from 1 to 10 segments.
       data.before.change <- end[-n.segments]
       data.after.change <- data.before.change+1
       pos.before.change <- as.integer(
-        (pro$position[data.before.change]+pro$position[data.after.change])/2)
+	(pro$position[data.before.change]+pro$position[data.after.change])/2)
       start <- c(1, data.after.change)
       chromStart <- c(pro$position[1], pos.before.change)
       chromEnd <- c(pos.before.change, max(pro$position))
       seg.mean.vec <- fit@parameters[n.segments, 1:n.segments]
       segs.list[[paste(problem.name, n.segments)]] <- data.table(
-        meta,
-        n.segments,
-        start,
-        end,
-        chromStart,
-        chromEnd,
-        mean=seg.mean.vec)
+	meta,
+	n.segments,
+	start,
+	end,
+	chromStart,
+	chromEnd,
+	mean=seg.mean.vec)
     }
     loss.list[[paste(problem.name, n.segments)]] <- data.table(
       meta,
@@ -106,10 +108,10 @@ compute models from 1 to 10 segments.
 #+END_SRC
 
 Choosing the number of change-points is typically done using a penalty
-function, which affects the error rate of the change-point model
-(which we can measure by counting the number of incorrectly predicted
-labels). The =penaltyLearning= package can be used to learn a penalty
-function which minimizes this error rate. First, we use
+function, which affects the error rate of the change-point model. The
+=penaltyLearning= package can be used to measure the error rate by
+counting the number of incorrectly predicted labels, and learn a
+penalty function which minimizes the error rate. First, we use
 =modelSelection= to determine a mapping between penalty values and
 segments/changes.
 
@@ -140,10 +142,10 @@ chromosome 11 as a test set, and use all other labels as a train set.
   all.errors[, set := ifelse(chromosome=="11", "test", "train")]
 #+END_SRC
 
-To train a penalty learning model, for every problem, we compute
-target intervals of log(penalty) values that achieve the minimal
-number of incorrect labels. This is the "output" in the machine
-learning problem.
+To train a penalty learning model, we compute target intervals of
+log(penalty) values that achieve the minimal number of incorrect
+labels (for each problem independently). This is the "output" in the
+machine learning problem.
 
 #+BEGIN_SRC R
   target.dt <- targetIntervals(
@@ -167,9 +169,10 @@ Then we compute a feature matrix (problems x features), which is the
 #+END_SRC
 
 Then we use =IntervalRegressionUnregularized= to learn a penalty
-function for this small data set. For data sets with more labels and
-features, =IntervalRegressionCV= would be preferable, since it also
-performs variable selection using L1-regularization.
+function for this small data set (see our [[http://jmlr.org/proceedings/papers/v28/hocking13.html][ICML'13 paper]] for
+details). For data sets with more labels and features,
+=IntervalRegressionCV= would be preferable, since it also performs
+variable selection using L1-regularization.
 
 #+BEGIN_SRC R
   fit <- IntervalRegressionUnregularized(train.feature.mat, target.mat)
@@ -179,7 +182,7 @@ Then we use the model to predict log(penalty) values for each
 segmentation problem (even those in the test set).
 
 #+BEGIN_SRC R
-  feature.dt$pred.log.lambda <- fit$predict(all.feature.mat)
+  feature.dt[, pred.log.lambda := predict(fit, all.feature.mat)]
 #+END_SRC
 
 We can use =ROChange= to compute test ROC curves, and Area Under the
@@ -191,23 +194,21 @@ accuracy.
   ROChange(all.errors, test.pred, c("profile.id", "chromosome"))
 #+END_SRC
 
-Finally we use =foverlaps= to join =feature.dt= (which contains the
-predicted values) with =selection= (which contains the number of
-segments for each penalty value). Then we plot the predicted
+Finally we use a non-equi join of =feature.dt= (which contains the
+predicted penalty values) with =selection= (which contains the number
+of segments for each penalty value). Then we plot the predicted
 models. It is clear that in these data, all of the predicted models
 are consistent with the labels.
 
 #+BEGIN_SRC R
-  feature.dt[, pred.log.penalty := pred.log.lambda ]
-  setkey(feature.dt, profile.id, chromosome, pred.log.lambda, pred.log.penalty)
-  setkey(selection, profile.id, chromosome, min.log.lambda, max.log.lambda)
-  pred.models <- foverlaps(feature.dt, selection)
-  setkey(pred.models, profile.id, chromosome, n.segments)
-  setkey(segs, profile.id, chromosome, n.segments)
-  pred.segs <- segs[pred.models]
+  pred.models <- feature.dt[selection, nomatch=0L, on=list(
+    profile.id, chromosome,
+    pred.log.lambda < max.log.lambda,
+    pred.log.lambda > min.log.lambda)]
+  pred.segs <- segs[pred.models, on=list(profile.id, chromosome, n.segments)]
   pred.changes <- pred.segs[1 < start, ]
-  setkey(errors$label.errors, profile.id, chromosome, n.segments)
-  pred.labels <- errors$label.errors[pred.models, nomatch=0L]
+  pred.labels <- errors$label.errors[pred.models, nomatch=0L, on=list(
+    profile.id, chromosome, n.segments)]
   ggplot()+
     ggtitle("data + labels + predicted segment means and changes")+
     theme_bw()+
@@ -229,8 +230,8 @@ are consistent with the labels.
       "position on chromosome (mega bases)",
       breaks=c(100, 200))+
     geom_segment(aes(chromStart/1e6, mean, xend=chromEnd/1e6, yend=mean),
-                 data=pred.segs,
-                 color="green")+
+		 data=pred.segs,
+		 color="green")+
     geom_vline(aes(xintercept=chromStart/1e6),
                data=pred.changes,
                color="green",
