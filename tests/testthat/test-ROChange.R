@@ -63,6 +63,14 @@ test_that("(FPR=1, TPR=0) in polygon but not roc", {
   expect_equal(result$auc.polygon[, sum(FPR==1 & TPR==0)], 1)
   expect_equal(result$roc[, sum(FPR==1 & TPR==0)], 0)
 })
+bad.pred <- data.table(
+  chromosome=paste(1:24),
+  pred.log.lambda=0)
+test_that("informative error when predicting for unlabeled data", {
+  expect_error({
+    ROChange(error.list$model.errors, bad.pred, "chromosome")
+  }, "some predictions do not exist in models")
+})
 
 ## Artificially tied penalty predictions. Although in real data sets
 ## it is possible to have the same predicted penalty (constant penalty
@@ -72,7 +80,8 @@ test_that("(FPR=1, TPR=0) in polygon but not roc", {
 some <- data.table(chromosome=paste(c(1, 2)), n.segments=c(2, 1))
 ##error.list$model.errors[chromosome %in% c(1,2), .(chromosome, errors, n.segments, min.log.lambda)]
 tie.pred <- data.table(pred)
-tie.pred$pred.log.lambda[1:2] <- error.list$model.errors[some, min.log.lambda - 2]
+tie.pred$pred.log.lambda[1:2] <- error.list$model.errors[some, on=list(
+  chromosome, n.segments), min.log.lambda - 2]
 tie.result <- ROChange(error.list$model.errors, tie.pred, "chromosome")
 test_that("six rows for six labels with one tie", {
   fn.vec <- c(3, 2, 1, 0, 0, 0)
