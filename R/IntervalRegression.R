@@ -440,10 +440,32 @@ IntervalRegressionRegularized <- function
 
 ### print learned model parameters.
 print.IntervalRegression <- function(x, ...){
-  x$pred.param.mat
-### numeric matrix of learned parameters (on the original feature
-### scale), can be used for prediction via cbind(1,features) %*%
-### parameters.
+  if(ncol(x$pred.param.mat)==1){
+    cat(
+      "IntervalRegression model for regularization ",
+      fit$regularization.vec, 
+      " with weights:\n",
+      sep="")
+    x <- t(x$pred.param.mat)
+    rownames(x) <- ""
+    print(x)
+  }else{
+    cat(
+      "IntervalRegression models [",
+      nrow(x$pred.param.mat),
+      " weights x ",
+      ncol(x$pred.param.mat),
+      " regularizations]\n",
+      sep="")
+  }
+}
+
+### Get the learned coefficients of an IntervalRegression model.
+coef.IntervalRegression <- function(object, ...){
+  object$pred.param.mat
+### numeric matrix [features x regularizations] of learned weights (on
+### the original feature scale), can be used for prediction via
+### cbind(1,features) %*% weights.
 }
 
 ### Plot an IntervalRegression model.

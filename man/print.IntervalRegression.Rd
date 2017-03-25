@@ -10,9 +10,7 @@
 }
 }
 
-\value{numeric matrix of learned parameters (on the original feature
-scale), can be used for prediction via cbind(1,features) \%*\%
-parameters.}
+
 
 \author{Toby Dylan Hocking}
 

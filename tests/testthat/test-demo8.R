@@ -8,6 +8,16 @@ set.seed(1)
 fit <- with(demo8, IntervalRegressionCV(
   feature.mat, target.mat, min.observations=8))
 
+test_that("CV model prints weights", {
+  expect_output({
+    print(fit)
+  }, "IntervalRegression model for regularization")
+})
+
+test_that("CV model coef ncol 1", {
+  expect_equal(ncol(coef(fit)), 1)
+})
+
 test_that("valid CV model for 8 train data with NA features", {
   pred.vec <- fit$predict(demo8$feature.mat)
   expect_equal(length(pred.vec), nrow(demo8$feature.mat))
@@ -29,3 +39,15 @@ test_that("Regularized model contains plots and data", {
   expect_is(fit$plot.residual.data, "data.table")
   expect_is(fit$plot.weight.data, "data.table")
 })
+
+test_that("Regularized model coef ncol", {
+  expect_equal(ncol(coef(fit)), ncol(fit$pred.param.mat))
+})
+
+test_that("Regularized model prints summary", {
+  expect_output({
+    print(fit)
+  }, "IntervalRegression models")
+})
+
+
