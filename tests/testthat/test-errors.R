@@ -19,9 +19,9 @@ test_that("predict NA results in NA", {
   expect_identical(as.logical(is.na(pred.vec)), c(FALSE, TRUE))
 })
 
-test_that("S3 print method returns numeric matrix with dimnames", {
+test_that("S3 coef method returns numeric matrix with dimnames", {
   expect_is(fit, "IntervalRegression")
-  result <- print(fit)
+  result <- coef(fit)
   expect_is(result, "matrix")
   expect_true(is.numeric(result))
   expect_identical(dimnames(result), list(

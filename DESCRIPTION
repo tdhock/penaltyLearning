@@ -10,4 +10,4 @@ Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, cghseg,
  testthat, doParallel, iregnet, PeakSegDP, PeakError, coseg, directlabels
 Depends: R (>= 2.10), data.table (>= 1.9.8)
 Imports: geometry, foreach, ggplot2
-Remotes: anujkhare/iregnet, tdhock/PeakSegDP, tdhock/PeakError, tdhock/coseg
+Remotes: anujkhare/iregnet, tdhock/PeakSegDP, tdhock/PeakError, tdhock/coseg, tdhock/directlabels

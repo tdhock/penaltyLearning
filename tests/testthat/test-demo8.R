@@ -50,4 +50,3 @@ test_that("Regularized model prints summary", {
   }, "IntervalRegression models")
 })
 
-

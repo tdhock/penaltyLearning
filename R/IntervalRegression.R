@@ -211,7 +211,6 @@ IntervalRegressionCV <- structure(function
   if(interactive() && require(doParallel)){
     registerDoParallel()
   }
-  library(ggplot2)
   errors.per.model <- data.table(neuroblastomaProcessed$errors)
   errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
   setkey(errors.per.model, pid.chr)
@@ -407,30 +406,38 @@ IntervalRegressionRegularized <- function
     model.i=as.integer(col(pred.log.penalty)),
     observation=as.integer(row(pred.log.penalty)),
     residual=targetIntervalResidual(target.mat, pred.log.penalty),
-    lower.limit, upper.limit, type=ifelse(
+    lower.limit, upper.limit, limit=ifelse(
       upper.limit, ifelse(lower.limit, "both", "upper"), "lower")
   )[lower.limit | upper.limit]
   L$plot.residual.data <- pred.dt
+  limit.colors <- c(
+    upper="red",
+    both="blue",
+    lower="grey50")
   L$plot.residual <- ggplot()+
     theme_bw()+
     theme_no_space+
     facet_wrap("model.i")+
     geom_hline(yintercept=0, color="grey")+
+    scale_color_manual(values=limit.colors, breaks=names(limit.colors))+
     geom_point(aes(
-      pred.log.penalty, residual, color=type),
+      pred.log.penalty, residual, color=limit),
       data=pred.dt,
       shape=1)
-  gg <- ggplot()+
-    geom_line(aes(
-      -log10(regularization), normalized.weight, color=variable),
-      data=L$plot.weight.data)
-  L$plot.weight <- if(require(directlabels)){
-    direct.label(gg, "lasso.labels")
+  L$plot <- if(1 == length(L$regularization.vec)){
+    L$plot.residual
   }else{
-    message('install.packages("directlabels") for more informative labels on plot.weight')
-    gg
+    gg <- ggplot()+
+      geom_line(aes(
+        -log10(regularization), normalized.weight, color=variable),
+        data=L$plot.weight.data)
+    (L$plot.weight <- if(require(directlabels)){
+      direct.label(gg, "lasso.labels")
+    }else{
+      message('install.packages("directlabels") for more informative labels on plot.weight')
+      gg
+    })
   }
-  L$plot <- if(ncol(L$pred.param.mat)==1)L$plot.residual else L$plot.weight
   L
 ### List representing fit model. You can do
 ### fit$predict(feature.matrix) to get a matrix of predicted log

@@ -55,7 +55,6 @@ data(neuroblastomaProcessed, package="penaltyLearning")
 if(interactive() && require(doParallel)){
   registerDoParallel()
 }
-library(ggplot2)
 errors.per.model <- data.table(neuroblastomaProcessed$errors)
 errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
 setkey(errors.per.model, pid.chr)
