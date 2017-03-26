@@ -46,14 +46,8 @@ IntervalRegressionCV <- structure(function
 ### example(ROChange).
  initial.regularization=0.001
 ### Passed to IntervalRegressionRegularized.
- ){
-  stopifnot(is.numeric(feature.mat))
-  stopifnot(is.matrix(feature.mat))
-  n.observations <- nrow(feature.mat)
-  stopifnot(is.numeric(target.mat))
-  stopifnot(is.matrix(target.mat))
-  stopifnot(nrow(target.mat) == n.observations)
-  stopifnot(ncol(target.mat) == 2)
+){
+  n.observations <- check_features_targets(feature.mat, target.mat)
   stopifnot(is.integer(n.folds))
   stopifnot(is.integer(fold.vec))
   stopifnot(length(fold.vec) == n.observations)
@@ -69,6 +63,9 @@ IntervalRegressionCV <- structure(function
       "; decrease min.observations or use a larger data set")
   }
   all.finite <- apply(is.finite(feature.mat), 2, all)
+  if(sum(all.finite)==0){
+    stop("after filtering NA features, none remain for training")
+  }
   validation.fold.vec <- unique(fold.vec)
   validation.data <- foreach(
     validation.fold=validation.fold.vec, .combine=rbind) %dopar% {
@@ -208,7 +205,7 @@ IntervalRegressionCV <- structure(function
 
   library(penaltyLearning)
   data(neuroblastomaProcessed, package="penaltyLearning")
-  if(interactive() && require(doParallel)){
+  if(require(doParallel)){
     registerDoParallel()
   }
   errors.per.model <- data.table(neuroblastomaProcessed$errors)
@@ -220,6 +217,8 @@ IntervalRegressionCV <- structure(function
   fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
     feature.mat[i.train,], target.mat[i.train,],
     incorrect.labels.db=errors.per.model))
+  ## The incorrect.labels.db argument is optional, but can be used if
+  ## you want to use AUC as the CV model selection criterion.
   plot(fit)
   
   if(require(iregnet)){
@@ -261,6 +260,35 @@ IntervalRegressionUnregularized <- function
 ### help(IntervalRegressionRegularized) for details.
 }
 
+check_features_targets <- function
+### stop with an informative error if there is a problem with the
+### feature or target matrix.
+(feature.mat,
+### n x p numeric input feature matrix.
+  target.mat
+### n x 2 matrix of target interval limits.
+  ){
+  if(!(
+    is.numeric(feature.mat) && 
+    is.matrix(feature.mat) &&
+    is.character(colnames(feature.mat))
+  )){
+    stop("feature.mat should be a numeric matrix with colnames (input features)")
+  }
+  if(!(
+    is.numeric(target.mat) && 
+    is.matrix(target.mat) && 
+    ncol(target.mat) == 2
+  )){
+    stop("target.mat should be a numeric matrix with two columns (lower and upper limits of correct outputs)")
+  }
+  if(nrow(target.mat) != nrow(feature.mat)){
+    stop("feature.mat and target.mat should have the same number of rows")
+  }
+  nrow(feature.mat)
+### number of observations/rows.
+}
+
 IntervalRegressionRegularized <- function
 ### Repeatedly use IntervalRegressionInternal to solve interval
 ### regression problems for a path of regularization parameters. This
@@ -283,14 +311,8 @@ IntervalRegressionRegularized <- function
 ### Print messages if >= 1.
  ...
 ### Other parameters to pass to IntervalRegressionInternal.
- ){
-  stopifnot(is.numeric(feature.mat))
-  stopifnot(is.matrix(feature.mat))
-  n.observations <- nrow(feature.mat)
-  stopifnot(is.numeric(target.mat))
-  stopifnot(is.matrix(target.mat))
-  stopifnot(nrow(target.mat) == n.observations)
-  stopifnot(ncol(target.mat) == 2)
+){
+  check_features_targets(feature.mat, target.mat)
   stopifnot(is.numeric(initial.regularization))
   stopifnot(length(initial.regularization)==1)
   stopifnot(is.finite(initial.regularization))
@@ -308,6 +330,9 @@ IntervalRegressionRegularized <- function
   is.invariant <- all.sd.vec == 0
   train.feature.i <- which(!is.invariant)
   train.feature.names <- colnames(finite.features)[train.feature.i]
+  if(length(train.feature.names)==0){
+    stop("after filtering NA and constant features, none remain for training")
+  }
   mean.vec <- all.mean.vec[train.feature.names]
   sd.vec <- all.sd.vec[train.feature.names]
   invariant.features <- finite.features[, train.feature.names, drop=FALSE]

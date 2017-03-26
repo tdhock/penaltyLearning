@@ -52,7 +52,7 @@ example(ROChange).}
 
 library(penaltyLearning)
 data(neuroblastomaProcessed, package="penaltyLearning")
-if(interactive() && require(doParallel)){
+if(require(doParallel)){
   registerDoParallel()
 }
 errors.per.model <- data.table(neuroblastomaProcessed$errors)
@@ -64,6 +64,8 @@ i.train <- 1:n.train
 fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
   feature.mat[i.train,], target.mat[i.train,],
   incorrect.labels.db=errors.per.model))
+## The incorrect.labels.db argument is optional, but can be used if
+## you want to use AUC as the CV model selection criterion.
 plot(fit)
 
 if(require(iregnet)){
