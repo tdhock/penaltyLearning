@@ -1,29 +1,59 @@
 labelError <- structure(function # Compute incorrect labels
 ### Compute incorrect labels for several change-point detection
-### problems and models.
+### problems and models. Use this function after having computed
+### changepoints, loss values, and model selection functions
+### (see modelSelection). The next step after labelError is typically
+### computing target intervals of log(penalty) values that predict
+### changepoints with minimum incorrect labels for each problem (see
+### targetIntervals).
 (models,
-### data.frame with one row per (problem,model) combination.
+### data.frame with one row per (problem,model) combination, typically
+### the output of modelSelection(...). There is a row for each
+### changepoint model that could be selected for a particular
+### segmentation problem. There should be columns problem.vars (for
+### problem ID) and model.vars (for model complexity).
   labels,
-### data.frame with one row per (problem,label).
+### data.frame with one row per (problem,region). Each label defines a
+### region in a particular segmentation problem, and a range of
+### predicted changepoints which are consistent in that region. There
+### should be a column "annotation" with takes one of the
+### corresponding values in the annotation column of change.labels
+### (used to determine the range of predicted changepoints which are
+### consistent). There should also be a columns problem.vars (for
+### problem ID) and label.vars (for region start/end).
   changes,
-### data.frame with one row per (problem,model,change).
+### data.frame with one row per (problem,model,change), for each
+### predicted changepoint (in each model and segmentation
+### problem). Should have columns problem.vars (for problem ID),
+### model.vars (for model complexity), and change.var (for changepoint
+### position).
   change.var="chromStart",
 ### character(length=1): column name of predicted change-point
-### position (refers to the changes argument). The default
-### "chromStart" is useful for genomic data with segment start/end
-### positions stored in columns named chromStart/chromEnd.
+### position in labels. The default "chromStart" is useful for genomic
+### data with segment start/end positions stored in columns named
+### chromStart/chromEnd. A predicted changepoint at position X is
+### interpreted to mean a changepoint between X and X+1.
   label.vars=c("min", "max"),
 ### character(length=2): column names of start and end positions of
-### labeled regions, in same units as change-point positions (refers
-### to the labels argument). The default is c("min", "max").
+### labels, in same units as change-point positions. The default is
+### c("min", "max"). Labeled regions are (start,end] -- open on the
+### left and closed on the right, so for example a 0changes annotation
+### between start=10 and end=20 means that any predicted changepoint
+### at 11, ..., 20 is a false positive.
   model.vars="n.segments",
 ### character: column names used to identify model complexity. The
 ### default "n.segments" is for change-point models such as in the
 ### Segmentor3IsBack and cghseg packages.
-  problem.vars=character(0)
+  problem.vars=character(0),
 ### character: column names used to identify data set / segmentation
-### problem. 
-){
+### problem, should be present in all three data tables (models,
+### labels, changes).
+  change.labels=change.labels
+### data.table with columns annotation, min.changes, max.changes,
+### possible.fn, possible.fp which is joined to labels in order to
+### determine how to compute false positives and false negatives for
+### each annotation.
+) {
   stopifnot(is.data.frame(models))
   stopifnot(is.data.frame(labels))
   stopifnot(is.data.frame(changes))
@@ -105,12 +135,12 @@ labelError <- structure(function # Compute incorrect labels
     fp, "false positive", ifelse(
       fn, "false negative", "correct"))]
   error.totals <- changes.per.label[, list(
-      possible.fp=sum(possible.fp*weight),
-      fp=sum(fp),
-      possible.fn=sum(possible.fn*weight),
-      fn=sum(fn),
-      labels=sum(weight),
-      errors=sum(fp+fn)),
+    possible.fp=sum(possible.fp*weight),
+    fp=sum(fp),
+    possible.fn=sum(possible.fn*weight),
+    fn=sum(fn),
+    labels=sum(weight),
+    errors=sum(fp+fn)),
     by=c(problem.vars, model.vars)]
   list(
     model.errors=models.dt[error.totals, on=c(problem.vars, model.vars)],
@@ -118,9 +148,10 @@ labelError <- structure(function # Compute incorrect labels
 ### list of two data.tables: label.errors has one row for every
 ### combination of models and labels, with status column that
 ### indicates whether or not that model commits an error in that
-### particular label; model.errors has one row per row of models, with
-### columns for computing error and ROC curves.
-}, ex=function(){
+### particular label; model.errors has one row per model, with columns
+### for computing target intervals and ROC curves (see targetIntervals
+### and ROChange).
+}, ex=function() {
   
   library(penaltyLearning)
   data(neuroblastoma, package="neuroblastoma", envir=environment())
@@ -130,9 +161,9 @@ labelError <- structure(function # Compute incorrect labels
     data.table(profile.id=4, chromosome="14", min, max, annotation)
   }
   ann <- rbind(
-      ann4,
-      label("1change", 70e6, 80e6),
-      label("0changes", 20e6, 60e6))
+    ann4,
+    label("1change", 70e6, 80e6),
+    label("0changes", 20e6, 60e6))
   max.segments <- 5
   segs.list <- list()
   models.list <- list()
@@ -151,13 +182,13 @@ labelError <- structure(function # Compute incorrect labels
       chromStart <- c(pro$position[1], pos.before.change)
       chromEnd <- c(pos.before.change, max(pro$position))
       segs.list[[paste(chr, n.segments)]] <- data.table(
-          chromosome=chr,
-          n.segments,
-          start,
-          end,
-          chromStart,
-          chromEnd,
-          mean=fit@parameters[n.segments, 1:n.segments])
+        chromosome=chr,
+        n.segments,
+        start,
+        end,
+        chromStart,
+        chromEnd,
+        mean=fit@parameters[n.segments, 1:n.segments])
     }
   }
   segs <- do.call(rbind, segs.list)
@@ -165,12 +196,12 @@ labelError <- structure(function # Compute incorrect labels
   
   changes <- segs[1 < start,]
   error.list <- labelError(
-      models, ann, changes,
-      problem.vars="chromosome", # for all three data sets.
-      model.vars="n.segments", # for changes and selection.
-      change.var="chromStart", # column of changes with breakpoint position.
-      label.vars=c("min", "max")) # limit of labels in ann.
-
+    models, ann, changes,
+    problem.vars="chromosome", # for all three data sets.
+    model.vars="n.segments", # for changes and selection.
+    change.var="chromStart", # column of changes with breakpoint position.
+    label.vars=c("min", "max")) # limit of labels in ann.
+  
   library(ggplot2)
   ggplot()+
     theme_bw()+

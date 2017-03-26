@@ -24,8 +24,10 @@ targetIntervalResidual <- function
 targetIntervals <- structure(function # Compute target intervals
 ### Compute target intervals of log(penalty) values that result in
 ### predicted changepoint models with minimum incorrect labels.
+### Use this function after labelError, and before IntervalRegression*.
 (models,
-### data.table with columns errors, min.log.lambda, max.log.lambda
+### data.table with columns errors, min.log.lambda, max.log.lambda,
+### typically labelError()$model.errors.
   problem.vars
 ### character: column names used to identify data set / segmentation
 ### problem.
@@ -41,6 +43,12 @@ targetIntervals <- structure(function # Compute target intervals
       min.log.lambda=min.log.lambda[L[["start"]]],
       max.log.lambda=max.log.lambda[L[["end"]]])
   }, by=problem.vars]
+### data.table with columns problem.vars, one row for each
+### segmentation problem. The "min.log.lambda", and "max.log.lambda"
+### columns give the largest interval of log(penalty) values which
+### results in the minimum incorrect labels for that problem. This can
+### be used to create the target.mat parameter of the
+### IntervalRegression* functions.
 }, ex=function(){
   
   data(neuroblastoma, package="neuroblastoma", envir=environment())

@@ -177,27 +177,44 @@ modelSelectionR <- structure(function # Exact model selection function
 
 })
 
-modelSelection <- function
+modelSelection <- function # Compute exact model selection functions
 ### Given loss.vec L_i, model.complexity K_i, the model selection
 ### function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 ### the solutions (i, min.lambda, max.lambda) with i being the
-### solution for every lambda in (min.lambda, max.lambda). This
-### function uses the linear time algorithm implemented in C code.
+### solution for every lambda in (min.lambda, max.lambda). Use this
+### function after having computed changepoints and loss values for
+### each model, and before using labelError. This function uses the
+### linear time algorithm implemented in C code (modelSelectionC).
 (models,
-### data.frame with one row per model. There must be at
-### least two columns [[loss]] and [[complexity]], but there can
+### data.frame with one row per model. There must be at least two
+### columns models[[loss]] and models[[complexity]], but there can
 ### also be other meta-data columns.
  loss="loss",
 ### character: column name of models to interpret as loss L_i.
  complexity="complexity"
 ### character: column name of models to interpret as complexity K_i.
 ){
-  stopifnot(is.data.frame(models))
-  stopifnot(1 < nrow(models))
-  for(x in list(loss, complexity)){
-    stopifnot(is.character(x))
-    stopifnot(length(x)==1)
-    stopifnot(x %in% names(models))
+  if(!(
+    is.character(complexity) &&
+    length(complexity)==1
+  )){
+    stop("complexity must be a column name of models")
+  }
+  if(!(
+    is.character(loss) &&
+    length(loss)==1
+  )){
+    stop("loss must be a column name of models")
+  }
+  if(!(
+    is.data.frame(models) &&
+    0 < nrow(models) &&
+    is.numeric(models[[complexity]]) &&
+    is.numeric(models[[loss]]) &&
+    all(!is.na(models[[complexity]])) &&
+    all(!is.na(models[[loss]])) 
+  )){
+    stop("models must be data.frame with at least one row and numeric columns models[[complexity]] and models[[loss]] which are not missing/NA")
   }
   ord <- order(models[[complexity]], models[[loss]])
   sorted <- models[ord,]
@@ -216,6 +233,7 @@ modelSelection <- function
 ### data.frame with a row for each model that can be selected for at
 ### least one lambda value, and the following columns. (min.lambda,
 ### max.lambda) and (min.log.lambda, max.log.lambda) are intervals of
-### optimal penalty constants, on the original and log scale;
-### the other columns (and rownames) are taken from models.
+### optimal penalty constants, on the original and log scale; the
+### other columns (and rownames) are taken from models. This should be
+### used as the models argument of labelError.
 }

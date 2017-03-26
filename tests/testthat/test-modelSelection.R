@@ -23,6 +23,59 @@ test_that("modelSelection works for unsorted data", {
   expect_identical(df$min.lambda, oneSkip$output$min.lambda)
 })
 
+test_that("error when models is not DF",{
+  expect_error({
+    modelSelection(1L)
+  }, "models must be data.frame with at least one row and numeric columns models[[complexity]] and models[[loss]]", fixed=TRUE)
+})
+
+test_that("error when models has 0 rows",{
+  expect_error({
+    modelSelection(data.frame())
+  }, "models must be data.frame with at least one row and numeric columns models[[complexity]] and models[[loss]]", fixed=TRUE)
+})
+
+test_that("error when models has 1 missing character row",{
+  expect_error({
+    modelSelection(data.frame(loss=NA_character_, complexity=NA_character_))
+  }, "models must be data.frame with at least one row and numeric columns models[[complexity]] and models[[loss]]", fixed=TRUE)
+})
+
+test_that("error when models has 1 missing loss",{
+  expect_error({
+    modelSelection(data.frame(loss=NA_real_, complexity=1))
+  }, "which are not missing/NA", fixed=TRUE)
+})
+
+test_that("error when models has 1 missing complexity",{
+  expect_error({
+    modelSelection(data.frame(loss=1, complexity=NA_real_))
+  }, "which are not missing/NA", fixed=TRUE)
+})
+
+test_that("one model is fine",{
+  one <- modelSelection(data.frame(loss=1, complexity=1, foo="bar"))
+  expect_identical(paste(one$foo), "bar")
+  expect_identical(one$min.lambda, 0)
+  expect_identical(one$max.lambda, Inf)
+  expect_identical(one$min.log.lambda, -Inf)
+  expect_identical(one$max.log.lambda, Inf)
+  expect_identical(one$loss, 1)
+  expect_identical(one$complexity, 1)
+})
+
+test_that("error for bad column names", {
+  expect_error({
+    modelSelection(loss=NULL)
+  }, "loss must be a column name of models")
+  expect_error({
+    modelSelection(loss=c())
+  }, "loss must be a column name of models")
+  expect_error({
+    modelSelection(loss=c("foo", "bar"))
+  }, "loss must be a column name of models")
+})
+
 library(neuroblastoma)
 library(Segmentor3IsBack)
 data(neuroblastoma)
