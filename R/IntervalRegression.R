@@ -456,8 +456,8 @@ IntervalRegressionRegularized <- function
       geom_line(aes(
         -log10(regularization), normalized.weight, color=variable),
         data=L$plot.weight.data)
-    (L$plot.weight <- if(require(directlabels)){
-      direct.label(gg, "lasso.labels")
+    (L$plot.weight <- if(requireNamespace("directlabels")){
+      directlabels::direct.label(gg, "lasso.labels")
     }else{
       message('install.packages("directlabels") for more informative labels on plot.weight')
       gg
@@ -475,7 +475,7 @@ print.IntervalRegression <- function(x, ...){
   if(ncol(x$pred.param.mat)==1){
     cat(
       "IntervalRegression model for regularization ",
-      fit$regularization.vec, 
+      x$regularization.vec, 
       " with weights:\n",
       sep="")
     x <- t(x$pred.param.mat)
