@@ -57,8 +57,8 @@ following computations:
 - *Prediction.* Use the =predict.IntervalRegression= method to compute
   predicted penalty values for all the segmentation problems. This
   works even for unlabeled data, and for "test" data sets where you
-  have hidden some labels in a computational cross-validation.
-  experiment
+  have hidden some labels in a computational cross-validation
+  experiment.
 - *Evaluation.* If you have set aside a "test set" of labels that you
   did not use for learning, then you can now use
   =penaltyLearning::ROChange= to compute test ROC curves. The AUC
