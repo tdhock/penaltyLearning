@@ -48,7 +48,7 @@ labelError <- structure(function # Compute incorrect labels
 ### character: column names used to identify data set / segmentation
 ### problem, should be present in all three data tables (models,
 ### labels, changes).
-  change.labels=change.labels
+  annotations=change.labels
 ### data.table with columns annotation, min.changes, max.changes,
 ### possible.fn, possible.fp which is joined to labels in order to
 ### determine how to compute false positives and false negatives for
@@ -106,9 +106,9 @@ labelError <- structure(function # Compute incorrect labels
   }else{
     labels.dt[, weight := 1 ]
   }
-  labels.info <- change.labels[labels.dt, on=list(annotation)]
+  labels.info <- annotations[labels.dt, on=list(annotation)]
   if(nrow(labels.info)!=nrow(labels.dt)){
-    stop("labels$annotation must be one of change.labels$annotation")
+    stop("labels$annotation must be one of annotations$annotation")
   }
   models.dt <- data.table(models)
   model.labels <- models.dt[labels.info, on=problem.vars, allow.cartesian=TRUE]
