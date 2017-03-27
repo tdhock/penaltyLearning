@@ -12,21 +12,23 @@ labels <- someProfiles(neuroblastoma$annotations)
 breakpoint.colors <- c(
   "breakpoint"="#a445ee",
   "normal"="#f6f4bf")
-ggplot()+
-  ggtitle("supervised change-point detection = data + labels")+
-  theme_bw()+
-  theme(panel.margin=grid::unit(0, "lines"))+
-  facet_grid(profile.id ~ chromosome, scales="free", space="free_x")+
-  geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6, fill=annotation),
-                color="grey",
-                data=labels)+
-  scale_fill_manual("label", values=breakpoint.colors)+
-  geom_point(aes(position/1e6, logratio),
-             data=profiles,
-             shape=1)+
-  scale_x_continuous(
-    "position on chromosome (mega bases)",
-    breaks=c(100, 200))
+if(interactive()){
+  ggplot()+
+    ggtitle("supervised change-point detection = data + labels")+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "lines"))+
+    facet_grid(profile.id ~ chromosome, scales="free", space="free_x")+
+    geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6, fill=annotation),
+                  color="grey",
+                  data=labels)+
+    scale_fill_manual("label", values=breakpoint.colors)+
+    geom_point(aes(position/1e6, logratio),
+               data=profiles,
+               shape=1)+
+    scale_x_continuous(
+      "position on chromosome (mega bases)",
+      breaks=c(100, 200))
+}
 problem.list <- split(profiles, profiles[, paste(profile.id, chromosome)])
 segs.list <- list()
 loss.list <- list()
