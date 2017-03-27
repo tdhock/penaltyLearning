@@ -10,7 +10,7 @@ changepoints with minimum incorrect labels for each problem (see
 targetIntervals).}
 \usage{labelError(models, labels, changes, change.var = "chromStart", 
     label.vars = c("min", "max"), model.vars = "n.segments", 
-    problem.vars = character(0), change.labels = change.labels)}
+    problem.vars = character(0), annotations = change.labels)}
 \arguments{
   \item{models}{data.frame with one row per (problem,model) combination, typically
 the output of modelSelection(...). There is a row for each
@@ -47,7 +47,7 @@ Segmentor3IsBack and cghseg packages.}
   \item{problem.vars}{character: column names used to identify data set / segmentation
 problem, should be present in all three data tables (models,
 labels, changes).}
-  \item{change.labels}{data.table with columns annotation, min.changes, max.changes,
+  \item{annotations}{data.table with columns annotation, min.changes, max.changes,
 possible.fn, possible.fp which is joined to labels in order to
 determine how to compute false positives and false negatives for
 each annotation.}
