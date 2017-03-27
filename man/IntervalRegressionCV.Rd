@@ -51,7 +51,7 @@ example(ROChange).}
 \examples{
 
 library(penaltyLearning)
-data("neuroblastomaProcessed", package="penaltyLearning", envir=.GlobalEnv)
+data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
 if(require(doParallel)){
   registerDoParallel()
 }
@@ -69,7 +69,7 @@ fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
 plot(fit)
 
 if(require(iregnet)){
-  data("penalty.learning", package="iregnet", envir=.GlobalEnv)
+  data("penalty.learning", package="iregnet", envir=environment())
   set.seed(1)
   is.test <- grepl("chr1:", rownames(penalty.learning$X.mat))
   pfit <- with(penalty.learning, IntervalRegressionCV(
