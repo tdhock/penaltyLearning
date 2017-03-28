@@ -31,37 +31,37 @@ following computations:
   changepoint detection package to compute a sequence of models of
   increasing complexity (say from 0 to 20 changepoints). For each
   segmentation problem, make sure to save the changepoint positions of
-  each model, and use =penaltyLearning::modelSelection= to compute the
+  each model, and use =modelSelection= to compute the
   exact path of models that will be selected for every possible
   non-negative penalty value.
-- *Label error.* Use =penaltyLearning::labelError= to compute
+- *Label error.* Use =labelError= to compute
   the number of incorrect labels for each labeled segmentation problem
   and each changepoint model. The goal of learning is to minimize the
   number of incorrectly predicted labels.
-- *Outputs.* Use =targetIntervals= to compute a target interval of
-  log(penalty) values that predicts the minimum number of incorrect
-  labels for each segmentation problem. Create a target interval
-  matrix (one row for each segmentation problems, 2 columns) which can
-  be used as the output (target.mat argument) in the
-  =penaltyLearning::IntervalRegression*= functions.
+- *Outputs.* Use =targetIntervals= to compute a
+  target interval of log(penalty) values that predicts the minimum
+  number of incorrect labels for each segmentation problem. Create a
+  target interval matrix (one row for each segmentation problems, 2
+  columns) which can be used as the output (target.mat argument) in
+  the =IntervalRegression*= functions.
 - *Inputs.* Compute a feature matrix (segmentation problems x
-  features). Features can be simple statistics of each segmentation
-  problem (quantiles, mean, number of data points, estimated variance,
-  etc).
-- *Learning.* Use =penaltyLearning::IntervalRegressionCV= to learn a
+  features) using =featureMatrix=. Features can be
+  simple statistics of each segmentation problem (quantiles, mean,
+  number of data points, estimated variance, etc).
+- *Learning.* Use =IntervalRegressionCV= to learn a
   penalty function, and automatically perform feature selection using
   L1 regularization. If you want to evaluate the prediction accuracy
   of the model you learn, make sure to set aside a "test set" of
   labeled data that you do not use in this learning step (this method is
   called cross-validation).
-- *Prediction.* Use the =predict.IntervalRegression= method to compute
-  predicted penalty values for all the segmentation problems. This
-  works even for unlabeled data, and for "test" data sets where you
-  have hidden some labels in a computational cross-validation
-  experiment.
+- *Prediction.* Use the =predict.IntervalRegression=
+  method to compute predicted penalty values for all the segmentation
+  problems. This works even for unlabeled data, and for "test" data
+  sets where you have hidden some labels in a computational
+  cross-validation experiment.
 - *Evaluation.* If you have set aside a "test set" of labels that you
   did not use for learning, then you can now use
-  =penaltyLearning::ROChange= to compute test ROC curves. The AUC
+  =ROChange= to compute test ROC curves. The AUC
   (area under the ROC curve) and the percent incorrect labels in the
   test set can be used to evaluate the prediction accuracy of your
   model.
