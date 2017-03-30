@@ -664,13 +664,13 @@ IntervalRegressionInternal <- function
       Lipschitz <- Lipschitz * 1.5
     }
     if(iterate.count > max.iterations){
-      Lipschitz <- Lipschitz * 1.5
-      iterate.count <- 1
-      max.iterations <- max.iterations * 2
       if(verbose >= 1){
         cat(max.iterations, "iterations, increasing Lipschitz and iterations.",
             "crit =", stopping.crit, "\n")
       }
+      Lipschitz <- Lipschitz * 1.5
+      iterate.count <- 1
+      max.iterations <- max.iterations * 2
     }
   }
   if(verbose >= 1){
