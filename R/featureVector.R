@@ -25,6 +25,7 @@ featureVector <- structure(function
       identity=x,
       sqrt=sqrt(x),
       log=log(x),
+      loglog=log(log(x)),
       square=x*x))
   }
   feature.list <- list(n=nonlinear(n))
@@ -36,12 +37,11 @@ featureVector <- structure(function
       square=vec * vec)
     for(trans.name in names(trans.list)){
       trans.vec <- trans.list[[trans.name]]
-      for(stat.name in c("sum", "mean", "sd", "quantile")){
-        stat.fun <- get(stat.name)
-        stat <- stat.fun(trans.vec)
-        feature.list[[paste(data.type, trans.name, stat.name)]] <-
-          nonlinear(stat)
-      }
+      feature.list[[paste(data.type, trans.name)]] <- nonlinear(c(
+        sum=sum(trans.vec),
+        mean=mean(trans.vec),
+        sd=sd(trans.vec),
+        quantile=quantile(trans.vec)))
     }
   }
   do.call(c, feature.list)
