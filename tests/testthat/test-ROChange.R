@@ -257,4 +257,8 @@ test_that("error when no positive labels", {
   }, "no positive labels")
 })
 
-
+test_that("error for missing columns in model table", {
+  expect_error({
+    ROChange(data.table(chromosome="foo"), pred, "chromosome")
+  }, "models should have columns")
+})

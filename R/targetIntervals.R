@@ -12,7 +12,34 @@ targetIntervalROC <- function
   stopifnot(is.numeric(target.mat))
   stopifnot(target.mat[,1] < target.mat[,2])
   stopifnot(is.numeric(pred))
-  stop("Not implemented")
+  observation <- 1:nrow(target.mat)
+  target.errors <- rbind(
+    data.table(
+      observation,
+      min.log.lambda=-Inf,
+      max.log.lambda=ifelse(
+        is.finite(target.mat[,1]), target.mat[,1], target.mat[,2]),
+      fp=ifelse(is.finite(target.mat[,1]), 1, 0),
+      fn=0),
+    data.table(
+      observation,
+      min.log.lambda=target.mat[,1],
+      max.log.lambda=target.mat[,2],
+      fp=0,
+      fn=0)[is.finite(target.mat[,1]) & is.finite(target.mat[,2])],
+    data.table(
+      observation,
+      min.log.lambda=ifelse(
+        is.finite(target.mat[,2]), target.mat[,2], target.mat[,1]),
+      max.log.lambda=Inf,
+      fp=0,
+      fn=ifelse(is.finite(target.mat[,2]), 1, 0)))
+  target.errors[, errors := fp + fn]
+  target.errors[, labels := 1]
+  target.errors[, possible.fp := max(fp), by=observation]
+  target.errors[, possible.fn := max(fn), by=observation]
+  pred.dt <- data.table(observation, pred.log.lambda=pred)
+  ROChange(target.errors, pred.dt, "observation")  
 ### list describing ROC curves, same as ROChange.
 }
 

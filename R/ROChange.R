@@ -13,6 +13,22 @@ ROChange <- structure(function # ROC curve for changepoints
 ### character: column names used to identify data set / segmentation
 ### problem. 
 ){
+  if(!(
+    is.character(problem.vars) &&
+      0 < length(problem.vars) &&
+      !is.na(problem.vars)
+    )){
+    stop("problem.vars should be a character vector of column names (IDs for predictions and models)")
+  }
+  exp.cols <- c(
+    "fp", "possible.fp", "fn", "possible.fn", "errors", "labels",
+    problem.vars, "min.log.lambda")
+  if(!(
+    is.data.frame(models) &&
+      all(exp.cols %in% names(models))
+    )){
+    stop("models should have columns ", paste(exp.cols, collapse=", "))
+  }
   pred <- data.table(predictions)
   err <- data.table(models)
   total.dt <- err[pred, on=problem.vars, .SD[1,], by=problem.vars][, list(
