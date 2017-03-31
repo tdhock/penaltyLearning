@@ -48,7 +48,7 @@ featureVector <- structure(function
 ### Numeric vector of features.
 }, ex=function(){
 
-  data(neuroblastoma, package="neuroblastoma")
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
 
   one <- subset(neuroblastoma$profiles, profile.id=="1" & chromosome=="1")
   (f.vec <- featureVector(one$logratio))
@@ -99,7 +99,7 @@ featureMatrix <- structure(function
 ### these columns should be removed before model training.
 }, ex=function(){
   
-  data(neuroblastoma, package="neuroblastoma")
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
 
   one <- subset(neuroblastoma$profiles, profile.id %in% c(1,2))
   f.mat <- featureMatrix(one, c("profile.id", "chromosome"), "logratio")

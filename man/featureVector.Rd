@@ -19,7 +19,7 @@ labels (see targetIntervals).}
 
 \examples{
 
-data(neuroblastoma, package="neuroblastoma")
+data(neuroblastoma, package="neuroblastoma", envir=environment())
 
 one <- subset(neuroblastoma$profiles, profile.id=="1" & chromosome=="1")
 (f.vec <- featureVector(one$logratio))
