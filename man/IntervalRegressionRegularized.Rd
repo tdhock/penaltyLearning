@@ -32,4 +32,13 @@ numeric matrix of optimal coefficients (on the original scale).}
 
 
 
+\examples{
 
+library(penaltyLearning)
+data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+i.train <- 1:500
+fit <- with(neuroblastomaProcessed, IntervalRegressionRegularized(
+  feature.mat[i.train,], target.mat[i.train,]))
+plot(fit)
+
+}

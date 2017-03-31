@@ -14,10 +14,16 @@ check_target_pred <- function(target.mat, pred){
     is.numeric(pred) &&
       all(is.finite(pred))
   }){
-    stop("pred must be a numeric vector with neither missing nor infinite entries")
+    stop("pred must be a numeric vector or matrix with neither missing nor infinite entries")
   }
-  if(length(pred) != nrow(target.mat)){
-    stop("length(pred) must be same as nrow(target.mat)")
+  if(is.matrix(pred)){
+    if(nrow(pred) != nrow(target.mat)){
+      stop("nrow(pred) must be same as nrow(target.mat)")
+    }
+  }else{
+    if(length(pred) != nrow(target.mat)){
+      stop("length(pred) must be same as nrow(target.mat)")
+    }
   }
   if(any(apply(!is.finite(target.mat), 1, all))){
     stop("each row of target.mat must have at least one finite limit")
@@ -40,6 +46,9 @@ targetIntervalROC <- structure(function
 ### numeric vector: predicted log(penalty) values.
  ){
   n <- check_target_pred(target.mat, pred)
+  if(length(pred) != nrow(target.mat)){
+    stop("length(pred) must be same as nrow(target.mat)")
+  }
   observation <- 1:n
   target.errors <- rbind(
     data.table(
@@ -100,6 +109,7 @@ targetIntervalROC <- structure(function
                  data=err)
   
 })
+
 targetIntervalResidual <- structure(function
 ### Compute residual of predicted penalties with respect to target
 ### intervals. This function is useful for visualizing the errors in a

@@ -289,7 +289,7 @@ check_features_targets <- function
 ### number of observations/rows.
 }
 
-IntervalRegressionRegularized <- function
+IntervalRegressionRegularized <- structure(function
 ### Repeatedly use IntervalRegressionInternal to solve interval
 ### regression problems for a path of regularization parameters. This
 ### function does not perform automatic selection of the
@@ -468,7 +468,16 @@ IntervalRegressionRegularized <- function
 ### fit$predict(feature.matrix) to get a matrix of predicted log
 ### penalty values. The param.mat is the n.features * n.regularization
 ### numeric matrix of optimal coefficients (on the original scale).
-}
+}, ex=function(){
+
+  library(penaltyLearning)
+  data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+  i.train <- 1:500
+  fit <- with(neuroblastomaProcessed, IntervalRegressionRegularized(
+    feature.mat[i.train,], target.mat[i.train,]))
+  plot(fit)
+
+})
 
 ### print learned model parameters.
 print.IntervalRegression <- function(x, ...){
