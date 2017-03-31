@@ -8,7 +8,7 @@ f.vec <- featureVector(one$logratio)
 
 test_that("median absolute difference computed", {
   expect_equal(
-    f.vec[["diff abs quantile.identity.50%"]],
+    f.vec[["diff abs.identity.quantile.50%"]],
     median(abs(diff(one$logratio))))
 })
 
