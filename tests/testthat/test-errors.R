@@ -55,6 +55,22 @@ test_that("no error for finite limits", {
   expect_is(roc.list$auc, "numeric")
 })
 
+test_that("no error for row vector predictions", {
+  roc.list <- targetIntervalROC(ok3, rbind(bar=1:3))
+  expect_is(roc.list$thresholds, "data.table")
+  expect_is(roc.list$auc.polygon, "data.table")
+  expect_is(roc.list$roc, "data.table")
+  expect_is(roc.list$auc, "numeric")
+})
+
+test_that("no error for col vector predictions", {
+  roc.list <- targetIntervalROC(ok3, cbind(foo=1:3))
+  expect_is(roc.list$thresholds, "data.table")
+  expect_is(roc.list$auc.polygon, "data.table")
+  expect_is(roc.list$roc, "data.table")
+  expect_is(roc.list$auc, "numeric")
+})
+
 test_that("S3 coef method returns numeric matrix with dimnames", {
   expect_is(fit, "IntervalRegression")
   result <- coef(fit)
