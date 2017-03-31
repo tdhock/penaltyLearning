@@ -14,9 +14,45 @@ test_that("predict without all pred col names is an error", {
 
 named.mat <- no.name.mat
 colnames(named.mat) <- c("log.hall", "log.n")
+pred.vec <- predict(fit, named.mat)#also tests S3 method.
 test_that("predict NA results in NA", {
-  pred.vec <- predict(fit, named.mat)#also tests S3 method.
   expect_identical(as.logical(is.na(pred.vec)), c(FALSE, TRUE))
+})
+
+ok.targets <- rbind(
+  c(1, 2),
+  c(3, 4))
+test_that("error for missing prediction", {
+  expect_error({
+    targetIntervalROC(ok.targets, pred.vec)
+  }, "missing")
+})
+
+test_that("error for infinite prediction", {
+  expect_error({
+    targetIntervalROC(ok.targets, c(1, Inf))
+  }, "infinite")
+})
+
+test_that("error for wrong size prediction", {
+  expect_error({
+    targetIntervalROC(ok.targets, 1:3)
+  }, "length(pred) must be same as nrow(target.mat)", fixed=TRUE)
+})
+
+test_that("error for no finite limit", {
+  expect_error({
+    targetIntervalROC(rbind(ok.targets, c(-Inf, Inf)), 1:3)
+  }, "each row of target.mat must have at least one finite limit")
+})
+
+ok3 <- rbind(ok.targets, c(-1, 5))
+test_that("no error for finite limits", {
+  roc.list <- targetIntervalROC(ok3, 1:3)
+  expect_is(roc.list$thresholds, "data.table")
+  expect_is(roc.list$auc.polygon, "data.table")
+  expect_is(roc.list$roc, "data.table")
+  expect_is(roc.list$auc, "numeric")
 })
 
 test_that("S3 coef method returns numeric matrix with dimnames", {

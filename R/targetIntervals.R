@@ -1,3 +1,31 @@
+### stop with an informative error if there are problems with the
+### target matrix or predicted values.
+check_target_pred <- function(target.mat, pred){
+  if(!{
+    is.matrix(target.mat) &&
+    is.numeric(target.mat) &&
+    all(!is.na(target.mat)) &&
+    ncol(target.mat)==2 &&
+    all(target.mat[,1] < target.mat[,2])
+  }){
+    stop("target.mat must be a numeric matrix with two columns and no missing entries (lower and upper limit of target interval)")
+  }
+  if(!{
+    is.numeric(pred) &&
+      all(is.finite(pred))
+  }){
+    stop("pred must be a numeric vector with neither missing nor infinite entries")
+  }
+  if(length(pred) != nrow(target.mat)){
+    stop("length(pred) must be same as nrow(target.mat)")
+  }
+  if(any(apply(!is.finite(target.mat), 1, all))){
+    stop("each row of target.mat must have at least one finite limit")
+  }
+  nrow(target.mat)
+### number of observations.
+}
+
 targetIntervalROC <- structure(function
 ### Compute a ROC curve using a target interval matrix. A prediction
 ### less than the lower limit is considered a false positive (penalty
@@ -11,11 +39,8 @@ targetIntervalROC <- structure(function
  pred
 ### numeric vector: predicted log(penalty) values.
  ){
-  stopifnot(is.matrix(target.mat))
-  stopifnot(is.numeric(target.mat))
-  stopifnot(target.mat[,1] < target.mat[,2])
-  stopifnot(is.numeric(pred))
-  observation <- 1:nrow(target.mat)
+  n <- check_target_pred(target.mat, pred)
+  observation <- 1:n
   target.errors <- rbind(
     data.table(
       observation,
@@ -61,10 +86,7 @@ targetIntervalResidual <- structure(function
  pred
 ### numeric vector: predicted log(penalty) values.
  ){
-  stopifnot(is.matrix(target.mat))
-  stopifnot(is.numeric(target.mat))
-  stopifnot(target.mat[,1] < target.mat[,2])
-  stopifnot(is.numeric(pred))
+  check_target_pred(target.mat, pred)
   pred.vec <- as.numeric(pred)
   ifelse(
     pred.vec < target.mat[, 1], pred.vec - target.mat[, 1], ifelse(
