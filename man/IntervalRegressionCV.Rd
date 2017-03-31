@@ -63,31 +63,9 @@ n.train <- 500
 i.train <- 1:n.train
 fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
   feature.mat[i.train,], target.mat[i.train,],
+  ## The incorrect.labels.db argument is optional, but can be used if
+  ## you want to use AUC as the CV model selection criterion.
   incorrect.labels.db=errors.per.model))
-## The incorrect.labels.db argument is optional, but can be used if
-## you want to use AUC as the CV model selection criterion.
 plot(fit)
-
-if(require(iregnet)){
-  data("penalty.learning", package="iregnet", envir=environment())
-  set.seed(1)
-  is.test <- grepl("chr1:", rownames(penalty.learning$X.mat))
-  pfit <- with(penalty.learning, IntervalRegressionCV(
-    X.mat[!is.test,], y.mat[!is.test,]))
-  print(pfit$plot)
-  pred.log.lambda <- pfit$predict(penalty.learning$X.mat)
-  residual <- targetIntervalResidual(penalty.learning$y.mat, pred.log.lambda)
-  residual.tall <- data.table(is.test, residual)[, list(
-    mean.residual=mean(residual),
-    intervals=.N
-    ), by=.(
-         set=ifelse(is.test, "test", "train"),
-         sign.residual=sign(residual))]
-  residual.tall[, set.intervals := ifelse(
-    set=="train", sum(!is.test), sum(is.test))]
-  residual.tall[, percent.intervals := 100 * intervals / set.intervals]
-  dcast(residual.tall, set ~ sign.residual, value.var="mean.residual")
-  dcast(residual.tall, set ~ sign.residual, value.var="percent.intervals")
-}
 
 }
