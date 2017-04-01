@@ -53,6 +53,7 @@ modelSelectionC <- structure(function # Exact model selection function
 ### values.
 },ex=function(){
 
+  library(penaltyLearning)
   data(neuroblastoma, package="neuroblastoma", envir=environment())
   pro <- subset(neuroblastoma$profiles, profile.id==1 & chromosome=="X")
   max.segments <- 20

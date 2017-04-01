@@ -4,3 +4,4 @@
 
 int largestContinuousMinimum
 (int n_data, double *cost_vec, double *size_vec, int *index_vec);
+
