@@ -3,7 +3,6 @@
 #include "modelSelection.h"
 #include "largestContinuousMinimum.h"
 #include <R.h>
-#include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
 void largestContinuousMinimum_interface
@@ -47,9 +46,7 @@ R_CMethodDef cMethods[] = {
 };
 
 extern "C" {
-  void
-  R_init_penaltyLearning(DllInfo *info)
-  {
+  void R_init_penaltyLearning(DllInfo *info) {
     R_registerRoutines(info, cMethods, NULL, NULL, NULL);
   }
 }
