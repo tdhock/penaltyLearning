@@ -51,7 +51,7 @@ IntervalRegressionCV <- structure(function
     variable <- value <- regularization <- folds <- status <- type <-
       vjust <- NULL
 ### The code above is to avoid CRAN NOTEs like
-### IntervalRegressionCV: no visible binding for global variable ‘vjust’
+### IntervalRegressionCV: no visible binding for global variable
   n.observations <- check_features_targets(feature.mat, target.mat)
   stopifnot(is.integer(n.folds))
   stopifnot(is.integer(fold.vec))
@@ -297,7 +297,7 @@ IntervalRegressionRegularized <- structure(function
 ){
   residual <- limit <- normalized.weight <- variable <- NULL
 ### The code above is to avoid CRAN NOTEs like
-### IntervalRegressionRegularized: no visible binding for global variable ‘limit’
+### IntervalRegressionRegularized: no visible binding for global variable
   check_features_targets(feature.mat, target.mat)
   stopifnot(is.numeric(initial.regularization))
   stopifnot(length(initial.regularization)==1)
