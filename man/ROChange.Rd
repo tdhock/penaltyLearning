@@ -42,6 +42,7 @@ pid.names <- paste0(pid, ".", chr.vec)
 BIC.feature <- neuroblastomaProcessed$feature.mat[pid.names, "log2.n"]
 pred <- data.table(pred.log.lambda=BIC.feature, chromosome=chr.vec)
 result <- ROChange(pro.errors, pred, "chromosome")
+library(ggplot2)
 ## Plot the ROC curves.
 ggplot()+
   geom_path(aes(FPR, TPR), data=result$roc)+
