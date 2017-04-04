@@ -13,6 +13,11 @@ ROChange <- structure(function # ROC curve for changepoints
 ### character: column names used to identify data set / segmentation
 ### problem. 
 ){
+  possible.fp <- possible.fn <- min.log.lambda <- fp <- fn <- thresh <-
+    log.lambda <- pred.log.lambda <- errors <- FPR <- tp <- TPR <-
+      error.percent <- min.thresh <- max.thresh <- NULL
+### The code above is to avoid CRAN NOTEs like
+### ROChange: no visible binding for global variable ‘fp’
   if(!(
     is.character(problem.vars) &&
       0 < length(problem.vars) &&

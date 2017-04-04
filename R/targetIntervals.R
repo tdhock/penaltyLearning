@@ -44,7 +44,11 @@ targetIntervalROC <- structure(function
 ### yield minimal incorrect labels.
  pred
 ### numeric vector: predicted log(penalty) values.
- ){
+){
+  min.log.lambda <- max.log.lambda <- errors <- fp <- fn <-
+    possible.fp <- possible.fn <- NULL
+### The code above is to avoid CRAN NOTEs like
+### targetIntervals: no visible binding for global variable ‘errors’
   n <- check_target_pred(target.mat, pred)
   if(length(pred) != nrow(target.mat)){
     stop("length(pred) must be same as nrow(target.mat)")
@@ -183,6 +187,9 @@ targetIntervals <- structure(function # Compute target intervals
 ### character: column names used to identify data set / segmentation
 ### problem.
 ){
+  min.log.lambda <- errors <- max.log.lambda <- NULL
+### The code above is to avoid CRAN NOTEs like
+### targetIntervals: no visible binding for global variable ‘errors’
   stopifnot(is.data.frame(models))
   stopifnot(is.character(problem.vars))
   stopifnot(problem.vars %in% names(models))

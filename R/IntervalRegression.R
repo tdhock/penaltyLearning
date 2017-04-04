@@ -47,6 +47,11 @@ IntervalRegressionCV <- structure(function
  initial.regularization=0.001
 ### Passed to IntervalRegressionRegularized.
 ){
+  validation.fold <- negative.auc <- threshold <- incorrect.labels <-
+    variable <- value <- regularization <- folds <- status <- type <-
+      vjust <- NULL
+### The code above is to avoid CRAN NOTEs like
+### IntervalRegressionCV: no visible binding for global variable ‘vjust’
   n.observations <- check_features_targets(feature.mat, target.mat)
   stopifnot(is.integer(n.folds))
   stopifnot(is.integer(fold.vec))
@@ -122,7 +127,7 @@ IntervalRegressionCV <- structure(function
     mean=mean(value),
     sd=sd(value),
     folds=.N
-    ), by=.(variable, regularization)][folds==max(folds),]
+    ), by=list(variable, regularization)][folds==max(folds),]
   min.each <- variable.data[, {
     .SD[which.min(value), ]
   }, by=validation.fold]
@@ -290,6 +295,9 @@ IntervalRegressionRegularized <- structure(function
  ...
 ### Other parameters to pass to IntervalRegressionInternal.
 ){
+  residual <- limit <- normalized.weight <- variable <- NULL
+### The code above is to avoid CRAN NOTEs like
+### IntervalRegressionRegularized: no visible binding for global variable ‘limit’
   check_features_targets(feature.mat, target.mat)
   stopifnot(is.numeric(initial.regularization))
   stopifnot(length(initial.regularization)==1)

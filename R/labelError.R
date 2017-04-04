@@ -54,6 +54,10 @@ labelError <- structure(function # Compute incorrect labels
 ### determine how to compute false positives and false negatives for
 ### each annotation.
 ) {
+  weight <- annotation <- fp <- max.changes <- pred.changes <- fn <-
+    min.changes <- status <- possible.fp <- possible.fn <- NULL
+### The code above is to avoid CRAN NOTEs like
+### labelError: no visible binding for global variable ‘status’
   stopifnot(is.data.frame(models))
   stopifnot(is.data.frame(labels))
   stopifnot(is.data.frame(changes))
