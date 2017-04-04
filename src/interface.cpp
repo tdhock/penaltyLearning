@@ -48,5 +48,9 @@ R_CMethodDef cMethods[] = {
 extern "C" {
   void R_init_penaltyLearning(DllInfo *info) {
     R_registerRoutines(info, cMethods, NULL, NULL, NULL);
+    //R_useDynamicSymbols call says the DLL is not to be searched for
+    //entry points specified by character strings so .C etc calls will
+    //only find registered symbols.
+    R_useDynamicSymbols(info, FALSE);
   }
 }
