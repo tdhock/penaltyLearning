@@ -1,0 +1,72 @@
+\documentclass{article}
+%\VignetteIndexEntry{Definition of penalty function learning}
+\usepackage[cm]{fullpage}
+\usepackage{verbatim}
+\usepackage{hyperref} 
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{amsmath,amssymb}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\Diag}{Diag}
+\DeclareMathOperator*{\TPR}{TPR}
+\DeclareMathOperator*{\FPR}{FPR}
+\DeclareMathOperator*{\FN}{FN}
+\DeclareMathOperator*{\FP}{FP}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\maximize}{maximize}
+\DeclareMathOperator*{\minimize}{minimize}
+\newcommand{\RR}{\mathbb R}
+
+\begin{document}
+
+\title{Penalty function learning}
+\author{Toby Dylan Hocking}
+\maketitle
+
+\section{Introduction}
+
+In supervised changepoint detection, we are given $n$ labeled data
+sequences. For each data sequence $i\in \{1, \dots, n\}$ we have a
+vector of noisy data $\mathbf z_i\in\RR^{d_i}$, a set of labels $L_i$
+which indicates appropriate changepoint positions, and an
+input/feature $\mathbf x_i\in\RR^p$. Note that the number of data
+points to segment $d_i$ can be different for every data sequence $i$,
+but the number of features $p$ is constant. 
+
+The optimal changepoint model for data sequence $i$, and a penalty
+parameter $\lambda$, is given by
+\begin{equation}
+  \label{eq:seg-model}
+  \mathbf m_i^\lambda = \argmin_{\mathbf m\in\RR^{d_i}}
+  \ell(\mathbf m, \mathbf z_{i}) + \lambda \mathcal C(\mathbf m),
+\end{equation}
+where
+\begin{itemize}
+\item  $\ell$ is a loss function, e.g. the square loss
+$\ell(\mathbf m, \mathbf z_i)=\sum_{j=1}^{d_i}(m_j-z_{ij})^2$,
+\item $\mathcal C$ is a model complexity function, e.g. the number of
+  changes $\mathcal C(\mathbf m)=\sum_{j=1}^{d_i-1} I(m_{j} \neq m_{j+1})$,
+\item $\lambda\geq 0$ is a penalty constant. Larger values penalize
+  more complex models, and result in few changepoints. Smaller values
+  penalize less and result in more changepoints.
+\end{itemize}
+
+In this context, we would like to learn a different penalty constant
+$\log\lambda_i=f(x_i)$ for every data sequence, where
+$f:\RR^p\rightarrow\RR$ is a function that we will learn by minimizing
+the number of incorrect labels in the training data:
+\begin{equation}
+  \min_f \sum_{i=1}^n E[\mathbf m_i^{\exp f(x_i)}, L_i].
+\end{equation}
+The function $E$ is the number of labels in $L_i$ which are
+incorrectly predicted by the changepoint model
+$\mathbf m_i^{\exp f(x_i)}$.
+
+TODO discuss R functions.
+
+<<auc>>=
+labelError(foo)
+@ 
+
+
+\end{document}
