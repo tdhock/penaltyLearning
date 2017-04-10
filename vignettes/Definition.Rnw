@@ -47,25 +47,186 @@ $\ell(\mathbf m, \mathbf z_i)=\sum_{j=1}^{d_i}(m_j-z_{ij})^2$,
 \item $\mathcal C$ is a model complexity function, e.g. the number of
   changes $\mathcal C(\mathbf m)=\sum_{j=1}^{d_i-1} I(m_{j} \neq m_{j+1})$,
 \item $\lambda\geq 0$ is a penalty constant. Larger values penalize
-  more complex models, and result in few changepoints. Smaller values
-  penalize less and result in more changepoints.
+  more complex models, and result in few changepoints
+  ($\lambda=\infty$ means no changes). Smaller values penalize less
+  and result in more changepoints ($\lambda=0$ means $d_i-1$ changes).
 \end{itemize}
 
 In this context, we would like to learn a different penalty constant
-$\log\lambda_i=f(x_i)$ for every data sequence, where
+$\log\lambda_i=f(\mathbf x_i)$ for every data sequence, where
 $f:\RR^p\rightarrow\RR$ is a function that we will learn by minimizing
 the number of incorrect labels in the training data:
 \begin{equation}
-  \min_f \sum_{i=1}^n E[\mathbf m_i^{\exp f(x_i)}, L_i].
+  \min_f \sum_{i=1}^n e[\mathbf m_i^{\exp f(\mathbf x_i)}, L_i].
 \end{equation}
-The function $E$ is the number of labels in $L_i$ which are
+The function $e$ is the number of labels in $L_i$ which are
 incorrectly predicted by the changepoint model
 $\mathbf m_i^{\exp f(x_i)}$.
 
-TODO discuss R functions.
+After having learned $f$ on training data, it can be used to predict a
+changepoint model for a test data sequence $\mathbf z\in\RR^{d}$
+which has features $\mathbf x\in\RR^p$. First compute a predicted
+penalty value $\lambda=\exp f(\mathbf x)$, and then use it to
+compute a predicted segmentation model $\mathbf m^\lambda$.
 
-<<auc>>=
-labelError(foo)
+\section{Details}
+
+\subsection{Changepoint model fitting}
+
+For each of several labeled segmentation problems (data sequences that
+are separate but have a similar signal/noise pattern), use your
+favorite changepoint detection package to compute a sequence of models
+of increasing complexity (say from 0 to 20 changepoints). In contrast
+to unsupervised changepoint detection (where we usually compute just
+one changepoint model per data sequence), it is essential to compute
+several models in supervised changepoint detection (so that we can
+learn which models and penalty values result in changepoints with
+minimum error with repect to the labels). Below we use the Segmentor
+function to compute a maximum likelihood Gaussian model.
+
+<<changes and loss>>=
+data(neuroblastoma, package="neuroblastoma")
+ids.str <- paste(c(1, 4, 6, 8, 10, 11))
+someProfiles <- function(all.profiles){
+  data.table(all.profiles)[profile.id %in% ids.str, ]
+}
+profiles <- someProfiles(neuroblastoma$profiles)
+labels <- someProfiles(neuroblastoma$annotations)
+problem.list <- split(profiles, profiles[, paste(profile.id, chromosome)])
+segs.list <- list()
+loss.list <- list()
+for(problem.i in seq_along(problem.list)){
+  problem.name <- names(problem.list)[[problem.i]]
+  cat(sprintf(
+    "%4d / %4d problems %s\n",
+    problem.i, length(problem.list), problem.name))
+  pro <- problem.list[[problem.name]]
+  meta <- pro[1, .(profile.id, chromosome)]
+  max.segments <- min(nrow(pro), 10)
+  fit <- Segmentor3IsBack::Segmentor(
+    pro$logratio, model=2, Kmax=max.segments)
+  for(n.segments in 1:max.segments){
+    end <- fit@breaks[n.segments, 1:n.segments]
+    data.before.change <- end[-n.segments]
+    data.after.change <- data.before.change+1
+    pos.before.change <- as.integer(
+    (pro$position[data.before.change]+pro$position[data.after.change])/2)
+    start <- c(1, data.after.change)
+    chromStart <- c(pro$position[1], pos.before.change)
+    chromEnd <- c(pos.before.change, max(pro$position))
+    seg.mean.vec <- fit@parameters[n.segments, 1:n.segments]
+    segs.list[[paste(problem.name, n.segments)]] <- data.table(
+      meta,
+      n.segments,
+      start,
+      end,
+      chromStart,
+      chromEnd,
+      mean=seg.mean.vec)
+  }
+  loss.list[[paste(problem.name, n.segments)]] <- data.table(
+    meta,
+    n.segments=1:max.segments,
+    loss=as.numeric(fit@likelihood))
+}
+loss <- do.call(rbind, loss.list)
+segs <- do.call(rbind, segs.list)
+@ 
+
+Note that we have saved the segment starts and ends, we can easily
+derive the changepoint positions of each model:
+<<segs>>=
+segs
+@ 
+
+Also note that we have saved the loss and model complexity
+(n.segments) of each model,
+<<loss>>=
+loss
+@ 
+
+\subsection{Model selection functions}
+We use modelSelection to compute the exact path of models that will be
+selected for every possible non-negative penalty value,
+<<modelSelection>>=
+selection <- loss[, {
+  penaltyLearning::modelSelection(.SD, "loss", "n.segments")
+}, by=.(profile.id, chromosome)]
+@ 
+
+Note that the model selection function $s_i(\lambda)$ is the number of segments
+that is selected for a given penalty $\lambda$ and data sequence $i$,
+\begin{equation}
+  \label{eq:modelSelection}
+  s_i(\lambda) = \argmin_{s}
+  \ell(\mathbf m, \mathbf z_{i}) + \lambda \mathcal C(\mathbf m).
+\end{equation}
+These functions are piecewise constant, and specific to each data
+sequence:
+<<modelSelectionplot>>=
+some.selection <- selection[profile.id==1 & chromosome %in% c(11, 17)]
+some.selection[, list(
+  pid.chr=paste(profile.id, chromosome),
+  min.log.lambda, max.log.lambda, n.segments, loss
+)]
+library(ggplot2)
+ggplot()+
+  theme_grey()+
+  facet_grid(. ~ profile.id + chromosome, labeller=label_both)+
+  geom_segment(aes(
+    min.log.lambda, n.segments,
+    xend=max.log.lambda, yend=n.segments),
+    data=some.selection)+
+  xlab("log(penalty)")
+
+@ 
+
+)]
+
+\subsection{Label error}
+
+To compute the label error function (number of incorrect labels as a
+function of penalty $\lambda$), we need to first get the positions of
+predicted changepoints:
+<<changes>>=
+changes <- segs[1 < start, ]
+changes[, list(profile.id, chromosome, n.segments, changepoint=chromStart)]
+@ 
+
+Then, we compute the number of incorrect labels for each model, for
+each labeled segmentation problem.
+
+<<labelError>>=
+errors <- penaltyLearning::labelError(
+  selection, labels, changes,
+  change.var="chromStart",
+  label.vars=c("min", "max"),
+  problem.vars=c("profile.id", "chromosome"))
+@ 
+
+The labelError function returns a list of two data tables:
+label.errors has one row for each label and each model, and
+model.errors has one row for each data sequence and each model. In
+this case they are the same size because the neuroblastoma data set
+has only one label per data sequence. The model.errors $E_i(\lambda)$ is a
+piecewise constant function for every data sequence $i$ (the number of
+incorrect labels as a function of penalty $\lambda$):
+\begin{equation}
+  E_i(\lambda) = e[\mathbf m_i^{\lambda}, L_i].
+\end{equation}
+
+<<model.errors>>=
+some.errors <- errors$model.errors[some.selection, on=list(
+  profile.id, chromosome, n.segments)]
+ggplot()+
+  theme_grey()+
+  facet_grid(. ~ profile.id + chromosome, labeller=label_both)+
+  geom_segment(aes(
+    min.log.lambda, errors,
+    xend=max.log.lambda, yend=errors),
+    data=some.errors)+
+  xlab("log(penalty)")
+
 @ 
 
 
