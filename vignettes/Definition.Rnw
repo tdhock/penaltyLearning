@@ -136,13 +136,13 @@ segs <- do.call(rbind, segs.list)
 Note that we have saved the segment starts and ends, we can easily
 derive the changepoint positions of each model:
 <<segs>>=
-segs
+print(segs)
 @ 
 
 Also note that we have saved the loss and model complexity
 (n.segments) of each model,
 <<loss>>=
-loss
+print(loss)
 @ 
 
 \subsection{Model selection functions}
@@ -151,7 +151,8 @@ selected for every possible non-negative penalty value,
 <<modelSelection>>=
 selection <- loss[, {
   penaltyLearning::modelSelection(.SD, "loss", "n.segments")
-}, by=.(profile.id, chromosome)]
+}, by=list(profile.id, chromosome)]
+print(selection[profile.id==1 & chromosome==1])
 @ 
 
 Note that the model selection function $s_i(\lambda)$ is the number of segments
@@ -170,7 +171,7 @@ some.selection[, list(
   min.log.lambda, max.log.lambda, n.segments, loss
 )]
 library(ggplot2)
-ggplot()+
+gg.selection <- ggplot()+
   theme_grey()+
   facet_grid(. ~ profile.id + chromosome, labeller=label_both)+
   geom_segment(aes(
@@ -178,23 +179,32 @@ ggplot()+
     xend=max.log.lambda, yend=n.segments),
     data=some.selection)+
   xlab("log(penalty)")
-
+print(gg.selection)
 @ 
-
-)]
 
 \subsection{Label error}
 
-To compute the label error function (number of incorrect labels as a
-function of penalty $\lambda$), we need to first get the positions of
-predicted changepoints:
+To compute the label error function $E_i(\lambda)$ (number of
+incorrect labels for data sequence $i$ as a function of penalty
+$\lambda$), we need to first get the positions of predicted
+changepoints:
 <<changes>>=
 changes <- segs[1 < start, ]
 changes[, list(profile.id, chromosome, n.segments, changepoint=chromStart)]
 @ 
 
-Then, we compute the number of incorrect labels for each model, for
-each labeled segmentation problem.
+Then, we use labelError to compute the number of incorrect labels
+for each model, for each labeled data sequence.
+The named arguments specify how the three input data tables are used:
+\begin{description}
+\item[change.var] is the column name of changes that will be used as
+  the changepoint position. 
+\item[label.vars] are the column names of
+  the start and end of the labeled regions.  
+\item[problem.vars] are the
+  column names (common to all data tables) that are used to identify
+  independent data sequences.
+\end{description}
 
 <<labelError>>=
 errors <- penaltyLearning::labelError(
@@ -218,7 +228,7 @@ incorrect labels as a function of penalty $\lambda$):
 <<model.errors>>=
 some.errors <- errors$model.errors[some.selection, on=list(
   profile.id, chromosome, n.segments)]
-ggplot()+
+gg.err <- ggplot()+
   theme_grey()+
   facet_grid(. ~ profile.id + chromosome, labeller=label_both)+
   geom_segment(aes(
@@ -226,8 +236,199 @@ ggplot()+
     xend=max.log.lambda, yend=errors),
     data=some.errors)+
   xlab("log(penalty)")
+print(gg.err)
+@ 
+
+\subsection{Target intervals}
+
+Now, let's perform a computational cross-validation experiment to
+train and evaluate a learned penalty function. We use labels in
+chromosome 11 as a test set, and use all other labels as a train set.
+
+<<all.errors>>=
+all.errors <- data.table(errors$model.errors)
+all.errors[, set := ifelse(chromosome=="11", "test", "train")]
+@ 
+
+To train a penalty learning model, we compute target intervals of
+log(penalty) values that achieve the minimal number of incorrect
+labels (for each problem independently). This is the "output" in the
+machine learning problem.
+
+<<targetIntervals>>=
+target.dt <- targetIntervals(
+  all.errors[set=="train", ],
+  c("profile.id", "chromosome"))
+target.mat <- target.dt[, cbind(min.log.lambda, max.log.lambda)]
+rownames(target.mat) <- target.dt[, paste(profile.id, chromosome)]
+print(head(target.mat))
+@ 
+
+\subsection{Feature matrix}
+
+Then we compute a feature matrix (problems x features), which is the
+"input" in the machine learning problem. Here we compute a simple
+matrix with just 2 columns/features (log.var = $\log\sigma_i$ is a
+variance estimate, and log.data = $\log d_i$ is log of the number of
+data points to segment). 
+
+<<featureMatrix>>=
+feature.dt <- profiles[, list(
+  log.data=log(.N),
+  log.var=log(median(abs(diff(logratio))))
+), by=list(profile.id, chromosome)]
+all.feature.mat <- feature.dt[, cbind(log.data, log.var)]
+rownames(all.feature.mat) <- feature.dt[, paste(profile.id, chromosome)]
+train.feature.mat <- all.feature.mat[rownames(target.mat), ]
+print(head(train.feature.mat))
+@ 
+
+You can also use featureMatrix for computing a larger feature matrix
+in real data sets where you aren't sure what features are relevant.
+
+\subsection{Learn a penalty function}
+
+Then we use IntervalRegressionUnregularized to learn a penalty
+function for this small data set (see Hocking et al ICML'13 for
+details). Because we only computed two features
+$\log d_i,\log\sigma_i$, the function that we learn here is
+$f(x_i) = \beta + w_1 \log d_i + w_2\log \sigma_i$ (we learn
+the intercept/bias $\beta$ and feature weights $w_1,w_2$). Remember
+that the prediction function models log(penalty) values
+$f(x_i)=\log\lambda_i$, so the penalty function we learn here is
+$\lambda_i = e^\beta d_i^{w_1} \sigma_i^{w_2}$.
+
+<<IntervalRegression>>=
+fit <- IntervalRegressionUnregularized(train.feature.mat, target.mat)
+print(fit)
+@ 
+
+For data sets with more labels and features,
+IntervalRegressionCV would be preferable, since it also performs
+variable selection using L1-regularization.
+
+\subsection{Prediction}
+
+Then we use the model to predict log(penalty) values for each
+segmentation problem (even those in the test set).
+
+<<pred>>=
+feature.dt[, pred.log.lambda := predict(fit, all.feature.mat)]
+@ 
+
+\subsection{Evaluation}
+
+We can use ROChange to compute test ROC curves, and Area Under the
+Curve (AUC), which in this case is 1, indicating a function which can
+perfectly discriminate between positive and negatve labels in the test
+set.
+
+<<ROC>>=
+test.pred <- feature.dt[chromosome=="11",]
+roc <- ROChange(all.errors, test.pred, c("profile.id", "chromosome"))
+pred.thresh <- roc$thresholds[threshold=="predicted"]
+gg.roc <- ggplot()+
+  geom_path(aes(
+    FPR, TPR),
+    data=roc$roc)+
+  geom_point(aes(
+    FPR, TPR),
+    data=pred.thresh)
+print(gg.roc)
+print(pred.thresh)
+@ 
+
+Using the ROC output you can also easily plot the number of incorrect
+labels as a function of threshold $\tau\in\RR$ added to the predicted
+log(penalty) function $f(x_i) + \tau$,
+
+<<roc.thresh>>=
+gg.thresh <- ggplot()+
+  geom_segment(aes(
+    min.thresh, errors,
+    xend=max.thresh, yend=errors),
+    data=roc$roc)+
+  geom_point(aes(
+    0, errors),
+    data=pred.thresh)+
+  xlab("threshold")
+print(gg.thresh)
+@ 
+
+We draw a dot at $\tau=0$ to show the number of incorrectly predicted
+test labels of the learned prediction function (0 in this case).
+
+\subsection{Visualizing predictions}
+
+Finally we use a non-equi join of feature.dt (which contains the
+predicted penalty values) with selection (which contains the number
+of segments for each penalty value). Then we plot the predicted
+models. 
+
+<<vizpred>>=
+
+pred.models <- feature.dt[selection, nomatch=0L, on=list(
+  profile.id, chromosome,
+  pred.log.lambda < max.log.lambda,
+  pred.log.lambda > min.log.lambda)]
+pred.segs <- segs[pred.models, on=list(profile.id, chromosome, n.segments)]
+pred.changes <- pred.segs[1 < start, ]
+pred.labels <- errors$label.errors[pred.models, nomatch=0L, on=list(
+  profile.id, chromosome, n.segments)]
+breakpoint.colors <- c(
+  "breakpoint"="#a445ee",
+  "normal"="#f6f4bf")
+ggplot()+
+  ggtitle("data + labels + predicted segment means and changes")+
+  theme_bw()+
+  theme(
+    legend.position="bottom",
+    legend.box="horizontal",
+    panel.margin=grid::unit(0, "lines"))+
+  facet_grid(profile.id ~ chromosome, scales="free", space="free_x")+
+  geom_tallrect(aes(
+    xmin=min/1e6, xmax=max/1e6, fill=annotation, linetype=status),
+    size=1.5,
+    data=pred.labels)+
+  scale_linetype_manual("error type",
+                        values=c(correct=0,
+                                 "false negative"=3,
+                                 "false positive"=1))+
+  scale_fill_manual("label", values=breakpoint.colors)+
+  geom_point(aes(position/1e6, logratio),
+             data=profiles,
+             shape=1)+
+  scale_x_continuous(
+    "position on chromosome (mega bases)",
+    breaks=c(100, 200))+
+  geom_segment(aes(chromStart/1e6, mean, xend=chromEnd/1e6, yend=mean),
+               data=pred.segs,
+               color="green")+
+  geom_vline(aes(xintercept=chromStart/1e6),
+             data=pred.changes,
+             color="green",
+             linetype="dashed")
 
 @ 
 
+It is clear that in these data, all of the predicted models
+are consistent with the labels. You can also see that the model makes
+reasonable predictions for the unlabeled chromosomes.
+
+\subsection{Comparison with BIC}
+
+The Bayesian Information Criterion (BIC) corresponds to using the
+penalty function $f(x_i) = \log\log d_i$ which is unsupervised
+(nothing to learn).
+
+<<bic>>=
+bic.dt <- profiles[, list(
+  pred.log.lambda=log(log(.N))
+), by=list(profile.id, chromosome)]
+bic.test <- bic.dt[chromosome==11]
+bic.roc <- ROChange(all.errors, bic.test, c("profile.id", "chromosome"))
+
+
+@ 
 
 \end{document}

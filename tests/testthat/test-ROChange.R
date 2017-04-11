@@ -46,6 +46,14 @@ error.list <- labelError(
   change.var="chromStart", # column of changes with breakpoint position.
   label.vars=c("min", "max")) # limit of labels in ann.
 pro.with.ann <- data.table(pro)[chromosome %in% ann$chromosome, ]
+
+bad.pred <- pro.with.ann[, list(pred.log.penalty=log(log(.N))), by=chromosome]
+test_that("informative error for no pred.log.lambda column", {
+  expect_error({
+    ROChange(error.list$model.errors, bad.pred, "chromosome")
+  }, "predictions does not have a column named pred.log.lambda")
+})
+
 ## The BIC model selection criterion is lambda = log(n), where n is
 ## the number of data points to segment. This implies log(lambda) =
 ## log(log(n)) = the log2.n feature in all.features.mat.

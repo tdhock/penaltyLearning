@@ -190,6 +190,14 @@ each labeled segmentation problem.
     problem.vars=c("profile.id", "chromosome"))
 #+END_SRC
 
+The named arguments specify how the three input data tables are used:
+- =change.var= is the column name of =changes= that will be used as
+  the changepoint position.
+- =label.vars= are the column names of the start and end of the
+  labeled regions.
+- =problem.vars= are the column names (common to all data tables) that
+  are used to identify independent data sequences.
+
 *** Compute target intervals
 
 Now, let's perform a computational cross-validation experiment to
@@ -217,7 +225,10 @@ machine learning problem.
 *** Compute feature matrix
 
 Then we compute a feature matrix (problems x features), which is the
-"input" in the machine learning problem.
+"input" in the machine learning problem. Here we compute a simple
+matrix with just 2 columns/features. Use
+=penaltyLearning::featureMatrix= for computing a larger feature
+matrix.
 
 #+BEGIN_SRC R
   feature.dt <- profiles[, list(
