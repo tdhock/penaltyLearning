@@ -1,8 +1,11 @@
 TODOs
 
-2017.04.xx
+2017.04.11
 
-convert all src/*.cpp files and register routines for CRAN submission.
+prepare for CRAN submission:
+- convert all src/*.cpp files and register routines.
+- NULL variables to avoid CRAN checks about global variables.
+- vignette
 
 2017.03.24
 
