@@ -103,6 +103,7 @@ for(problem.i in seq_along(problem.list)){
   max.segments <- min(nrow(pro), 10)
   fit <- Segmentor3IsBack::Segmentor(
     pro$logratio, model=2, Kmax=max.segments)
+  rss.vec <- rep(NA, max.segments)
   for(n.segments in 1:max.segments){
     end <- fit@breaks[n.segments, 1:n.segments]
     data.before.change <- end[-n.segments]
@@ -113,6 +114,9 @@ for(problem.i in seq_along(problem.list)){
     chromStart <- c(pro$position[1], pos.before.change)
     chromEnd <- c(pos.before.change, max(pro$position))
     seg.mean.vec <- fit@parameters[n.segments, 1:n.segments]
+    data.mean.vec <- rep(seg.mean.vec, end-start+1)
+    residual.vec <- pro$logratio - data.mean.vec
+    rss.vec[n.segments] <- sum(residual.vec * residual.vec)
     segs.list[[paste(problem.name, n.segments)]] <- data.table(
       meta,
       n.segments,
@@ -125,7 +129,8 @@ for(problem.i in seq_along(problem.list)){
   loss.list[[paste(problem.name, n.segments)]] <- data.table(
     meta,
     n.segments=1:max.segments,
-    loss=as.numeric(fit@likelihood))
+    loss=rss.vec,
+    lik=as.numeric(fit@likelihood))
 }
 loss <- do.call(rbind, loss.list)
 segs <- do.call(rbind, segs.list)
@@ -144,8 +149,9 @@ print(loss)
 @ 
 
 \subsection{Model selection functions}
-We use modelSelection to compute the exact path of models that will be
-selected for every possible non-negative penalty value,
+We use penaltyLearning::modelSelection to compute the exact path of
+models that will be selected for every possible non-negative penalty
+value,
 <<modelSelection>>=
 selection <- loss[, {
   penaltyLearning::modelSelection(.SD, "loss", "n.segments")
@@ -176,6 +182,7 @@ gg.selection <- ggplot()+
     min.log.lambda, n.segments,
     xend=max.log.lambda, yend=n.segments),
     data=some.selection)+
+  scale_y_continuous(breaks=1:max(some.selection$n.segments))+
   xlab("log(penalty)")
 print(gg.selection)
 @ 
@@ -191,9 +198,9 @@ changes <- segs[1 < start, ]
 changes[, list(profile.id, chromosome, n.segments, changepoint=chromStart)]
 @ 
 
-Then, we use labelError to compute the number of incorrect labels
-for each model, for each labeled data sequence.
-The named arguments specify how the three input data tables are used:
+Then, we use penaltyLearning::labelError to compute the number of
+incorrect labels for each model, for each labeled data sequence.  The
+named arguments specify how the three input data tables are used:
 \begin{description}
 \item[change.var] is the column name of changes that will be used as
   the changepoint position. 
@@ -251,7 +258,8 @@ all.errors[, set := ifelse(chromosome=="11", "test", "train")]
 To train a penalty learning model, we compute target intervals of
 log(penalty) values that achieve the minimal number of incorrect
 labels (for each problem independently). This is the "output" in the
-machine learning problem.
+machine learning problem, which is a (n x 2) matrix that we compute
+using the penaltyLearning::targetIntervals function.
 
 <<targetIntervals>>=
 target.dt <- penaltyLearning::targetIntervals(
@@ -261,6 +269,10 @@ target.mat <- target.dt[, cbind(min.log.lambda, max.log.lambda)]
 rownames(target.mat) <- target.dt[, paste(profile.id, chromosome)]
 print(head(target.mat))
 @ 
+
+Note that the first column is the lower limit (possibly -Inf) of
+acceptable log(penalty) values, and the second column is the upper
+limit (possibly Inf).
 
 \subsection{Feature matrix}
 
@@ -281,12 +293,13 @@ train.feature.mat <- all.feature.mat[rownames(target.mat), ]
 print(head(train.feature.mat))
 @ 
 
-You can also use featureMatrix for computing a larger feature matrix
-in real data sets where you aren't sure what features are relevant.
+You can also use penaltyLearning::featureMatrix for computing a larger
+feature matrix in real data sets where you aren't sure what features
+are relevant.
 
 \subsection{Learn a penalty function}
 
-Then we use IntervalRegressionUnregularized to learn a penalty
+Then we use penaltyLearning::IntervalRegressionUnregularized to learn a penalty
 function for this small data set (see Hocking et al ICML'13 for
 details). Because we only computed two features
 $\log d_i,\log\sigma_i$, the function that we learn here is
@@ -303,8 +316,8 @@ print(fit)
 @ 
 
 For data sets with more labels and features,
-IntervalRegressionCV would be preferable, since it also performs
-variable selection using L1-regularization.
+penaltyLearning:;IntervalRegressionCV would be preferable, since it
+also performs variable selection using L1-regularization.
 
 \subsection{Prediction}
 
@@ -315,12 +328,14 @@ segmentation problem (even those in the test set).
 feature.dt[, pred.log.lambda := predict(fit, all.feature.mat)]
 @ 
 
+Note that this is the predict method for the IntervalRegression class.
+
 \subsection{Evaluation}
 
-We can use ROChange to compute test ROC curves, and Area Under the
-Curve (AUC), which in this case is 1, indicating a function which can
-perfectly discriminate between positive and negatve labels in the test
-set.
+We can use penaltyLearning::ROChange to compute test ROC curves, and
+Area Under the Curve (AUC), which in this case is 1, indicating a
+function which can perfectly discriminate between positive and negatve
+labels in the test set.
 
 <<ROC, fig=TRUE>>=
 test.pred <- feature.dt[chromosome=="11",]
