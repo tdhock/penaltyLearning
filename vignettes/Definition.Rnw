@@ -363,10 +363,9 @@ test labels of the learned prediction function (0 in this case).
 Finally we use a non-equi join of feature.dt (which contains the
 predicted penalty values) with selection (which contains the number
 of segments for each penalty value). Then we plot the predicted
-models. 
+models along with the data and labels.
 
 <<vizpred>>=
-
 pred.models <- feature.dt[selection, nomatch=0L, on=list(
   profile.id, chromosome,
   pred.log.lambda < max.log.lambda,
@@ -378,8 +377,8 @@ pred.labels <- errors$label.errors[pred.models, nomatch=0L, on=list(
 breakpoint.colors <- c(
   "breakpoint"="#a445ee",
   "normal"="#f6f4bf")
-ggplot()+
-  ggtitle("data + labels + predicted segment means and changes")+
+viz.learned <- ggplot()+
+  ggtitle("data + labels + learned model segment means and changes")+
   theme_bw()+
   theme(
     legend.position="bottom",
@@ -408,8 +407,22 @@ ggplot()+
              data=pred.changes,
              color="green",
              linetype="dashed")
-
+print(viz.learned)
 @ 
+
+The plot above can be interpreted in the following manner
+\begin{itemize}
+\item black dots are the noisy data points in which we have
+  attempted to detect changepoints.
+\item each panel is a separate data sequence (a separate multiple
+  changepoint detection problem).
+\item horizontal solid green lines are the learned segment means.
+\item vertical dashed green lines are the predicted changepoint
+  positions.
+\item colored rectangles are the labels. yellow normal labels should
+  have no changepoints, and purple breakpoint labels should have at
+  least one changepoint.
+\end{itemize}
 
 It is clear that in these data, all of the predicted models
 are consistent with the labels. You can also see that the model makes
@@ -419,16 +432,95 @@ reasonable predictions for the unlabeled chromosomes.
 
 The Bayesian Information Criterion (BIC) corresponds to using the
 penalty function $f(x_i) = \log\log d_i$ which is unsupervised
-(nothing to learn).
+(nothing to learn). Below we compute the ROC curve for the same test
+set (chromosome 11) as we used for the learned model.
 
-<<bic>>=
+<<bic.roc>>=
 bic.dt <- profiles[, list(
   pred.log.lambda=log(log(.N))
 ), by=list(profile.id, chromosome)]
 bic.test <- bic.dt[chromosome==11]
 bic.roc <- ROChange(all.errors, bic.test, c("profile.id", "chromosome"))
-
-
+print(bic.roc$thresholds[threshold=="predicted"])
 @ 
+
+It is clear that the BIC suffers from 3 false positives in chromosome
+11. We visualize them along with all the other errors on the other
+chromosomes in the plot below,
+
+<<bic.viz>>=
+bic.models <- bic.dt[selection, nomatch=0L, on=list(
+  profile.id, chromosome,
+  pred.log.lambda < max.log.lambda,
+  pred.log.lambda > min.log.lambda)]
+bic.segs <- segs[bic.models, on=list(profile.id, chromosome, n.segments)]
+bic.changes <- bic.segs[1 < start, ]
+bic.labels <- errors$label.errors[bic.models, nomatch=0L, on=list(
+  profile.id, chromosome, n.segments)]
+viz.bic <- ggplot()+
+  ggtitle("data + labels + BIC model segment means and changes")+
+  theme_bw()+
+  theme(
+    legend.position="bottom",
+    legend.box="horizontal",
+    panel.margin=grid::unit(0, "lines"))+
+  facet_grid(profile.id ~ chromosome, scales="free", space="free_x")+
+  geom_tallrect(aes(
+    xmin=min/1e6, xmax=max/1e6, fill=annotation, linetype=status),
+    size=1.5,
+    data=bic.labels)+
+  scale_linetype_manual("error type",
+                        values=c(correct=0,
+                                 "false negative"=3,
+                                 "false positive"=1))+
+  scale_fill_manual("label", values=breakpoint.colors)+
+  geom_point(aes(position/1e6, logratio),
+             data=profiles,
+             shape=1)+
+  scale_x_continuous(
+    "position on chromosome (mega bases)",
+    breaks=c(100, 200))+
+  geom_segment(aes(chromStart/1e6, mean, xend=chromEnd/1e6, yend=mean),
+               data=bic.segs,
+               color="green")+
+  geom_vline(aes(xintercept=chromStart/1e6),
+             data=bic.changes,
+             color="green",
+             linetype="dashed")
+print(viz.bic)
+@ 
+
+It is clear from the plot above that there are many false positives --
+normal labels where there should be no changes, but the BIC model
+predicts some.
+
+Finally we can make the scatterplot that compare the predicted penalty
+values of the learned model and the BIC:
+
+<<scatter>>=
+scatter.dt <- data.table(
+  bic=bic.dt$pred.log.lambda, 
+  learned=feature.dt$pred.log.lambda)
+gg.scatter <- ggplot()+
+  geom_abline(
+    slope=1, intercept=0, color="grey")+
+  geom_point(aes(
+    learned, bic), 
+    data=scatter.dt)+
+  coord_equal()
+print(gg.scatter)
+@ 
+
+It is clear from the scatterplot that the learned model always
+predicts larger log(penalty) values than the BIC. 
+
+\section{Conclusion}
+
+We have shown an application of the penaltyLearning package to the
+neuroblastoma data set. We showed how to learn a penalty function
+based on set of data sequences which have labels that indicate
+presence or absence of changes in specific regions. We showed that the
+learned penalty function is more accurate than an unsupervised penalty
+function (BIC).
 
 \end{document}

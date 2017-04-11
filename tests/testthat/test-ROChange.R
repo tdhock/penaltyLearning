@@ -51,7 +51,7 @@ bad.pred <- pro.with.ann[, list(pred.log.penalty=log(log(.N))), by=chromosome]
 test_that("informative error for no pred.log.lambda column", {
   expect_error({
     ROChange(error.list$model.errors, bad.pred, "chromosome")
-  }, "predictions does not have a column named pred.log.lambda")
+  }, "predictions should be a data.frame with at least one row and a column named pred.log.lambda")
 })
 
 ## The BIC model selection criterion is lambda = log(n), where n is

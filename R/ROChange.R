@@ -8,7 +8,7 @@ ROChange <- structure(function # ROC curve for changepoints
 ### labelError(modelSelection(...), ...)$model.errors -- see examples.
   predictions,
 ### data.frame with a column named pred.log.lambda, the predicted
-### log(lambda) value for each segmentation problem.
+### log(penalty) value for each segmentation problem.
   problem.vars=character()
 ### character: column names used to identify data set / segmentation
 ### problem. 
@@ -33,6 +33,13 @@ ROChange <- structure(function # ROC curve for changepoints
       all(exp.cols %in% names(models))
     )){
     stop("models should have columns ", paste(exp.cols, collapse=", "))
+  }
+  if(!(
+    is.data.frame(predictions) &&
+    0 < nrow(predictions) &&
+    "pred.log.lambda" %in% names(predictions)
+  )){
+    stop("predictions should be a data.frame with at least one row and a column named pred.log.lambda")
   }
   pred <- data.table(predictions)
   err <- data.table(models)

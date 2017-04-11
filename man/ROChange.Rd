@@ -10,7 +10,7 @@ of log(lambda), with columns min.log.lambda, max.log.lambda, fp,
 fn, possible.fp, possible.fn, etc. This can be computed via
 labelError(modelSelection(...), ...)$model.errors -- see examples.}
   \item{predictions}{data.frame with a column named pred.log.lambda, the predicted
-log(lambda) value for each segmentation problem.}
+log(penalty) value for each segmentation problem.}
   \item{problem.vars}{character: column names used to identify data set / segmentation
 problem. }
 }
