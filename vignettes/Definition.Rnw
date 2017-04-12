@@ -136,7 +136,7 @@ loss <- do.call(rbind, loss.list)
 segs <- do.call(rbind, segs.list)
 @ 
 
-Note that we have saved the segment starts and ends, we can easily
+Note that since we have saved the segment starts and ends, we can easily
 derive the changepoint positions of each model:
 <<segs>>=
 print(segs)
@@ -402,7 +402,6 @@ viz.learned <- ggplot()+
   facet_grid(profile.id ~ chromosome, scales="free", space="free_x")+
   penaltyLearning::geom_tallrect(aes(
     xmin=min/1e6, xmax=max/1e6, fill=annotation, linetype=status),
-    size=1.5,
     data=pred.labels)+
   scale_linetype_manual("error type",
                         values=c(correct=0,
@@ -460,9 +459,9 @@ bic.roc <- penaltyLearning::ROChange(
 print(bic.roc$thresholds[threshold=="predicted"])
 @ 
 
-It is clear that the BIC suffers from 3 false positives in chromosome
-11. We visualize them along with all the other errors on the other
-chromosomes in the plot below,
+It is clear that the BIC suffers from a false negative in chromosome
+11 (a purple breakpoint region with no predicted changepoint). We
+visualize the model along with the data and labels in the plot below,
 
 <<bic-viz, fig=TRUE>>=
 bic.models <- bic.dt[selection, nomatch=0L, on=list(
@@ -483,7 +482,6 @@ viz.bic <- ggplot()+
   facet_grid(profile.id ~ chromosome, scales="free", space="free_x")+
   penaltyLearning::geom_tallrect(aes(
     xmin=min/1e6, xmax=max/1e6, fill=annotation, linetype=status),
-    size=1.5,
     data=bic.labels)+
   scale_linetype_manual("error type",
                         values=c(correct=0,
@@ -506,9 +504,9 @@ viz.bic <- ggplot()+
 print(viz.bic)
 @ 
 
-It is clear from the plot above that there are many false positives --
-normal labels where there should be no changes, but the BIC model
-predicts some.
+It is clear from the plot above that there are many false negatives --
+purple breakpoint labels in which there should be at least one change,
+but the BIC model predicts none.
 
 Finally we can make the scatterplot that compare the predicted penalty
 values of the learned model and the BIC:
