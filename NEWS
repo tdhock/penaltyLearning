@@ -3,9 +3,12 @@ TODOs
 2017.04.11
 
 prepare for CRAN submission:
-- convert all src/*.cpp files and register routines.
+- convert to src/*.cpp files and register routines.
 - NULL variables to avoid CRAN checks about global variables.
-- vignette
+- vignette.
+- many more user-friendly error messages.
+- coefficients of IntervalRegression models are
+  now returned on the original scale.
 
 2017.03.24
 
