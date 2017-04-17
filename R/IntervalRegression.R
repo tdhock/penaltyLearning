@@ -9,15 +9,15 @@ IntervalRegressionCV <- structure(function
 ### predicted target intervals. K-fold cross-validation is
 ### parallelized using the foreach package.
 (feature.mat,
-### Numeric feature matrix.
+### Numeric feature matrix, n observations x p features.
  target.mat,
-### Numeric target matrix.
+### Numeric target matrix, n observations x 2 limits.
  n.folds=ifelse(nrow(feature.mat) < 10, 3L, 5L),
 ### Number of cross-validation folds.
  fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
 ### Integer vector of fold id numbers.
  verbose=0,
-### numeric: bigger numbers for more output.
+### numeric: 0 for silent, bigger numbers (1 or 2) for more output.
  min.observations=10,
 ### stop with an error if there are fewer than this many observations.
  reg.type="min(mean)",
@@ -27,7 +27,7 @@ IntervalRegressionCV <- structure(function
 ### error functions, then minimize it (this is the default since it
 ### tends to yield the least test error). 1sd: take the least complex
 ### model which is within one standard deviation of that minimum (this
-### model is typical a bit less accurate, but much less complex, so
+### model is typically a bit less accurate, but much less complex, so
 ### better if you want to interpret the coefficients). mean(min): take
 ### the min of each K-CV error function, and then take their mean.
  incorrect.labels.db=NULL,
