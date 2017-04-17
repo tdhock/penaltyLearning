@@ -9,41 +9,57 @@ IntervalRegressionCV <- structure(function
 ### predicted target intervals. K-fold cross-validation is
 ### parallelized using the foreach package.
 (feature.mat,
-### Numeric feature matrix.
+### Numeric feature matrix, n observations x p features.
  target.mat,
-### Numeric target matrix.
+### Numeric target matrix, n observations x 2 limits.
  n.folds=ifelse(nrow(feature.mat) < 10, 3L, 5L),
 ### Number of cross-validation folds.
  fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
 ### Integer vector of fold id numbers.
  verbose=0,
-### numeric: bigger numbers for more output.
+### numeric: 0 for silent, bigger numbers (1 or 2) for more output.
  min.observations=10,
 ### stop with an error if there are fewer than this many observations.
- incorrect.labels.db=NULL
-### either NULL or a data.table, which specifies what to compute to
-### select the regularization parameter on the validation set. NULL
-### means to minimize the squared hinge loss, which measures how far
-### the predicted log(penalty) values are from the target
-### intervals. If a data.table is specified, it should have one key
-### which corresponds to the rownames of feature.mat, and columns
+ reg.type="min(mean)",
+### Either "1sd", "min(mean)" or "mean(min)" which specifies how the
+### regularization parameter is chosen during the internal
+### cross-validation loop. min(mean): first take the mean of the K-CV
+### error functions, then minimize it (this is the default since it
+### tends to yield the least test error). 1sd: take the least complex
+### model which is within one standard deviation of that minimum (this
+### model is typically a bit less accurate, but much less complex, so
+### better if you want to interpret the coefficients). mean(min): take
+### the min of each K-CV error function, and then take their mean.
+ incorrect.labels.db=NULL,
+### either NULL or a data.table, which specifies the error function to
+### compute for selecting the regularization parameter on the
+### validation set. NULL means to minimize the squared hinge loss,
+### which measures how far the predicted log(penalty) values are from
+### the target intervals. If a data.table is specified, its first key
+### should correspond to the rownames of feature.mat, and columns
 ### min.log.lambda, max.log.lambda, fp, fn, possible.fp, possible.fn;
 ### these will be used with ROChange to compute the AUC for each
-### regularization parameter, and the maximimum will be selected. This
+### regularization parameter, and the maximimum will be selected (in
+### the plot this is negative.auc, which is minimized). This
 ### data.table can be computed via
 ### labelError(modelSelection(...),...)$model.errors -- see
 ### example(ROChange).
- ){
-  stopifnot(is.numeric(feature.mat))
-  stopifnot(is.matrix(feature.mat))
-  n.observations <- nrow(feature.mat)
-  stopifnot(is.numeric(target.mat))
-  stopifnot(is.matrix(target.mat))
-  stopifnot(nrow(target.mat) == n.observations)
-  stopifnot(ncol(target.mat) == 2)
+ initial.regularization=0.001
+### Passed to IntervalRegressionRegularized.
+){
+  validation.fold <- negative.auc <- threshold <- incorrect.labels <-
+    variable <- value <- regularization <- folds <- status <- type <-
+      vjust <- NULL
+### The code above is to avoid CRAN NOTEs like
+### IntervalRegressionCV: no visible binding for global variable
+  n.observations <- check_features_targets(feature.mat, target.mat)
   stopifnot(is.integer(n.folds))
   stopifnot(is.integer(fold.vec))
   stopifnot(length(fold.vec) == n.observations)
+  stopifnot(
+    is.character(reg.type),
+    length(reg.type)==1,
+    reg.type %in% c("1sd", "mean(min)", "min(mean)"))
   if(n.observations < min.observations){
     stop(
       n.observations,
@@ -51,15 +67,21 @@ IntervalRegressionCV <- structure(function
       min.observations,
       "; decrease min.observations or use a larger data set")
   }
+  all.finite <- apply(is.finite(feature.mat), 2, all)
+  if(sum(all.finite)==0){
+    stop("after filtering NA features, none remain for training")
+  }
+  validation.fold.vec <- unique(fold.vec)
   validation.data <- foreach(
-    validation.fold=unique(fold.vec), .combine=rbind) %dopar% {
+    validation.fold=validation.fold.vec, .combine=rbind) %dopar% {
       ##print(validation.fold)
       is.validation <- fold.vec == validation.fold
       is.train <- !is.validation
-      train.features <- feature.mat[is.train, , drop=FALSE]
+      train.features <- feature.mat[is.train, all.finite, drop=FALSE]
       train.targets <- target.mat[is.train, , drop=FALSE]
       fit <- IntervalRegressionRegularized(
-        train.features, train.targets, verbose=verbose)
+        train.features, train.targets, verbose=verbose,
+        initial.regularization=initial.regularization)
       validation.features <- feature.mat[is.validation, , drop=FALSE]
       pred.log.lambda <- fit$predict(validation.features)
       validation.targets <- target.mat[is.validation, , drop=FALSE]
@@ -83,7 +105,8 @@ IntervalRegressionCV <- structure(function
             pred.log.lambda=pred.log.lambda[, regularization.i])
           pred.dt[[key(incorrect.labels.db)]] <-
             rownames(feature.mat)[is.validation]
-          roc <- ROChange(incorrect.labels.db, pred.dt, key(incorrect.labels.db))
+          roc <- ROChange(
+            incorrect.labels.db, pred.dt, key(incorrect.labels.db))
           dt[regularization.i, negative.auc := -roc$auc]
           predicted.thresh <- roc$thresholds[threshold=="predicted", ]
           dt[regularization.i, incorrect.labels := predicted.thresh$errors]
@@ -96,13 +119,15 @@ IntervalRegressionCV <- structure(function
   }else{
     "squared.hinge.loss"
   }
-  vtall <- melt(validation.data, id.vars=c("validation.fold", "regularization"))
+  vtall <- melt(
+    validation.data,
+    id.vars=c("validation.fold", "regularization"))
   variable.data <- vtall[variable==variable.name, ]
   stats <- variable.data[, list(
     mean=mean(value),
     sd=sd(value),
     folds=.N
-    ), by=.(variable, regularization)][folds==max(folds),]
+    ), by=list(variable, regularization)][folds==max(folds),]
   min.each <- variable.data[, {
     .SD[which.min(value), ]
   }, by=validation.fold]
@@ -118,76 +143,97 @@ IntervalRegressionCV <- structure(function
       min.mean$regularization,
       simplest.within.1sd$regularization),
     variable=variable.name)
+  min.dt[, status := ifelse(type == reg.type, "selected", "not")]
   fit <- IntervalRegressionRegularized(
     feature.mat, target.mat,
-    initial.regularization=simplest.within.1sd$regularization,
+    initial.regularization=min.dt[status=="selected", regularization],
     factor.regularization=NULL,
     verbose=verbose)
-  fit$plot <-
-    ggplot()+
-      theme_bw()+
-      geom_vline(aes(xintercept=-log(regularization), color=type),data=min.dt)+
-      guides(color="none")+
+  fit$plot.selectRegularization <- fit$plot <- ggplot()+
+    ggtitle(paste0(
+      "Regularization parameter selection using ",
+      length(validation.fold.vec),
+      "-fold cross-validation"
+      ))+
+    theme_bw()+
+    geom_vline(aes(xintercept=-log(regularization)),
+               data=min.dt[status=="selected",],
+               color="grey",
+               size=2)+
+    geom_vline(aes(xintercept=-log(regularization), color=type),
+               data=min.dt)+
+    guides(color="none")+
     geom_text(aes(-log(regularization), max(variable.data$value),
                   vjust=vjust,
-                    label=paste0(type, " "),
-                    color=type),
-                hjust=1,
-                data=min.dt)+
-      geom_hline(aes(yintercept=mean, color=type),
-                 data=data.table(
-                   simplest.within.1sd, type="1sd"))+
-      theme(panel.margin=grid::unit(0, "lines"))+
-      facet_grid(variable ~ ., scales="free")+
-      geom_ribbon(aes(
-        -log(regularization),
-        ymin=mean-sd,
-        ymax=mean+sd),
-                  fill="grey",
-                  alpha=0.5,
-                  data=stats)+
-      geom_line(aes(
-        -log(regularization),
-        mean),
+                  label=paste0(type, " "),
+                  color=type),
+              hjust=1,
+              data=min.dt)+
+    geom_segment(aes(
+      -log(regularization), mean,
+      xend=-log(min.mean$regularization), yend=mean,
+      color=type),
+               data=data.table(
+                 simplest.within.1sd, type="1sd"))+
+    theme_no_space+
+    facet_grid(variable ~ ., scales="free")+
+    scale_color_manual(values=c(
+                         "1sd"="red",
+                         "mean(min)"="blue",
+                         "min(mean)"="black"))+
+    geom_ribbon(aes(
+      -log(regularization),
+      ymin=mean-sd,
+      ymax=mean+sd),
+                fill="grey",
+                alpha=0.5,
                 data=stats)+
-      geom_line(aes(-log(regularization), value, group=validation.fold),
-                color="grey50",
-                data=vtall[variable!="auc",])+
+    geom_line(aes(
+      -log(regularization),
+      mean,
+      color="min(mean)"),
+              data=stats)+
+    geom_line(aes(-log(regularization), value, group=validation.fold),
+              color="grey50",
+              data=vtall[variable!="auc",])+
+    geom_point(aes(
+      -log(regularization),
+      value,
+      color="mean(min)"),
+               data=min.each)+
     xlab("model complexity -log(regularization)")+
     ylab("")
-  fit$plot.data <- validation.data
+  fit$plot.selectRegularization.data <- validation.data
+  fit$plot.selectRegularization.vlines <- min.dt
   fit
 }, ex=function(){
-  library(penaltyLearning)
-  data(neuroblastomaProcessed, package="penaltyLearning")
-  library(doParallel)
-  registerDoParallel()
 
-  errors.per.model <- data.table(neuroblastomaProcessed$errors)
-  errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
-  setkey(errors.per.model, pid.chr)
-  set.seed(1)
-  fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
-    feature.mat, target.mat,
-    incorrect.labels.db=errors.per.model))
-  fit$plot
-
-  if(require(iregnet)){
-    data("penalty.learning", package="iregnet")
+  if(interactive()){
+    library(penaltyLearning)
+    data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+    if(require(doParallel)){
+      registerDoParallel()
+    }
     set.seed(1)
-    is.test <- grepl("chr1:", rownames(penalty.learning$X.mat))
-    pfit <- with(penalty.learning, IntervalRegressionCV(X.mat[!is.test,], y.mat[!is.test,]))
-    print(pfit$plot)
-    pred.log.lambda <- pfit$predict(penalty.learning$X.mat)
-    residual <- targetIntervalResidual(penalty.learning$y.mat, pred.log.lambda)
-    residual.tall <- data.table(is.test, residual)[, list(
-      mean.residual=mean(residual),
-      intervals=.N
-      ), by=.(set=ifelse(is.test, "test", "train"), sign.residual=sign(residual))]
-    residual.tall[, set.intervals := ifelse(set=="train", sum(!is.test), sum(is.test))]
-    residual.tall[, percent.intervals := 100 * intervals / set.intervals]
-    dcast(residual.tall, set ~ sign.residual, value.var="mean.residual")
-    dcast(residual.tall, set ~ sign.residual, value.var="percent.intervals")
+    i.train <- 1:200
+    fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
+      feature.mat[i.train,], target.mat[i.train,]))
+    ## When only features and target matrices are specified for
+    ## training, the squared hinge loss is used as the metric to
+    ## minimize on the validation set.
+    plot(fit)
+    ## Create an incorrect labels data.table (first key is same as
+    ## rownames of feature.mat and target.mat).
+    errors.per.model <- data.table(neuroblastomaProcessed$errors)
+    errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
+    setkey(errors.per.model, pid.chr)
+    set.seed(1)
+    fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
+      feature.mat[i.train,], target.mat[i.train,],
+      ## The incorrect.labels.db argument is optional, but can be used if
+      ## you want to use AUC as the CV model selection criterion.
+      incorrect.labels.db=errors.per.model))
+    plot(fit)
   }
   
 })
@@ -207,7 +253,36 @@ IntervalRegressionUnregularized <- function
 ### help(IntervalRegressionRegularized) for details.
 }
 
-IntervalRegressionRegularized <- function
+check_features_targets <- function
+### stop with an informative error if there is a problem with the
+### feature or target matrix.
+(feature.mat,
+### n x p numeric input feature matrix.
+  target.mat
+### n x 2 matrix of target interval limits.
+  ){
+  if(!(
+    is.numeric(feature.mat) && 
+    is.matrix(feature.mat) &&
+    is.character(colnames(feature.mat))
+  )){
+    stop("feature.mat should be a numeric matrix with colnames (input features)")
+  }
+  if(!(
+    is.numeric(target.mat) && 
+    is.matrix(target.mat) && 
+    ncol(target.mat) == 2
+  )){
+    stop("target.mat should be a numeric matrix with two columns (lower and upper limits of correct outputs)")
+  }
+  if(nrow(target.mat) != nrow(feature.mat)){
+    stop("feature.mat and target.mat should have the same number of rows")
+  }
+  nrow(feature.mat)
+### number of observations/rows.
+}
+
+IntervalRegressionRegularized <- structure(function
 ### Repeatedly use IntervalRegressionInternal to solve interval
 ### regression problems for a path of regularization parameters. This
 ### function does not perform automatic selection of the
@@ -229,18 +304,14 @@ IntervalRegressionRegularized <- function
 ### Print messages if >= 1.
  ...
 ### Other parameters to pass to IntervalRegressionInternal.
- ){
-  stopifnot(is.numeric(feature.mat))
-  stopifnot(is.matrix(feature.mat))
-  n.observations <- nrow(feature.mat)
-  stopifnot(is.numeric(target.mat))
-  stopifnot(is.matrix(target.mat))
-  stopifnot(nrow(target.mat) == n.observations)
-  stopifnot(ncol(target.mat) == 2)
+){
+  residual <- limit <- normalized.weight <- variable <- NULL
+### The code above is to avoid CRAN NOTEs like
+### IntervalRegressionRegularized: no visible binding for global variable
+  check_features_targets(feature.mat, target.mat)
   stopifnot(is.numeric(initial.regularization))
   stopifnot(length(initial.regularization)==1)
   stopifnot(is.finite(initial.regularization))
-
   is.trivial.target <- apply(!is.finite(target.mat), 1, all)
   nontrivial.features <- feature.mat[!is.trivial.target, , drop=FALSE]
   nontrivial.targets <- target.mat[!is.trivial.target, , drop=FALSE]
@@ -255,6 +326,9 @@ IntervalRegressionRegularized <- function
   is.invariant <- all.sd.vec == 0
   train.feature.i <- which(!is.invariant)
   train.feature.names <- colnames(finite.features)[train.feature.i]
+  if(length(train.feature.names)==0){
+    stop("after filtering NA and constant features, none remain for training")
+  }
   mean.vec <- all.mean.vec[train.feature.names]
   sd.vec <- all.sd.vec[train.feature.names]
   invariant.features <- finite.features[, train.feature.names, drop=FALSE]
@@ -266,13 +340,12 @@ IntervalRegressionRegularized <- function
   intercept.features <- cbind("(Intercept)"=1, norm.features)
   apply(intercept.features, 2, mean)
   apply(intercept.features, 2, sd)
-
   regularization <- initial.regularization
   n.features <- ncol(intercept.features)
   param.vec <- rep(0, n.features)
   n.nonzero <- n.features
-
   param.vec.list <- list()
+  scaled.vec.list <- list()
   regularization.vec.list <- list()
   while(n.nonzero > 1){
     param.vec <-
@@ -289,7 +362,18 @@ IntervalRegressionRegularized <- function
       cat(sprintf("regularization=%8.4f L1norm=%8.4f zeros=%d\n",
                   regularization, l1.norm, n.zero))
     }
-    param.vec.list[[paste(regularization)]] <- param.vec
+    weight.vec <- param.vec[-1]
+    ## training is done in the centered and scaled space
+    ## (intercept.features), but we report coefficients for the
+    ## original space.
+    orig.param.vec <- c(
+      param.vec[1] - sum(weight.vec*mean.vec/sd.vec),
+      weight.vec/sd.vec)
+    pred.vec <- intercept.features %*% param.vec
+    orig.pred.vec <- cbind(1, invariant.features) %*% orig.param.vec
+    stopifnot(all.equal(pred.vec, orig.pred.vec))
+    scaled.vec.list[[paste(regularization)]] <- weight.vec
+    param.vec.list[[paste(regularization)]] <- orig.param.vec
     regularization.vec.list[[paste(regularization)]] <- regularization
     if(is.null(factor.regularization)){
       n.nonzero <- 1 #stops while loop.
@@ -299,6 +383,7 @@ IntervalRegressionRegularized <- function
       regularization <- regularization * factor.regularization
     }
   }
+  scaled.mat <- do.call(cbind, scaled.vec.list)
   param.mat <- do.call(cbind, param.vec.list)
   if(verbose >= 1){
     cat(paste0("Done computing parameter matrix (",
@@ -309,34 +394,129 @@ IntervalRegressionRegularized <- function
   pred.feature.names <- train.feature.names[!feature.not.used]
   pred.param.mat <-
     param.mat[c("(Intercept)", pred.feature.names),,drop=FALSE]
-  list(param.mat=param.mat,
-       regularization.vec=do.call(c, regularization.vec.list),
-       mean.vec=mean.vec,
-       sd.vec=sd.vec,
-       train.feature.names=train.feature.names,
-       pred.feature.names=pred.feature.names,
-       pred.param.mat=pred.param.mat,
-       predict=function(mat){
-         stopifnot(is.matrix(mat))
-         stopifnot(is.numeric(mat))
-         stopifnot(pred.feature.names %in% colnames(mat))
-         raw.mat <- mat[, pred.feature.names, drop=FALSE]
-         raw.mat[!is.finite(raw.mat)] <- 0 
-         mean.mat <- matrix(
-           mean.vec[pred.feature.names],
-           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
-         sd.mat <- matrix(
-           sd.vec[pred.feature.names],
-           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
-         norm.mat <- (raw.mat-mean.mat)/sd.mat
-         intercept.mat <- cbind("(Intercept)"=1, norm.mat)
-         intercept.mat %*% pred.param.mat
-       })
+  L <- list(
+    param.mat=param.mat,
+    regularization.vec=do.call(c, regularization.vec.list),
+    train.feature.names=train.feature.names,
+    pred.feature.names=pred.feature.names,
+    pred.param.mat=pred.param.mat,
+    plot.weight.data=data.table(
+      normalized.weight=as.numeric(scaled.mat),
+      original.weight=as.numeric(param.mat[-1,]),
+      variable=rownames(scaled.mat)[row(scaled.mat)],
+      regularization=as.numeric(colnames(scaled.mat)[col(scaled.mat)])),
+    predict=function(mat){
+      if(missing(mat))mat <- feature.mat
+      stopifnot(is.matrix(mat))
+      stopifnot(is.numeric(mat))
+      is.missing <- ! pred.feature.names %in% colnames(mat)
+      if(any(is.missing)){
+        stop("columns needed for prediction but not present: ",
+             paste(pred.feature.names[is.missing], collapse=", "))
+      }
+      cbind(1, mat[, pred.feature.names, drop=FALSE]) %*% pred.param.mat
+    })
+  class(L) <- c("IntervalRegression", "list")
+  pred.log.penalty <- predict(L)
+  lower.limit <- -Inf < target.mat[,1]
+  upper.limit <- target.mat[,2] < Inf
+  pred.dt <- data.table(
+    pred.log.penalty=as.numeric(pred.log.penalty),
+    regularization=as.numeric(
+      colnames(pred.log.penalty)[col(pred.log.penalty)]),
+    model.i=as.integer(col(pred.log.penalty)),
+    observation=as.integer(row(pred.log.penalty)),
+    residual=targetIntervalResidual(target.mat, pred.log.penalty),
+    lower.limit, upper.limit, limit=ifelse(
+      upper.limit, ifelse(lower.limit, "both", "upper"), "lower")
+  )[lower.limit | upper.limit]
+  L$plot.residual.data <- pred.dt
+  limit.colors <- c(
+    upper="red",
+    both="blue",
+    lower="grey50")
+  L$plot.residual <- ggplot()+
+    theme_bw()+
+    theme_no_space+
+    facet_wrap("model.i")+
+    geom_hline(yintercept=0, color="grey")+
+    scale_color_manual(values=limit.colors, breaks=names(limit.colors))+
+    geom_point(aes(
+      pred.log.penalty, residual, color=limit),
+      data=pred.dt,
+      shape=1)
+  L$plot <- if(1 == length(L$regularization.vec)){
+    L$plot.residual
+  }else{
+    gg <- ggplot()+
+      geom_line(aes(
+        -log10(regularization), normalized.weight, color=variable),
+        data=L$plot.weight.data)
+    (L$plot.weight <- if(requireNamespace("directlabels")){
+      directlabels::direct.label(gg, "lasso.labels")
+    }else{
+      message('install.packages("directlabels") for more informative labels on plot.weight')
+      gg
+    })
+  }
+  L
 ### List representing fit model. You can do
 ### fit$predict(feature.matrix) to get a matrix of predicted log
-### penalty values. The mean.vec and sd.vec were used for scaling the
-### training data matrices. The param.mat is the n.features *
-### n.regularization numeric matrix of optimal coefficients.
+### penalty values. The param.mat is the n.features * n.regularization
+### numeric matrix of optimal coefficients (on the original scale).
+}, ex=function(){
+
+  if(interactive()){
+    library(penaltyLearning)
+    data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+    i.train <- 1:500
+    fit <- with(neuroblastomaProcessed, IntervalRegressionRegularized(
+      feature.mat[i.train,], target.mat[i.train,]))
+    plot(fit)
+  }
+
+})
+
+### print learned model parameters.
+print.IntervalRegression <- function(x, ...){
+  if(ncol(x$pred.param.mat)==1){
+    cat(
+      "IntervalRegression model for regularization ",
+      x$regularization.vec, 
+      " with weights:\n",
+      sep="")
+    x <- t(x$pred.param.mat)
+    rownames(x) <- ""
+    print(x)
+  }else{
+    cat(
+      "IntervalRegression models [",
+      nrow(x$pred.param.mat),
+      " weights x ",
+      ncol(x$pred.param.mat),
+      " regularizations]\n",
+      sep="")
+  }
+}
+
+### Get the learned coefficients of an IntervalRegression model.
+coef.IntervalRegression <- function(object, ...){
+  object$pred.param.mat
+### numeric matrix [features x regularizations] of learned weights (on
+### the original feature scale), can be used for prediction via
+### cbind(1,features) %*% weights.
+}
+
+### Plot an IntervalRegression model.
+plot.IntervalRegression <- function(x, ...){
+  x$plot
+### a ggplot.
+}
+
+### Compute model predictions.
+predict.IntervalRegression <- function(object, X, ...){
+  object$predict(X)
+### numeric matrix of predicted log(penalty) values.
 }
 
 IntervalRegressionInternal <- function
@@ -491,12 +671,13 @@ IntervalRegressionInternal <- function
       Lipschitz <- Lipschitz * 1.5
     }
     if(iterate.count > max.iterations){
-      Lipschitz <- Lipschitz * 1.5
-      iterate.count <- 1
       if(verbose >= 1){
-        cat(max.iterations, "iterations, increasing Lipschitz.",
+        cat(max.iterations, "iterations, increasing Lipschitz and iterations.",
             "crit =", stopping.crit, "\n")
       }
+      Lipschitz <- Lipschitz * 1.5
+      iterate.count <- 1
+      max.iterations <- max.iterations * 2
     }
   }
   if(verbose >= 1){

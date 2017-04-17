@@ -2,6 +2,19 @@ Algorithms for supervised learning of penalty functions for change detection
 
 [[https://travis-ci.org/tdhock/penaltyLearning][https://travis-ci.org/tdhock/penaltyLearning.png?branch=master]]
 
+This R package provides a practical implementation of the algorithms
+described in our ICML'13 paper, [[http://jmlr.org/proceedings/papers/v28/hocking13.html][Learning Sparse Penalties for
+Change-point Detection using Max Margin Interval Regression]]. This
+package can be used to learn a penalty function for predicting highly
+accurate changepoints in labeled data sets such as [[https://cran.r-project.org/package=neuroblastoma][neuroblastoma]]. The
+main advantage of this method is increased accuracy, relative to
+unsupervised methods (such as information criteria: AIC, BIC, etc). In
+particular, since we have labels that indicate where there should and
+should not be changepoints, we can use them to learn a highly accurate
+penalty function which minimizes the number of incorrectly predicted
+labels. The learned penalty function can be used for predicting the
+number of changepoints in other data (even in data without labels).
+
 ** Installation
 
 #+BEGIN_SRC R
@@ -10,10 +23,52 @@ devtools::install_github("tdhock/penaltyLearning")
 
 ** Usage
 
-This R package provides a practical method to learn a penalty function
-for predicting change-points in labeled data sets such as
-https://cran.r-project.org/package=neuroblastoma Below we plot the
-data and labels, for a subset of 6 profiles.
+A typical supervised changepoint analysis will consist of the
+following computations:
+- *Changepoints and model selection.* For each of
+  several labeled segmentation problems (data sequences that are
+  separate but have a similar signal/noise pattern), use your favorite
+  changepoint detection package to compute a sequence of models of
+  increasing complexity (say from 0 to 20 changepoints). For each
+  segmentation problem, make sure to save the changepoint positions of
+  each model, and use =modelSelection= to compute the
+  exact path of models that will be selected for every possible
+  non-negative penalty value.
+- *Label error.* Use =labelError= to compute
+  the number of incorrect labels for each labeled segmentation problem
+  and each changepoint model. The goal of learning is to minimize the
+  number of incorrectly predicted labels.
+- *Outputs.* Use =targetIntervals= to compute a
+  target interval of log(penalty) values that predicts the minimum
+  number of incorrect labels for each segmentation problem. Create a
+  target interval matrix (one row for each segmentation problems, 2
+  columns) which can be used as the output (target.mat argument) in
+  the =IntervalRegression*= functions.
+- *Inputs.* Compute a feature matrix (segmentation problems x
+  features) using =featureMatrix=. Features can be
+  simple statistics of each segmentation problem (quantiles, mean,
+  number of data points, estimated variance, etc).
+- *Learning.* Use =IntervalRegressionCV= to learn a
+  penalty function, and automatically perform feature selection using
+  L1 regularization. If you want to evaluate the prediction accuracy
+  of the model you learn, make sure to set aside a "test set" of
+  labeled data that you do not use in this learning step (this method is
+  called cross-validation).
+- *Prediction.* Use the =predict.IntervalRegression=
+  method to compute predicted penalty values for all the segmentation
+  problems. This works even for unlabeled data, and for "test" data
+  sets where you have hidden some labels in a computational
+  cross-validation experiment.
+- *Evaluation.* If you have set aside a "test set" of labels that you
+  did not use for learning, then you can now use
+  =ROChange= to compute test ROC curves. The AUC
+  (area under the ROC curve) and the percent incorrect labels in the
+  test set can be used to evaluate the prediction accuracy of your
+  model.
+
+*** Plot data and labels
+
+Below we plot the data and labels, for a subset of 6 profiles.
 
 #+BEGIN_SRC R
   library(penaltyLearning)
@@ -30,7 +85,7 @@ data and labels, for a subset of 6 profiles.
     "normal"="#f6f4bf")
   library(ggplot2)
   ggplot()+
-    ggtitle("supervised change-point detection = data + labels")+
+    ggtitle("supervised changepoint detection = data + labels")+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "lines"))+
     facet_grid(profile.id ~ chromosome, scales="free", space="free_x")+
@@ -46,21 +101,23 @@ data and labels, for a subset of 6 profiles.
       breaks=c(100, 200))
 #+END_SRC
 
-The plot above shows 24 * 6 = 144 separate multiple change-point
+The plot above shows 24 * 6 = 144 separate multiple changepoint
 detection problems, which include labels (colored rectangles) which
 indicate regions that should have at least one change (purple
 breakpoint labels), and regions that should have no changes (yellow
 normal labels). These are positive and negative labels that can be
-used to train a supervised machine learning model for change-point
+used to train a supervised machine learning model for changepoint
 detection.
 
-The change-point detection model that has proven to be most accurate
+*** Segmentation and model selection
+
+The changepoint detection model that has proven to be most accurate
 in these data ([[http://members.cbio.mines-paristech.fr/~thocking/neuroblastoma/accuracy.html][see benchmark]]) is maximum likelihood segmentation with
 the normal/Gaussian loss. This model has efficient implementations in
 R as =cghseg:::segmeanCO=, =Segmentor3IsBack::Segmentor=, and
 =changepoint::cpt.mean=. These packages provide methods for computing
-the most likely change-point positions, subject to a constraint on the
-number of change-points. In the code below, we use Segmentor to
+the most likely changepoint positions, subject to a constraint on the
+number of changepoints. In the code below, we use Segmentor to
 compute models from 1 to 10 segments.
 
 #+BEGIN_SRC R
@@ -105,11 +162,11 @@ compute models from 1 to 10 segments.
   segs <- do.call(rbind, segs.list)
 #+END_SRC
 
-Choosing the number of change-points is typically done using a penalty
-function, which affects the error rate of the change-point model
-(which we can measure by counting the number of incorrectly predicted
-labels). The =penaltyLearning= package can be used to learn a penalty
-function which minimizes this error rate. First, we use
+Choosing the number of changepoints is typically done using a penalty
+function, which affects the error rate of the changepoint model. The
+=penaltyLearning= package can be used to measure the error rate by
+counting the number of incorrectly predicted labels, and learn a
+penalty function which minimizes the error rate. First, we use
 =modelSelection= to determine a mapping between penalty values and
 segments/changes.
 
@@ -118,6 +175,8 @@ segments/changes.
     penaltyLearning::modelSelection(.SD, "loss", "n.segments")
   }, by=.(profile.id, chromosome)]
 #+END_SRC
+
+*** Compute label error
 
 Then, we compute the number of incorrect labels for each model, for
 each labeled segmentation problem.
@@ -131,6 +190,16 @@ each labeled segmentation problem.
     problem.vars=c("profile.id", "chromosome"))
 #+END_SRC
 
+The named arguments specify how the three input data tables are used:
+- =change.var= is the column name of =changes= that will be used as
+  the changepoint position.
+- =label.vars= are the column names of the start and end of the
+  labeled regions.
+- =problem.vars= are the column names (common to all data tables) that
+  are used to identify independent data sequences.
+
+*** Compute target intervals
+
 Now, let's perform a computational cross-validation experiment to
 train and evaluate a learned penalty function. We use labels in
 chromosome 11 as a test set, and use all other labels as a train set.
@@ -140,10 +209,10 @@ chromosome 11 as a test set, and use all other labels as a train set.
   all.errors[, set := ifelse(chromosome=="11", "test", "train")]
 #+END_SRC
 
-To train a penalty learning model, for every problem, we compute
-target intervals of log(penalty) values that achieve the minimal
-number of incorrect labels. This is the "output" in the machine
-learning problem.
+To train a penalty learning model, we compute target intervals of
+log(penalty) values that achieve the minimal number of incorrect
+labels (for each problem independently). This is the "output" in the
+machine learning problem.
 
 #+BEGIN_SRC R
   target.dt <- targetIntervals(
@@ -153,8 +222,13 @@ learning problem.
   rownames(target.mat) <- target.dt[, paste(profile.id, chromosome)]
 #+END_SRC
 
+*** Compute feature matrix
+
 Then we compute a feature matrix (problems x features), which is the
-"input" in the machine learning problem.
+"input" in the machine learning problem. Here we compute a simple
+matrix with just 2 columns/features. Use
+=penaltyLearning::featureMatrix= for computing a larger feature
+matrix.
 
 #+BEGIN_SRC R
   feature.dt <- profiles[, list(
@@ -166,21 +240,28 @@ Then we compute a feature matrix (problems x features), which is the
   train.feature.mat <- all.feature.mat[rownames(target.mat), ]
 #+END_SRC
 
+*** Learn a penalty function
+
 Then we use =IntervalRegressionUnregularized= to learn a penalty
-function for this small data set. For data sets with more labels and
-features, =IntervalRegressionCV= would be preferable, since it also
-performs variable selection using L1-regularization.
+function for this small data set (see our [[http://jmlr.org/proceedings/papers/v28/hocking13.html][ICML'13 paper]] for
+details). For data sets with more labels and features,
+=IntervalRegressionCV= would be preferable, since it also performs
+variable selection using L1-regularization.
 
 #+BEGIN_SRC R
   fit <- IntervalRegressionUnregularized(train.feature.mat, target.mat)
 #+END_SRC
 
+*** Prediction
+
 Then we use the model to predict log(penalty) values for each
 segmentation problem (even those in the test set).
 
 #+BEGIN_SRC R
-  feature.dt$pred.log.lambda <- fit$predict(all.feature.mat)
+  feature.dt[, pred.log.lambda := predict(fit, all.feature.mat)]
 #+END_SRC
+
+*** Evaluation
 
 We can use =ROChange= to compute test ROC curves, and Area Under the
 Curve (AUC), which in this case is 1, indicating perfect prediction
@@ -191,23 +272,24 @@ accuracy.
   ROChange(all.errors, test.pred, c("profile.id", "chromosome"))
 #+END_SRC
 
-Finally we use =foverlaps= to join =feature.dt= (which contains the
-predicted values) with =selection= (which contains the number of
-segments for each penalty value). Then we plot the predicted
+*** Visualizing predictions
+
+Finally we use a non-equi join of =feature.dt= (which contains the
+predicted penalty values) with =selection= (which contains the number
+of segments for each penalty value). Then we plot the predicted
 models. It is clear that in these data, all of the predicted models
-are consistent with the labels.
+are consistent with the labels. You can also see that the model makes
+reasonable predictions for the unlabeled chromosomes.
 
 #+BEGIN_SRC R
-  feature.dt[, pred.log.penalty := pred.log.lambda ]
-  setkey(feature.dt, profile.id, chromosome, pred.log.lambda, pred.log.penalty)
-  setkey(selection, profile.id, chromosome, min.log.lambda, max.log.lambda)
-  pred.models <- foverlaps(feature.dt, selection)
-  setkey(pred.models, profile.id, chromosome, n.segments)
-  setkey(segs, profile.id, chromosome, n.segments)
-  pred.segs <- segs[pred.models]
+  pred.models <- feature.dt[selection, nomatch=0L, on=list(
+    profile.id, chromosome,
+    pred.log.lambda < max.log.lambda,
+    pred.log.lambda > min.log.lambda)]
+  pred.segs <- segs[pred.models, on=list(profile.id, chromosome, n.segments)]
   pred.changes <- pred.segs[1 < start, ]
-  setkey(errors$label.errors, profile.id, chromosome, n.segments)
-  pred.labels <- errors$label.errors[pred.models, nomatch=0L]
+  pred.labels <- errors$label.errors[pred.models, nomatch=0L, on=list(
+    profile.id, chromosome, n.segments)]
   ggplot()+
     ggtitle("data + labels + predicted segment means and changes")+
     theme_bw()+

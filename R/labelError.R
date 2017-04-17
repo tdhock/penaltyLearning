@@ -1,112 +1,161 @@
 labelError <- structure(function # Compute incorrect labels
 ### Compute incorrect labels for several change-point detection
-### problems and models.
+### problems and models. Use this function after having computed
+### changepoints, loss values, and model selection functions
+### (see modelSelection). The next step after labelError is typically
+### computing target intervals of log(penalty) values that predict
+### changepoints with minimum incorrect labels for each problem (see
+### targetIntervals).
 (models,
-### data.frame with one row per (problem,model) combination.
+### data.frame with one row per (problem,model) combination, typically
+### the output of modelSelection(...). There is a row for each
+### changepoint model that could be selected for a particular
+### segmentation problem. There should be columns problem.vars (for
+### problem ID) and model.vars (for model complexity).
   labels,
-### data.frame with one row per (problem,label).
+### data.frame with one row per (problem,region). Each label defines a
+### region in a particular segmentation problem, and a range of
+### predicted changepoints which are consistent in that region. There
+### should be a column "annotation" with takes one of the
+### corresponding values in the annotation column of change.labels
+### (used to determine the range of predicted changepoints which are
+### consistent). There should also be a columns problem.vars (for
+### problem ID) and label.vars (for region start/end).
   changes,
-### data.frame with one row per (problem,model,change).
+### data.frame with one row per (problem,model,change), for each
+### predicted changepoint (in each model and segmentation
+### problem). Should have columns problem.vars (for problem ID),
+### model.vars (for model complexity), and change.var (for changepoint
+### position).
   change.var="chromStart",
 ### character(length=1): column name of predicted change-point
-### position (refers to the changes argument). The default
-### "chromStart" is useful for genomic data with segment start/end
-### positions stored in columns named chromStart/chromEnd.
+### position in labels. The default "chromStart" is useful for genomic
+### data with segment start/end positions stored in columns named
+### chromStart/chromEnd. A predicted changepoint at position X is
+### interpreted to mean a changepoint between X and X+1.
   label.vars=c("min", "max"),
 ### character(length=2): column names of start and end positions of
-### labeled regions, in same units as change-point positions (refers
-### to the labels argument). The default is c("min", "max").
+### labels, in same units as change-point positions. The default is
+### c("min", "max"). Labeled regions are (start,end] -- open on the
+### left and closed on the right, so for example a 0changes annotation
+### between start=10 and end=20 means that any predicted changepoint
+### at 11, ..., 20 is a false positive.
   model.vars="n.segments",
 ### character: column names used to identify model complexity. The
 ### default "n.segments" is for change-point models such as in the
 ### Segmentor3IsBack and cghseg packages.
-  problem.vars=character(0)
+  problem.vars=character(0),
 ### character: column names used to identify data set / segmentation
-### problem. 
-){
-  stopifnot(is.character(problem.vars))
-  stopifnot(is.character(model.vars))
-  stopifnot(is.character(change.var))
-  stopifnot(is.character(label.vars))
-  stopifnot(length(change.var)==1)
-  stopifnot(length(label.vars)==2)
+### problem, should be present in all three data tables (models,
+### labels, changes).
+  annotations=change.labels
+### data.table with columns annotation, min.changes, max.changes,
+### possible.fn, possible.fp which is joined to labels in order to
+### determine how to compute false positives and false negatives for
+### each annotation.
+) {
+  weight <- annotation <- fp <- max.changes <- pred.changes <- fn <-
+    min.changes <- status <- possible.fp <- possible.fn <- NULL
+### The code above is to avoid CRAN NOTEs like
+### labelError: no visible binding for global variable
   stopifnot(is.data.frame(models))
   stopifnot(is.data.frame(labels))
   stopifnot(is.data.frame(changes))
-  if(length(problem.vars)==0){
-    stop("Need at least one column name in problem.vars")
+  if(!(
+    is.character(problem.vars) &&
+    0 < length(problem.vars) &&
+    problem.vars %in% names(changes) &&
+    problem.vars %in% names(labels) &&
+    problem.vars %in% names(models)
+  )){
+    stop("problem.vars should be a character vector of column names present in models, changes, and labels (ID for separate changepoint detection problems)")
   }
-  if(length(model.vars)==0){
-    stop("Need at least one column name in model.vars")
+  if(!(
+    is.character(label.vars) &&
+    length(label.vars)==2 &&
+    all(label.vars %in% names(labels))
+  )){
+    stop("label.vars should be a 2-element character vector of labels column names (start and end of labeled region)")
   }
-  stopifnot(label.vars %in% names(labels))
-  stopifnot(change.var %in% names(changes))
-  stopifnot(problem.vars %in% names(changes))
-  stopifnot(problem.vars %in% names(labels))
-  stopifnot(problem.vars %in% names(models))
-  stopifnot(model.vars %in% names(models))
-  stopifnot(model.vars %in% names(changes))
-  new.key <- paste0(change.var, ".after")
-  if(new.key %in% names(changes)){
-    stop("changes should not have a column named ", new.key)
+  if(any(labels[[ label.vars[[2]] ]] <= labels[[ label.vars[[1]] ]])){
+    stop("label start must be less than end")
+  }
+  if(!(
+    is.character(change.var) &&
+    length(change.var)==1 &&
+    change.var %in% names(changes)
+  )){
+    stop("change.var should be a column name of changes (position of predicted changepoints)")
+  }
+  if(!(
+    is.character(model.vars) && 
+    0 < length(model.vars) &&
+    model.vars %in% names(models) &&
+    model.vars %in% names(changes)
+  )){
+    stop("model.vars should be a column name of both models and changes (ID for model complexity, typically the number of changepoints or segments)")
   }
   labels.dt <- data.table(labels)
+  setkeyv(labels.dt, c(problem.vars, label.vars))
+  labels.dt[, {
+    end <- .SD[[ label.vars[[2]] ]][-.N]
+    next.start <- .SD[[ label.vars[[1]] ]][-1]
+    if(any(next.start < end)){
+      stop("each label end must be <= next label start")
+    }
+  }, by=problem.vars]
   if("weight" %in% names(labels.dt)){
     stopifnot(is.numeric(labels.dt$weight))
     stopifnot(0 < labels.dt$weight)
   }else{
-    labels.dt$weight <- 1
+    labels.dt[, weight := 1 ]
   }
-  setkey(labels.dt, annotation)
-  labels.info <- change.labels[labels.dt]
-  stopifnot(nrow(labels.info)==nrow(labels.dt))
-  setkeyv(labels.info, problem.vars)
+  labels.info <- annotations[labels.dt, on=list(annotation)]
+  if(nrow(labels.info)!=nrow(labels.dt)){
+    stop("labels$annotation must be one of annotations$annotation")
+  }
   models.dt <- data.table(models)
-  setkeyv(models.dt, problem.vars)
-  model.labels <- models.dt[labels.info, allow.cartesian=TRUE]
+  model.labels <- models.dt[labels.info, on=problem.vars, allow.cartesian=TRUE]
   if(any(is.na(model.labels))){
     stop("some labels have no models")
   }
   changes.dt <- data.table(changes)
-  changes.dt[[new.key]] <- changes.dt[[change.var]]+1
-  changes.key <- c(problem.vars, model.vars, change.var, new.key)
-  setkeyv(changes.dt, changes.key)
-  labels.key <- c(problem.vars, model.vars, label.vars)
-  setkeyv(model.labels, labels.key)
-  over.dt <- foverlaps(changes.dt, model.labels, nomatch=0L)
-  long.key <- c(
-    labels.key, "annotation",
-    "min.changes", "max.changes", "possible.fp", "possible.fn", "weight")
-  setkeyv(over.dt, long.key)
-  setkeyv(model.labels, long.key)
-  changes.per.label <- over.dt[model.labels, list(
+  over.dt <- changes.dt[model.labels, list(
     pred.changes=.N
-    ), by=.EACHI]
+  ), by=.EACHI, on=c(
+    problem.vars, model.vars,
+    paste0(change.var, c(">", "<="), label.vars))]
+  ## Is this a bug in data.table? Why should I have to set names back
+  ## to start and end (they are both pos after the join).
+  setnames(over.dt, c(
+    problem.vars, model.vars,
+    label.vars,
+    "pred.changes"))
+  changes.per.label <- over.dt[model.labels, on=c(
+    problem.vars, model.vars, label.vars)]
   changes.per.label[, fp := ifelse(max.changes < pred.changes, weight, 0)]
   changes.per.label[, fn := ifelse(pred.changes < min.changes, weight, 0)]
   changes.per.label[, status := ifelse(
     fp, "false positive", ifelse(
       fn, "false negative", "correct"))]
-  setkeyv(model.labels, c(problem.vars, model.vars))
-  setkeyv(models.dt, c(problem.vars, model.vars))
-  setkeyv(changes.per.label, c(problem.vars, model.vars))
-  error.totals <- changes.per.label[model.labels, list(
+  error.totals <- changes.per.label[, list(
     possible.fp=sum(possible.fp*weight),
     fp=sum(fp),
     possible.fn=sum(possible.fn*weight),
     fn=sum(fn),
     labels=sum(weight),
     errors=sum(fp+fn)),
-    by=.EACHI]
+    by=c(problem.vars, model.vars)]
   list(
-    model.errors=models.dt[error.totals],
+    model.errors=models.dt[error.totals, on=c(problem.vars, model.vars)],
     label.errors=changes.per.label)
 ### list of two data.tables: label.errors has one row for every
 ### combination of models and labels, with status column that
 ### indicates whether or not that model commits an error in that
-### particular label; model.errors has one row per row of models, with
-### columns for computing error and ROC curves.
-}, ex=function(){
+### particular label; model.errors has one row per model, with columns
+### for computing target intervals and ROC curves (see targetIntervals
+### and ROChange).
+}, ex=function() {
   
   library(penaltyLearning)
   data(neuroblastoma, package="neuroblastoma", envir=environment())
@@ -116,9 +165,9 @@ labelError <- structure(function # Compute incorrect labels
     data.table(profile.id=4, chromosome="14", min, max, annotation)
   }
   ann <- rbind(
-      ann4,
-      label("1change", 70e6, 80e6),
-      label("0changes", 20e6, 60e6))
+    ann4,
+    label("1change", 70e6, 80e6),
+    label("0changes", 20e6, 60e6))
   max.segments <- 5
   segs.list <- list()
   models.list <- list()
@@ -137,13 +186,13 @@ labelError <- structure(function # Compute incorrect labels
       chromStart <- c(pro$position[1], pos.before.change)
       chromEnd <- c(pos.before.change, max(pro$position))
       segs.list[[paste(chr, n.segments)]] <- data.table(
-          chromosome=chr,
-          n.segments,
-          start,
-          end,
-          chromStart,
-          chromEnd,
-          mean=fit@parameters[n.segments, 1:n.segments])
+        chromosome=chr,
+        n.segments,
+        start,
+        end,
+        chromStart,
+        chromEnd,
+        mean=fit@parameters[n.segments, 1:n.segments])
     }
   }
   segs <- do.call(rbind, segs.list)
@@ -151,16 +200,16 @@ labelError <- structure(function # Compute incorrect labels
   
   changes <- segs[1 < start,]
   error.list <- labelError(
-      models, ann, changes,
-      problem.vars="chromosome", # for all three data sets.
-      model.vars="n.segments", # for changes and selection.
-      change.var="chromStart", # column of changes with breakpoint position.
-      label.vars=c("min", "max")) # limit of labels in ann.
-
+    models, ann, changes,
+    problem.vars="chromosome", # for all three data sets.
+    model.vars="n.segments", # for changes and selection.
+    change.var="chromStart", # column of changes with breakpoint position.
+    label.vars=c("min", "max")) # limit of labels in ann.
+  
   library(ggplot2)
   ggplot()+
     theme_bw()+
-    theme(panel.margin=grid::unit(0, "lines"))+
+    theme_no_space+
     facet_grid(n.segments ~ chromosome, scales="free", space="free")+
     scale_x_continuous(breaks=c(100, 200))+
     scale_linetype_manual("error type",

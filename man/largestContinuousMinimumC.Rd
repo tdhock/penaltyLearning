@@ -1,23 +1,18 @@
-\name{targetIntervals}
-\alias{targetIntervals}
-\title{Compute target intervals}
-\description{Compute target intervals of log(penalty) values that result in
-predicted changepoint models with minimum incorrect labels.
-Use this function after labelError, and before IntervalRegression*.}
-\usage{targetIntervals(models, problem.vars)}
+\name{largestContinuousMinimumC}
+\alias{largestContinuousMinimumC}
+\title{largestContinuousMinimumC}
+\description{Find the run of minimum cost with the largest size.
+This function use a linear time C implementation,
+and is meant for internal use.
+Use targetIntervals for real data.}
+\usage{largestContinuousMinimumC(cost, size)}
 \arguments{
-  \item{models}{data.table with columns errors, min.log.lambda, max.log.lambda,
-typically labelError()$model.errors.}
-  \item{problem.vars}{character: column names used to identify data set / segmentation
-problem.}
+  \item{cost}{numeric vector of cost values.}
+  \item{size}{numeric vector of interval size values.}
 }
 
-\value{data.table with columns problem.vars, one row for each
-segmentation problem. The "min.log.lambda", and "max.log.lambda"
-columns give the largest interval of log(penalty) values which
-results in the minimum incorrect labels for that problem. This can
-be used to create the target.mat parameter of the
-IntervalRegression* functions.}
+\value{Integer vector length 2 (start and end of target interval relative
+to cost and size).}
 
 \author{Toby Dylan Hocking}
 
@@ -74,6 +69,10 @@ error.list <- labelError(
   model.vars="n.segments", # for changes and selection.
   change.var="chromStart", # column of changes with breakpoint position.
   label.vars=c("min", "max")) # limit of labels in ann.
-targetIntervals(error.list$model.errors, "chromosome")
+
+one.problem.error <- error.list$model.errors[chromosome=="14", ]
+indices <- one.problem.error[, largestContinuousMinimumC(
+  errors, max.log.lambda-min.log.lambda)]
+one.problem.error[indices[["start"]]:indices[["end"]],]
 
 }

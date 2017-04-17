@@ -28,7 +28,8 @@ modelSelectionC <- structure(function # Exact model selection function
     model.complexity=as.double(model.complexity),
     n.models=as.integer(n.models),
     after.vec=as.integer(after.vec),
-    lambda.vec=as.double(lambda.vec))
+    lambda.vec=as.double(lambda.vec),
+    PACKAGE="penaltyLearning")
   is.out <- 0 < result.list$lambda.vec
   lambda.out <- result.list$lambda.vec[is.out]
   i <- c(n.models, result.list$after.vec[is.out]+1)
@@ -52,6 +53,7 @@ modelSelectionC <- structure(function # Exact model selection function
 ### values.
 },ex=function(){
 
+  library(penaltyLearning)
   data(neuroblastoma, package="neuroblastoma", envir=environment())
   pro <- subset(neuroblastoma$profiles, profile.id==1 & chromosome=="X")
   max.segments <- 20
@@ -150,53 +152,72 @@ modelSelectionR <- structure(function # Exact model selection function
 ### values.
 },ex=function(){
 
-  library(penaltyLearning)
-  data(neuroblastoma, package="neuroblastoma", envir=environment())
-  one <- subset(neuroblastoma$profiles, profile.id==599 & chromosome=="14")
-  max.segments <- 1000
-  fit <- Segmentor3IsBack::Segmentor(one$logratio, model=2, Kmax=max.segments)
-  lik.df <- data.frame(lik=fit@likelihood, segments=1:max.segments)
-  times.list <- list()
-  for(n.segments in seq(10, max.segments, by=10)){
-    some.lik <- lik.df[1:n.segments,]
-    some.times <- microbenchmark::microbenchmark(
-      R=pathR <- with(some.lik, modelSelectionR(lik, segments, segments)),
-      C=pathC <- with(some.lik, modelSelectionC(lik, segments, segments)),
-      times=5)
-    times.list[[paste(n.segments)]] <- data.frame(n.segments, some.times)
+  if(interactive()){
+    library(penaltyLearning)
+    data(neuroblastoma, package="neuroblastoma", envir=environment())
+    one <- subset(neuroblastoma$profiles, profile.id==599 & chromosome=="14")
+    max.segments <- 1000
+    fit <- Segmentor3IsBack::Segmentor(one$logratio, model=2, Kmax=max.segments)
+    lik.df <- data.frame(lik=fit@likelihood, segments=1:max.segments)
+    times.list <- list()
+    for(n.segments in seq(10, max.segments, by=10)){
+      some.lik <- lik.df[1:n.segments,]
+      some.times <- microbenchmark::microbenchmark(
+        R=pathR <- with(some.lik, modelSelectionR(lik, segments, segments)),
+        C=pathC <- with(some.lik, modelSelectionC(lik, segments, segments)),
+        times=5)
+      times.list[[paste(n.segments)]] <- data.frame(n.segments, some.times)
+    }
+    times <- do.call(rbind, times.list)
+    ## modelSelectionR and modelSelectionC should give identical results.
+    identical(pathR, pathC)
+    ## However, modelSelectionC is much faster (linear time complexity)
+    ## than modelSelectionR (quadratic time complexity).
+    library(ggplot2)
+    ggplot()+
+      geom_point(aes(n.segments, time/1e9, color=expr), data=times)
   }
-  times <- do.call(rbind, times.list)
-  ## modelSelectionR and modelSelectionC should give identical results.
-  identical(pathR, pathC)
-  ## However, modelSelectionC is much faster (linear time complexity)
-  ## than modelSelectionR (quadratic time complexity).
-  library(ggplot2)
-  ggplot()+
-    geom_point(aes(n.segments, time/1e9, color=expr), data=times)
 
 })
 
-modelSelection <- function
+modelSelection <- function # Compute exact model selection functions
 ### Given loss.vec L_i, model.complexity K_i, the model selection
 ### function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 ### the solutions (i, min.lambda, max.lambda) with i being the
-### solution for every lambda in (min.lambda, max.lambda). This
-### function uses the linear time algorithm implemented in C code.
+### solution for every lambda in (min.lambda, max.lambda). Use this
+### function after having computed changepoints and loss values for
+### each model, and before using labelError. This function uses the
+### linear time algorithm implemented in C code (modelSelectionC).
 (models,
-### data.frame with one row per model. There must be at
-### least two columns [[loss]] and [[complexity]], but there can
+### data.frame with one row per model. There must be at least two
+### columns models[[loss]] and models[[complexity]], but there can
 ### also be other meta-data columns.
  loss="loss",
 ### character: column name of models to interpret as loss L_i.
  complexity="complexity"
 ### character: column name of models to interpret as complexity K_i.
 ){
-  stopifnot(is.data.frame(models))
-  stopifnot(1 < nrow(models))
-  for(x in list(loss, complexity)){
-    stopifnot(is.character(x))
-    stopifnot(length(x)==1)
-    stopifnot(x %in% names(models))
+  if(!(
+    is.character(complexity) &&
+    length(complexity)==1
+  )){
+    stop("complexity must be a column name of models")
+  }
+  if(!(
+    is.character(loss) &&
+    length(loss)==1
+  )){
+    stop("loss must be a column name of models")
+  }
+  if(!(
+    is.data.frame(models) &&
+    0 < nrow(models) &&
+    is.numeric(models[[complexity]]) &&
+    is.numeric(models[[loss]]) &&
+    all(!is.na(models[[complexity]])) &&
+    all(!is.na(models[[loss]])) 
+  )){
+    stop("models must be data.frame with at least one row and numeric columns models[[complexity]] and models[[loss]] which are not missing/NA")
   }
   ord <- order(models[[complexity]], models[[loss]])
   sorted <- models[ord,]
@@ -215,6 +236,7 @@ modelSelection <- function
 ### data.frame with a row for each model that can be selected for at
 ### least one lambda value, and the following columns. (min.lambda,
 ### max.lambda) and (min.log.lambda, max.log.lambda) are intervals of
-### optimal penalty constants, on the original and log scale;
-### the other columns (and rownames) are taken from models.
+### optimal penalty constants, on the original and log scale; the
+### other columns (and rownames) are taken from models. This should be
+### used as the models argument of labelError.
 }
