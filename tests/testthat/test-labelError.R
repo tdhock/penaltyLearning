@@ -13,6 +13,7 @@ breakpoint.colors <- c(
   "breakpoint"="#a445ee",
   "normal"="#f6f4bf")
 if(interactive()){
+  library(ggplot2)
   ggplot()+
     ggtitle("supervised change-point detection = data + labels")+
     theme_bw()+
@@ -84,6 +85,12 @@ labeled.model.counts <- model.counts[label.counts, on=list(
   profile.id, chromosome)]
 test_that("label error OK when more models than labels", {
   expect_equal(nrow(errors$model.errors), sum(labeled.model.counts$models))
+})
+
+test_that("error for missing columns in targetIntervals", {
+  expect_error({
+    targetIntervals(selection, problem.vars=c("profile.id", "chromosome"))
+  }, "models$errors should be the number of incorrect labels")
 })
 
 test_that("label error fails when more labels than models", {
