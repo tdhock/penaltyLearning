@@ -93,6 +93,13 @@ test_that("error for missing columns in targetIntervals", {
   }, "models$errors should be the number of incorrect labels")
 })
 
+targets <- targetIntervals(
+  errors$model.errors,
+  problem.vars=c("profile.id", "chromosome"))
+test_that("errors are reported", {
+  expect_true(is.numeric(targets$errors))
+})
+
 test_that("label error fails when more labels than models", {
   expect_error({
     labelError(

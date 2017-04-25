@@ -193,13 +193,17 @@ targetIntervals <- structure(function # Compute target intervals
   stopifnot(is.data.frame(models))
   stopifnot(is.character(problem.vars))
   stopifnot(problem.vars %in% names(models))
+  if(!is.numeric(models[["errors"]])){
+    stop("models$errors should be the number of incorrect labels")
+  }
   error.dt <- data.table(models)
   setkey(error.dt, min.log.lambda)
   error.dt[, {
     L <- largestContinuousMinimumC(errors, max.log.lambda-min.log.lambda)
     data.table(
       min.log.lambda=min.log.lambda[L[["start"]]],
-      max.log.lambda=max.log.lambda[L[["end"]]])
+      max.log.lambda=max.log.lambda[L[["end"]]],
+      errors=errors[L[["end"]]])
   }, by=problem.vars]
 ### data.table with columns problem.vars, one row for each
 ### segmentation problem. The "min.log.lambda", and "max.log.lambda"
