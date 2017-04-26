@@ -139,7 +139,6 @@ labelError <- structure(function # Compute incorrect labels
   ## Is this a bug in data.table? Why should I have to set names back
   ## to start and end (they are both pos after the
   ## join). https://github.com/Rdatatable/data.table/issues/1700
-  browser()
   setnames(over.dt, c(
     problem.vars, model.vars,
     label.vars,
