@@ -90,7 +90,18 @@ test_that("label error OK when more models than labels", {
 test_that("error for missing columns in targetIntervals", {
   expect_error({
     targetIntervals(selection, problem.vars=c("profile.id", "chromosome"))
-  }, "models$errors should be the number of incorrect labels")
+  }, "models$errors should be the number of incorrect labels", fixed=TRUE)
+})
+
+only10 <- changes[n.segments==10]
+test_that("error for missing changes", {
+  expect_error({
+    labelError(
+      selection, labels, only10,
+      change.var="chromStart",
+      label.vars=c("min", "max"),
+      problem.vars=c("profile.id", "chromosome"))
+  }, "each model should have a different number of changes")
 })
 
 targets <- targetIntervals(

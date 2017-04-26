@@ -120,13 +120,26 @@ labelError <- structure(function # Compute incorrect labels
     stop("some labels have no models")
   }
   changes.dt <- data.table(changes)
+  changes.per.problem <- changes.dt[models.dt, list(
+    pred.changes=.N
+  ), by=.EACHI, on=c(problem.vars, model.vars)]
+  model.counts <- changes.per.problem[, list(
+    models=.N
+  ), by=c(problem.vars, "pred.changes")]
+  bad.models <- model.counts[1 < models]
+  if(nrow(bad.models)){
+    print(bad.models)
+    stop("each model should have a different number of changes, problems displayed above")
+  }
   over.dt <- changes.dt[model.labels, list(
     pred.changes=.N
   ), by=.EACHI, on=c(
     problem.vars, model.vars,
     paste0(change.var, c(">", "<="), label.vars))]
   ## Is this a bug in data.table? Why should I have to set names back
-  ## to start and end (they are both pos after the join).
+  ## to start and end (they are both pos after the
+  ## join). https://github.com/Rdatatable/data.table/issues/1700
+  browser()
   setnames(over.dt, c(
     problem.vars, model.vars,
     label.vars,
