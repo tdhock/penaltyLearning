@@ -194,8 +194,8 @@ models <- data.table(
   complexity=c(-1, -3, -5, -6))
 changes <- data.table(
   prob="five",
-  pos=c(1, 7, 1, 6),
-  complexity=c(-3, -5, -5, -6))
+  pos=c(1, 7, 1, 6, 17, 11),
+  complexity=c(-3, -5, -5, -6, -6, -6))
 test_that("labelError throws informative errors", {
   expect_error({
     labelError(models, ann.trivial, changes)
