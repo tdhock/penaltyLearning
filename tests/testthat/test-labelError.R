@@ -13,6 +13,7 @@ breakpoint.colors <- c(
   "breakpoint"="#a445ee",
   "normal"="#f6f4bf")
 if(interactive()){
+  library(ggplot2)
   ggplot()+
     ggtitle("supervised change-point detection = data + labels")+
     theme_bw()+
@@ -84,6 +85,30 @@ labeled.model.counts <- model.counts[label.counts, on=list(
   profile.id, chromosome)]
 test_that("label error OK when more models than labels", {
   expect_equal(nrow(errors$model.errors), sum(labeled.model.counts$models))
+})
+
+test_that("error for missing columns in targetIntervals", {
+  expect_error({
+    targetIntervals(selection, problem.vars=c("profile.id", "chromosome"))
+  }, "models$errors should be the number of incorrect labels", fixed=TRUE)
+})
+
+only10 <- changes[n.segments==10]
+test_that("error for missing changes", {
+  expect_error({
+    labelError(
+      selection, labels, only10,
+      change.var="chromStart",
+      label.vars=c("min", "max"),
+      problem.vars=c("profile.id", "chromosome"))
+  }, "each model should have a different number of changes")
+})
+
+targets <- targetIntervals(
+  errors$model.errors,
+  problem.vars=c("profile.id", "chromosome"))
+test_that("errors are reported", {
+  expect_true(is.numeric(targets$errors))
 })
 
 test_that("label error fails when more labels than models", {
@@ -169,8 +194,8 @@ models <- data.table(
   complexity=c(-1, -3, -5, -6))
 changes <- data.table(
   prob="five",
-  pos=c(1, 7, 1, 6),
-  complexity=c(-3, -5, -5, -6))
+  pos=c(1, 7, 1, 6, 17, 11),
+  complexity=c(-3, -5, -5, -6, -6, -6))
 test_that("labelError throws informative errors", {
   expect_error({
     labelError(models, ann.trivial, changes)

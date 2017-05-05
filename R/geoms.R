@@ -1,10 +1,11 @@
 ### ggplot2 theme element for no space between panels.
-theme_no_space <- tryCatch({
-  theme(panel.spacing=grid::unit(0, "lines"))
-}, error=function(e){
-  theme(panel.margin=grid::unit(0, "lines"))
-})
-
+theme_no_space <- function(...){
+  tryCatch({
+    theme(panel.spacing=grid::unit(0, "lines"), ...)
+  }, error=function(e){
+    theme(panel.margin=grid::unit(0, "lines"), ...)
+  })
+}
 
 geom_tallrect <- function
 ### ggplot2 geom with xmin and xmax aesthetics that covers the entire

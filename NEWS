@@ -1,5 +1,25 @@
 TODOs
 
+tests/support for L1 regularized models?
+
+- option to not stop in labelError if there is the same number of
+  changes in two models.
+
+2017.05.05
+
+corrections encountered while preparing tutorial,
+
+- theme_no_space() evaluated at runtime rather than theme_no_space
+  which was evaluated at build time.
+
+- stop with an error if there are models that have the same number of
+  changes -- this prevents problems for changepoint models, but
+  prevents using the code with L1 regularized models (fused lasso).
+
+- stop with an error in targetIntervals if the errors column is not
+  numeric. And return an errors column (the minimum number of
+  incorrect labels).
+
 2017.04.11
 
 prepare for CRAN submission:

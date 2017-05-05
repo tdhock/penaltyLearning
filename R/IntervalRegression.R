@@ -175,7 +175,7 @@ IntervalRegressionCV <- structure(function
       color=type),
                data=data.table(
                  simplest.within.1sd, type="1sd"))+
-    theme_no_space+
+    theme_no_space()+
     facet_grid(variable ~ ., scales="free")+
     scale_color_manual(values=c(
                          "1sd"="red",
@@ -437,7 +437,7 @@ IntervalRegressionRegularized <- structure(function
     lower="grey50")
   L$plot.residual <- ggplot()+
     theme_bw()+
-    theme_no_space+
+    theme_no_space()+
     facet_wrap("model.i")+
     geom_hline(yintercept=0, color="grey")+
     scale_color_manual(values=limit.colors, breaks=names(limit.colors))+
