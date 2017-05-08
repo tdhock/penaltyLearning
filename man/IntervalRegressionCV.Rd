@@ -4,7 +4,7 @@
 \description{Use cross-validation to estimate the optimal regularization, by
 picking the value that minimizes the number of incorrectly
 predicted target intervals. K-fold cross-validation is
-parallelized using the foreach package.}
+parallelized using the future package.}
 \usage{IntervalRegressionCV(feature.mat, target.mat, n.folds = ifelse(nrow(feature.mat) < 
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
     verbose = 0, min.observations = 10, reg.type = "min(mean)", 
@@ -53,8 +53,8 @@ example(ROChange).}
 if(interactive()){
   library(penaltyLearning)
   data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
-  if(require(doParallel)){
-    registerDoParallel()
+  if(require(future)){
+    plan(multiprocess)
   }
   set.seed(1)
   i.train <- 1:200
