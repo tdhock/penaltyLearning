@@ -7,7 +7,7 @@ IntervalRegressionCV <- structure(function
 ### Use cross-validation to estimate the optimal regularization, by
 ### picking the value that minimizes the number of incorrectly
 ### predicted target intervals. K-fold cross-validation is
-### parallelized using the foreach package.
+### parallelized using the future package.
 (feature.mat,
 ### Numeric feature matrix, n observations x p features.
  target.mat,
@@ -72,48 +72,53 @@ IntervalRegressionCV <- structure(function
     stop("after filtering NA features, none remain for training")
   }
   validation.fold.vec <- unique(fold.vec)
-  validation.data <- foreach(
-    validation.fold=validation.fold.vec, .combine=rbind) %dopar% {
-      ##print(validation.fold)
-      is.validation <- fold.vec == validation.fold
-      is.train <- !is.validation
-      train.features <- feature.mat[is.train, all.finite, drop=FALSE]
-      train.targets <- target.mat[is.train, , drop=FALSE]
-      fit <- IntervalRegressionRegularized(
-        train.features, train.targets, verbose=verbose,
-        initial.regularization=initial.regularization)
-      validation.features <- feature.mat[is.validation, , drop=FALSE]
-      pred.log.lambda <- fit$predict(validation.features)
-      validation.targets <- target.mat[is.validation, , drop=FALSE]
-      too.small <- pred.log.lambda < validation.targets[, 1]
-      too.big <- validation.targets[, 2] < pred.log.lambda
-      is.error <- too.small | too.big
-      left.term <- squared.hinge(pred.log.lambda-validation.targets[, 1])
-      right.term <- squared.hinge(validation.targets[, 2]-pred.log.lambda)
-      loss.vec <- colMeans(left.term+right.term)
-      error.vec <- colSums(is.error)
-      dt <- data.table(
-        validation.fold,
-        regularization=fit$regularization.vec,
-        squared.hinge.loss=loss.vec,
-        incorrect.intervals=error.vec)
-      if(!is.null(incorrect.labels.db)){
-        dt$negative.auc <- NA_real_
-        dt$incorrect.labels <- NA_real_
-        for(regularization.i in seq_along(fit$regularization.vec)){
-          pred.dt <- data.table(
-            pred.log.lambda=pred.log.lambda[, regularization.i])
-          pred.dt[[key(incorrect.labels.db)]] <-
-            rownames(feature.mat)[is.validation]
-          roc <- ROChange(
-            incorrect.labels.db, pred.dt, key(incorrect.labels.db))
-          dt[regularization.i, negative.auc := -roc$auc]
-          predicted.thresh <- roc$thresholds[threshold=="predicted", ]
-          dt[regularization.i, incorrect.labels := predicted.thresh$errors]
-        }
+  LAPPLY <- if(requireNamespace(future)){
+    future::future_lapply
+  }else{
+    lapply
+  }
+  validation.data.list <- LAPPLY(validation.fold.vec, function(validation.fold){
+    ##print(validation.fold)
+    is.validation <- fold.vec == validation.fold
+    is.train <- !is.validation
+    train.features <- feature.mat[is.train, all.finite, drop=FALSE]
+    train.targets <- target.mat[is.train, , drop=FALSE]
+    fit <- IntervalRegressionRegularized(
+      train.features, train.targets, verbose=verbose,
+      initial.regularization=initial.regularization)
+    validation.features <- feature.mat[is.validation, , drop=FALSE]
+    pred.log.lambda <- fit$predict(validation.features)
+    validation.targets <- target.mat[is.validation, , drop=FALSE]
+    too.small <- pred.log.lambda < validation.targets[, 1]
+    too.big <- validation.targets[, 2] < pred.log.lambda
+    is.error <- too.small | too.big
+    left.term <- squared.hinge(pred.log.lambda-validation.targets[, 1])
+    right.term <- squared.hinge(validation.targets[, 2]-pred.log.lambda)
+    loss.vec <- colMeans(left.term+right.term)
+    error.vec <- colSums(is.error)
+    dt <- data.table(
+      validation.fold,
+      regularization=fit$regularization.vec,
+      squared.hinge.loss=loss.vec,
+      incorrect.intervals=error.vec)
+    if(!is.null(incorrect.labels.db)){
+      dt$negative.auc <- NA_real_
+      dt$incorrect.labels <- NA_real_
+      for(regularization.i in seq_along(fit$regularization.vec)){
+        pred.dt <- data.table(
+          pred.log.lambda=pred.log.lambda[, regularization.i])
+        pred.dt[[key(incorrect.labels.db)]] <-
+          rownames(feature.mat)[is.validation]
+        roc <- ROChange(
+          incorrect.labels.db, pred.dt, key(incorrect.labels.db))
+        dt[regularization.i, negative.auc := -roc$auc]
+        predicted.thresh <- roc$thresholds[threshold=="predicted", ]
+        dt[regularization.i, incorrect.labels := predicted.thresh$errors]
       }
-      dt
     }
+    dt
+  })
+  validation.data <- do.call(rbind, validation.data.list)
   variable.name <- if(!is.null(incorrect.labels.db)){
     "negative.auc"
   }else{
@@ -211,8 +216,8 @@ IntervalRegressionCV <- structure(function
   if(interactive()){
     library(penaltyLearning)
     data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
-    if(require(doParallel)){
-      registerDoParallel()
+    if(require(future)){
+      plan(multiprocess)
     }
     set.seed(1)
     i.train <- 1:200

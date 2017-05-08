@@ -1,5 +1,7 @@
 TODOs
 
+IntervalRegressionCV uses future instead of foreach.
+
 2017.04.11
 
 prepare for CRAN submission:

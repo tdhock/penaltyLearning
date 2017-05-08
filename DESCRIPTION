@@ -7,7 +7,7 @@ Title: Penalty Learning
 Description: Algorithms for supervised learning
  of penalty functions for change detection.
 Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, cghseg,
- testthat, doParallel,
+ testthat, future,
  PeakSegDP, PeakError, coseg,
  directlabels (>= 2017.03.31)
 Depends: R (>= 2.10), data.table (>= 1.9.8)
