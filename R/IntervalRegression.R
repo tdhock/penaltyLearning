@@ -72,7 +72,7 @@ IntervalRegressionCV <- structure(function
     stop("after filtering NA features, none remain for training")
   }
   validation.fold.vec <- unique(fold.vec)
-  LAPPLY <- if(requireNamespace(future)){
+  LAPPLY <- if(requireNamespace("future")){
     future::future_lapply
   }else{
     lapply
