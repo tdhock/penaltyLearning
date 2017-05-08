@@ -119,7 +119,7 @@ error.list <- labelError(
 library(ggplot2)
 ggplot()+
   theme_bw()+
-  theme_no_space+
+  theme_no_space()+
   facet_grid(n.segments ~ chromosome, scales="free", space="free")+
   scale_x_continuous(breaks=c(100, 200))+
   scale_linetype_manual("error type",
