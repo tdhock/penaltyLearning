@@ -77,6 +77,21 @@ IntervalRegressionCV <- structure(function
     t.vec <- sort(target.mat[is.finite(target.mat)])
     d.vec <- diff(t.vec)
     pos.vec <- d.vec[0 < d.vec]
+    ##TODO: increase the min/from value -- it is much too small, and
+    ##not so much difference between small ones.
+
+    ##           margin  min
+    ##  1: 2.710619e-08 14.0
+    ##  2: 2.453163e-07 14.0
+    ##  3: 2.220159e-06 14.0
+    ##  4: 2.009287e-05 14.0
+    ##  5: 1.818443e-04 13.8
+    ##  6: 1.645726e-03 14.0
+    ##  7: 1.489414e-02 14.0
+    ##  8: 1.347948e-01 13.0
+    ##  9: 1.219919e+00 10.4
+    ## 10: 1.104050e+01 23.2
+
     margin.vec <- exp(seq(
       log(min(pos.vec)),
       log(t.vec[length(t.vec)]-t.vec[1]),
@@ -142,8 +157,16 @@ IntervalRegressionCV <- structure(function
     })
     do.call(rbind, dt.list)
   })
-  browser()
+  ## TODO: use incorrect targets if there is an unambiguous minimum,
+  ## otherwise use squared hinge loss.
   validation.data <- do.call(rbind, validation.data.list)
+  mstats <- validation.data[, list(
+    mean=mean(incorrect.intervals), sd=sd(incorrect.intervals), folds=.N
+    ), by=list(margin, regularization)]
+  mmin <- mstats[mean==min(mean)]
+  gg <- ggplot()+theme_bw()+theme_no_space()+facet_grid(margin ~ .)+geom_line(aes(log10(regularization), log10(mean)), size=1, data=mstats)+geom_ribbon(aes(log10(regularization), ymin=log10(mean-sd), ymax=log10(mean+sd)), alpha=0.5, data=mstats)+geom_point(aes(log10(regularization), log10(mean)), color="red", data=mmin)
+  print(gg)
+  browser()
   variable.name <- if(!is.null(incorrect.labels.db)){
     "negative.auc"
   }else{
