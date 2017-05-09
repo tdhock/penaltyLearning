@@ -7,6 +7,10 @@ tests/support for flsa and HMM?
 
 IntervalRegressionCV uses future instead of foreach.
 
+2017.05.08
+
+future instead of do
+
 2017.05.05
 
 corrections encountered while preparing tutorial,
