@@ -10,7 +10,7 @@ select which one to use. For automatic regularization parameter
 selection, use IntervalRegressionCV.}
 \usage{IntervalRegressionRegularized(feature.mat, target.mat, 
     initial.regularization = 0.001, factor.regularization = 1.2, 
-    verbose = 0, ...)}
+    verbose = 0, margin = 1, ...)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix.}
   \item{target.mat}{Numeric target matrix.}
@@ -19,6 +19,7 @@ selection, use IntervalRegressionCV.}
 solution. Or NULL to compute just one model
 (initial.regularization).}
   \item{verbose}{Print messages if >= 1.}
+  \item{margin}{Non-negative margin size parameter, default 1.}
   \item{\dots}{Other parameters to pass to IntervalRegressionInternal.}
 }
 

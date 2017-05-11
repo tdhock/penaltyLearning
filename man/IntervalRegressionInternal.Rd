@@ -12,7 +12,8 @@ regression model, try IntervalRegressionCV or
 IntervalRegressionUnregularized.}
 \usage{IntervalRegressionInternal(features, targets, initial.param.vec, 
     regularization, threshold = 0.001, max.iterations = 1000, 
-    weight.vec = NULL, Lipschitz = NULL, verbose = 2)}
+    weight.vec = NULL, Lipschitz = NULL, verbose = 2, 
+    margin = 1)}
 \arguments{
   \item{features}{Scaled numeric feature matrix (problems x features). The first
 column/feature should be all ones and will not be regularized.}
@@ -28,6 +29,7 @@ this many iterations.}
 mean of the squared L2-norms of the rows of the feature matrix.}
   \item{verbose}{Cat messages: for restarts and at the end if >= 1, and for every
 iteration if >= 2.}
+  \item{margin}{Margin size hyper-parameter, default 1.}
 }
 
 \value{Numeric vector of scaled weights w of the affine function f_w(X) =
