@@ -254,7 +254,7 @@ IntervalRegressionCV <- structure(function
   fit$plot.selectRegularization.ribbon <- best.margin.stats
   fit$plot.selectRegularization.point <- dot.dt
   fit$plot.selectRegularization.vlines <- selected
-  fit$plot.heatmap <- gg.bands
+  fit$plot.heatmap <- gg.heatmap
   fit$plot.heatmap.tile <- vstats
   fit$validation.data <- validation.data
   fit
