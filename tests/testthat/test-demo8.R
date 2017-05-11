@@ -11,7 +11,7 @@ fit <- with(demo8, IntervalRegressionCV(
 test_that("CV model prints weights", {
   expect_output({
     print(fit)
-  }, "IntervalRegression model for regularization")
+  }, "IntervalRegression model for margin")
 })
 
 test_that("CV model coef ncol 1", {
