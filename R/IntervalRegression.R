@@ -3,7 +3,19 @@ squared.hinge <- function(x, e=1){
   ifelse(x<e,(x-e)^2,0)
 }
 
-IntervalRegressionCVmargin <- function(feature.mat, target.mat, ...){
+IntervalRegressionCVmargin <- function
+### Use cross-validation to fit an L1-regularized linear interval
+### regression model by optimizing margin and regularization
+### parameters. This function just calls IntervalRegressionCV with a
+### margin.vec parameter that is computed based on the finite target
+### interval limits.
+(feature.mat,
+### Numeric feature matrix, n observations x p features.
+ target.mat,
+### Numeric target matrix, n observations x 2 limits.
+ ...
+### Passed to IntervalRegressionCV.
+ ){
   n.observations <- check_features_targets(feature.mat, target.mat)
   t.vec <- sort(target.mat[is.finite(target.mat)])
   d.vec <- diff(t.vec)
@@ -17,13 +29,17 @@ IntervalRegressionCVmargin <- function(feature.mat, target.mat, ...){
       log10.range-2,
       log10.range,
       l=10))
+### Model fit list from IntervalRegressionCV.
 }
 
 IntervalRegressionCV <- structure(function
-### Use cross-validation to estimate the optimal regularization, by
-### picking the value that minimizes the number of incorrectly
-### predicted target intervals. K-fold cross-validation is
-### parallelized using the future package.
+### Use cross-validation to fit an L1-regularized linear interval
+### regression model by optimizing margin and regularization
+### parameters (max AUC or min squared hinge loss). K-fold
+### cross-validation is parallelized using the future package. This
+### function repeatedly calls IntervalRegressionRegularized, and by
+### default assumes that margin=1 (to optimize the margin, specify it
+### manually, or use IntervalRegressionCVmargin).
 (feature.mat,
 ### Numeric feature matrix, n observations x p features.
  target.mat,

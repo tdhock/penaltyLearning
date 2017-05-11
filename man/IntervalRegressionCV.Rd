@@ -1,10 +1,13 @@
 \name{IntervalRegressionCV}
 \alias{IntervalRegressionCV}
 \title{IntervalRegressionCV}
-\description{Use cross-validation to estimate the optimal regularization, by
-picking the value that minimizes the number of incorrectly
-predicted target intervals. K-fold cross-validation is
-parallelized using the future package.}
+\description{Use cross-validation to fit an L1-regularized linear interval
+regression model by optimizing margin and regularization
+parameters (max AUC or min squared hinge loss). K-fold
+cross-validation is parallelized using the future package. This
+function repeatedly calls IntervalRegressionRegularized, and by
+default assumes that margin=1 (to optimize the margin, specify it
+manually, or use IntervalRegressionCVmargin).}
 \usage{IntervalRegressionCV(feature.mat, target.mat, n.folds = ifelse(nrow(feature.mat) < 
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
     verbose = 0, min.observations = 10, reg.type = "min", 
