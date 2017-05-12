@@ -146,7 +146,7 @@ IntervalRegressionCV <- structure(function
 ){
   validation.fold <- negative.auc <- threshold <- incorrect.labels <-
     variable <- value <- regularization <- folds <- status <- type <-
-      vjust <- NULL
+      vjust <- upper.limit <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### IntervalRegressionCV: no visible binding for global variable
   n.observations <- check_features_targets(feature.mat, target.mat)
@@ -240,7 +240,8 @@ IntervalRegressionCV <- structure(function
     sd=sd(value),
     folds=.N
   ), by=list(margin, regularization, variable)][folds==max(folds)]
-  vstats.wide <- dcast(vstats, margin + regularization ~ variable, value.var="mean")
+  vstats.wide <- dcast(
+    vstats, margin + regularization ~ variable, value.var="mean")
   validation.metrics <- if(is.null(incorrect.labels.db)){
     if(length(margin.vec)==1){
       ## only one margin parameter, so it is fine to use the squared
@@ -268,7 +269,8 @@ IntervalRegressionCV <- structure(function
   validation.best <- validation.ord[1]
   best.margin.stats <- vstats[margin==validation.best$margin]
   first.variable <- best.margin.stats[variable==validation.metrics[1], ]
-  best.regularization <- first.variable[regularization==validation.best$regularization]
+  best.regularization <-
+    first.variable[regularization==validation.best$regularization]
   best.regularization[, upper.limit := mean+sd]
   within.1sd <- first.variable[mean < best.regularization$upper.limit]
   least.complex <- within.1sd[which.max(regularization)]
