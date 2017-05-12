@@ -2,12 +2,15 @@
 \alias{IntervalRegressionCV}
 \title{IntervalRegressionCV}
 \description{Use cross-validation to fit an L1-regularized linear interval
-regression model by optimizing margin and regularization
-parameters (max AUC or min squared hinge loss). K-fold
-cross-validation is parallelized using the future package. This
-function repeatedly calls IntervalRegressionRegularized, and by
-default assumes that margin=1 (to optimize the margin, specify it
-manually, or use IntervalRegressionCVmargin).}
+regression model by optimizing margin and/or regularization
+parameters. 
+This function repeatedly calls IntervalRegressionRegularized, and by
+default assumes that margin=1 (to optimize the margin,
+specify the margin.vec parameter
+manually, or use IntervalRegressionCVmargin).
+If the future package is available,
+two levels of future_lapply are used 
+to parallelize on validation.fold and margin.}
 \usage{IntervalRegressionCV(feature.mat, target.mat, n.folds = ifelse(nrow(feature.mat) < 
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
     verbose = 0, min.observations = 10, reg.type = "min", 
@@ -40,7 +43,9 @@ regularization parameter, and the maximimum will be selected (in
 the plot this is negative.auc, which is minimized). This
 data.table can be computed via
 labelError(modelSelection(...),...)$model.errors -- see
-example(ROChange).}
+example(ROChange). In practice this makes the computation longer,
+and it should only result in more accurate models if there are
+many labels per data sequence.}
   \item{initial.regularization}{Passed to IntervalRegressionRegularized.}
   \item{margin.vec}{numeric vector of margin size hyper-parameters.}
 }
@@ -64,7 +69,7 @@ if(interactive()){
   i.train <- 1:100
   fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
     feature.mat[i.train,], target.mat[i.train,],
-    verbose=1))
+    verbose=0))
   ## When only features and target matrices are specified for
   ## training, the squared hinge loss is used as the metric to
   ## minimize on the validation set.

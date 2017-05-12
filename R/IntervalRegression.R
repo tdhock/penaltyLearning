@@ -3,9 +3,9 @@ squared.hinge <- function(x, e=1){
   ifelse(x<e,(x-e)^2,0)
 }
 
-IntervalRegressionCVmargin <- function
+IntervalRegressionCVmargin <- structure(function
 ### Use cross-validation to fit an L1-regularized linear interval
-### regression model by optimizing margin and regularization
+### regression model by optimizing both margin and regularization
 ### parameters. This function just calls IntervalRegressionCV with a
 ### margin.vec parameter that is computed based on the finite target
 ### interval limits.
@@ -30,29 +30,45 @@ IntervalRegressionCVmargin <- function
       log10.range,
       l=10))
 ### Model fit list from IntervalRegressionCV.
-}
+}, ex=function(){
+  if(interactive()){
+    library(penaltyLearning)
+    data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+    if(require(future)){
+      plan(multiprocess)
+    }
+    set.seed(1)
+    i.train <- 1:nrow(neuroblastomaProcessed$feature.mat)
+    fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
+      feature.mat[i.train,], target.mat[i.train,],
+      verbose=1))
+  }
+})
 
 IntervalRegressionCV <- structure(function
 ### Use cross-validation to fit an L1-regularized linear interval
-### regression model by optimizing margin and regularization
-### parameters (max AUC or min squared hinge loss). K-fold
-### cross-validation is parallelized using the future package. This
-### function repeatedly calls IntervalRegressionRegularized, and by
-### default assumes that margin=1 (to optimize the margin, specify it
+### regression model by optimizing margin and/or regularization
+### parameters. 
+### This function repeatedly calls IntervalRegressionRegularized, and by
+### default assumes that margin=1 (to optimize the margin,
+### specify the margin.vec parameter
 ### manually, or use IntervalRegressionCVmargin).
+### If the future package is available,
+### two levels of future_lapply are used 
+### to parallelize on validation.fold and margin.
 (feature.mat,
 ### Numeric feature matrix, n observations x p features.
- target.mat,
+  target.mat,
 ### Numeric target matrix, n observations x 2 limits.
- n.folds=ifelse(nrow(feature.mat) < 10, 3L, 5L),
+  n.folds=ifelse(nrow(feature.mat) < 10, 3L, 5L),
 ### Number of cross-validation folds.
- fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
+  fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
 ### Integer vector of fold id numbers.
- verbose=0,
+  verbose=0,
 ### numeric: 0 for silent, bigger numbers (1 or 2) for more output.
- min.observations=10,
+  min.observations=10,
 ### stop with an error if there are fewer than this many observations.
- reg.type="min",
+  reg.type="min",
 ### Either "1sd" or "min" which specifies how the regularization
 ### parameter is chosen during the internal cross-validation
 ### loop. min: first take the mean of the K-CV error functions, then
@@ -61,7 +77,7 @@ IntervalRegressionCV <- structure(function
 ### margin which is within one standard deviation of that minimum 
 ### (this model is typically a bit less accurate, but much less
 ### complex, so better if you want to interpret the coefficients).
- incorrect.labels.db=NULL,
+  incorrect.labels.db=NULL,
 ### either NULL or a data.table, which specifies the error function to
 ### compute for selecting the regularization parameter on the
 ### validation set. NULL means to minimize the squared hinge loss,
@@ -74,8 +90,10 @@ IntervalRegressionCV <- structure(function
 ### the plot this is negative.auc, which is minimized). This
 ### data.table can be computed via
 ### labelError(modelSelection(...),...)$model.errors -- see
-### example(ROChange).
- initial.regularization=0.001,
+### example(ROChange). In practice this makes the computation longer,
+### and it should only result in more accurate models if there are
+### many labels per data sequence.
+  initial.regularization=0.001,
 ### Passed to IntervalRegressionRegularized.
   margin.vec=1
 ### numeric vector of margin size hyper-parameters.
@@ -124,7 +142,9 @@ IntervalRegressionCV <- structure(function
     train.features <- feature.mat[is.train, all.finite, drop=FALSE]
     train.targets <- target.mat[is.train, , drop=FALSE]
     dt.list <- LAPPLY(margin.vec, function(margin){
-      if(1 <= verbose)cat(sprintf("margin=%f vfold=%d\n", margin, validation.fold))
+      if(1 <= verbose){
+        cat(sprintf("margin=%f vfold=%d\n", margin, validation.fold))
+      }
       fit <- IntervalRegressionRegularized(
         train.features, train.targets, verbose=verbose,
         margin=margin,
@@ -172,7 +192,7 @@ IntervalRegressionCV <- structure(function
     mean=mean(value),
     sd=sd(value),
     folds=.N
-    ), by=list(margin, regularization, variable)][folds==max(folds)]
+  ), by=list(margin, regularization, variable)][folds==max(folds)]
   vstats.wide <- dcast(vstats, margin + regularization ~ variable, value.var="mean")
   validation.metrics <- if(is.null(incorrect.labels.db)){
     c(#"incorrect.intervals",
@@ -207,7 +227,7 @@ IntervalRegressionCV <- structure(function
       length(validation.fold.vec),
       "-fold cross-validation, margin=",
       validation.best$margin
-      ))+
+    ))+
     theme_bw()+
     guides(color="none")+
     theme_no_space()+
@@ -216,49 +236,49 @@ IntervalRegressionCV <- structure(function
     geom_vline(aes(
       xintercept=-log10(regularization),
       color=type
-      ), data=selected)+
+    ), data=selected)+
     geom_ribbon(aes(
       -log10(regularization),
       ymin=mean-sd,
       ymax=mean+sd),
-                fill="grey",
-                alpha=0.5,
-                data=best.margin.stats)+
-    geom_line(aes(
-      -log10(regularization),
-      value,
-      group=validation.fold),
-              color="grey",
-              data=best.margin.folds)+
-    geom_line(aes(
-      -log10(regularization),
-      mean),
-              size=1,
-              data=best.margin.stats)+
-    geom_text(aes(-log10(regularization), mean,
-                  label=paste0(type, " "),
-                  color=type),
-              vjust=1,
-              hjust=1,
-              data=dot.dt)+
-    geom_point(aes(-log10(regularization), mean,
-                  color=type),
-              data=dot.dt)+
-    xlab("model complexity -log(regularization)")+
-    ylab("")
+      fill="grey",
+      alpha=0.5,
+      data=best.margin.stats)+
+      geom_line(aes(
+        -log10(regularization),
+        value,
+        group=validation.fold),
+        color="grey",
+        data=best.margin.folds)+
+        geom_line(aes(
+          -log10(regularization),
+          mean),
+          size=1,
+          data=best.margin.stats)+
+          geom_text(aes(-log10(regularization), mean,
+                        label=paste0(type, " "),
+                        color=type),
+                    vjust=1,
+                    hjust=1,
+                    data=dot.dt)+
+              geom_point(aes(-log10(regularization), mean,
+                             color=type),
+                         data=dot.dt)+
+              xlab("model complexity -log(regularization)")+
+              ylab("")
   gg.heatmap <- ggplot()+
     geom_tile(aes(
       -log10(regularization),
       log10(margin),
       fill=log10(mean)
-      ), data=vstats[variable==validation.metrics[1],])+
+    ), data=vstats[variable==validation.metrics[1],])+
     scale_fill_gradient(low="white", high="red")+
     color.scale+
     geom_point(aes(
       -log10(regularization),
       log10(margin),
       color=type
-      ), data=dot.dt)
+    ), data=dot.dt)
   fit <- IntervalRegressionRegularized(
     feature.mat, target.mat,
     initial.regularization=selected$regularization,
@@ -276,7 +296,7 @@ IntervalRegressionCV <- structure(function
   fit
 ### List representing regularized linear model.
 }, ex=function(){
-
+  
   if(interactive()){
     library(penaltyLearning)
     data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
@@ -287,7 +307,7 @@ IntervalRegressionCV <- structure(function
     i.train <- 1:100
     fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
       feature.mat[i.train,], target.mat[i.train,],
-      verbose=1))
+      verbose=0))
     ## When only features and target matrices are specified for
     ## training, the squared hinge loss is used as the metric to
     ## minimize on the validation set.
@@ -426,6 +446,7 @@ IntervalRegressionRegularized <- structure(function
         param.vec,
         regularization,
         verbose=verbose,
+        margin=margin,
         ...)
     n.zero <- sum(param.vec == 0)
     n.nonzero <- sum(param.vec != 0)
