@@ -5,9 +5,11 @@
 regression model by optimizing margin and/or regularization
 parameters. 
 This function repeatedly calls IntervalRegressionRegularized, and by
-default assumes that margin=1 (to optimize the margin,
+default assumes that margin=1. To optimize the margin,
 specify the margin.vec parameter
-manually, or use IntervalRegressionCVmargin).
+manually, or use IntervalRegressionCVmargin
+(which takes more computation time
+but yields more accurate models).
 If the future package is available,
 two levels of future_lapply are used 
 to parallelize on validation.fold and margin.}
@@ -47,7 +49,10 @@ example(ROChange). In practice this makes the computation longer,
 and it should only result in more accurate models if there are
 many labels per data sequence.}
   \item{initial.regularization}{Passed to IntervalRegressionRegularized.}
-  \item{margin.vec}{numeric vector of margin size hyper-parameters.}
+  \item{margin.vec}{numeric vector of margin size hyper-parameters. The computation
+time is linear in the number of elements of margin.vec -- more
+values takes more computation time, but yields slightly more
+accurate models (if there is enough data).}
 }
 
 \value{List representing regularized linear model.}

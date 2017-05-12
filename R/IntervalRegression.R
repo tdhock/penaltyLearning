@@ -3,19 +3,60 @@ squared.hinge <- function(x, e=1){
   ifelse(x<e,(x-e)^2,0)
 }
 
-IntervalRegressionCVmargin <- structure(function
+IntervalRegressionCVmargin <- structure(function 
 ### Use cross-validation to fit an L1-regularized linear interval
 ### regression model by optimizing both margin and regularization
 ### parameters. This function just calls IntervalRegressionCV with a
 ### margin.vec parameter that is computed based on the finite target
-### interval limits.
+### interval limits. If default parameters are used, this function
+### should be about 10 times slower than IntervalRegressionCV
+### (since this function computes n.margin=10 models
+### per regularization parameter whereas IntervalRegressionCV
+### only computes one).
+### On large (N > 1000 rows) data sets,
+### this function should yield a model which is a little
+### more accurate than IntervalRegressionCV
+### (since the margin parameter is optimized).
 (feature.mat,
 ### Numeric feature matrix, n observations x p features.
- target.mat,
+  target.mat,
 ### Numeric target matrix, n observations x 2 limits.
- ...
+  log10.diff=2,
+### Numeric scalar: factors of 10 below the largest finite limit
+### difference to use as a minimum margin value (difference on the
+### log10 scale which is used to generate margin parameters). Bigger
+### values mean a grid of margin parameters with a larger range. For
+### example if the largest finite limit in target.mat is 26 and the
+### smallest finite limit is -4 then the largest limit difference is
+### 30, which will be used as the maximum margin parameter. If
+### log10.diff is the default of 2 then that means the smallest margin
+### parameter will be 0.3 (two factors of 10 smaller than 30).
+  n.margin=10L,
+### Integer scalar: number of margin parameters, by default 10.
+  ...
 ### Passed to IntervalRegressionCV.
- ){
+) {
+  if(!(
+    is.numeric(log10.diff) &&
+    length(log10.diff)==1 &&
+    is.finite(log10.diff)
+  )){
+    stop(paste(
+      "log10.diff must be a finite numeric value",
+      "(the number of factors of 10 below",
+      "the largest limit difference",
+      "to use as a minimum margin value)"))
+  }
+  if(!(
+    is.integer(n.margin) &&
+    length(n.margin)==1 &&
+    is.finite(n.margin) &&
+    0 < n.margin
+  )){
+    stop(paste(
+      "n.margin must be a positive integer",
+      "(number of margin parameters)"))
+  }
   n.observations <- check_features_targets(feature.mat, target.mat)
   t.vec <- sort(target.mat[is.finite(target.mat)])
   d.vec <- diff(t.vec)
@@ -26,11 +67,11 @@ IntervalRegressionCVmargin <- structure(function
     target.mat,
     ...,
     margin.vec=10^seq(
-      log10.range-2,
+      log10.range-log10.diff,
       log10.range,
-      l=10))
+      l=n.margin))
 ### Model fit list from IntervalRegressionCV.
-}, ex=function(){
+}, ex=function() {
   if(interactive()){
     library(penaltyLearning)
     data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
@@ -38,10 +79,10 @@ IntervalRegressionCVmargin <- structure(function
       plan(multiprocess)
     }
     set.seed(1)
-    i.train <- 1:nrow(neuroblastomaProcessed$feature.mat)
-    fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
-      feature.mat[i.train,], target.mat[i.train,],
-      verbose=1))
+    fit <- with(neuroblastomaProcessed, IntervalRegressionCVmargin(
+      feature.mat, target.mat, verbose=1))
+    plot(fit)
+    print(fit$plot.heatmap)
   }
 })
 
@@ -50,9 +91,11 @@ IntervalRegressionCV <- structure(function
 ### regression model by optimizing margin and/or regularization
 ### parameters. 
 ### This function repeatedly calls IntervalRegressionRegularized, and by
-### default assumes that margin=1 (to optimize the margin,
+### default assumes that margin=1. To optimize the margin,
 ### specify the margin.vec parameter
-### manually, or use IntervalRegressionCVmargin).
+### manually, or use IntervalRegressionCVmargin
+### (which takes more computation time
+### but yields more accurate models).
 ### If the future package is available,
 ### two levels of future_lapply are used 
 ### to parallelize on validation.fold and margin.
@@ -96,7 +139,10 @@ IntervalRegressionCV <- structure(function
   initial.regularization=0.001,
 ### Passed to IntervalRegressionRegularized.
   margin.vec=1
-### numeric vector of margin size hyper-parameters.
+### numeric vector of margin size hyper-parameters. The computation
+### time is linear in the number of elements of margin.vec -- more
+### values takes more computation time, but yields slightly more
+### accurate models (if there is enough data).
 ){
   validation.fold <- negative.auc <- threshold <- incorrect.labels <-
     variable <- value <- regularization <- folds <- status <- type <-
@@ -155,16 +201,17 @@ IntervalRegressionCV <- structure(function
       too.small <- pred.log.lambda < validation.targets[, 1]
       too.big <- validation.targets[, 2] < pred.log.lambda
       is.error <- too.small | too.big
-      left.term <- squared.hinge(pred.log.lambda-validation.targets[, 1], 0)
-      right.term <- squared.hinge(validation.targets[, 2]-pred.log.lambda, 0)
-      loss.vec <- colMeans(left.term+right.term)
-      error.vec <- colSums(is.error)
+      getLoss <- function(m)colMeans({
+        squared.hinge(pred.log.lambda-validation.targets[, 1], m)+
+        squared.hinge(validation.targets[, 2]-pred.log.lambda, m)
+      })
       dt <- data.table(
         margin,
         validation.fold,
         regularization=fit$regularization.vec,
-        squared.hinge.loss=loss.vec,
-        incorrect.intervals=error.vec)
+        squared.hinge.loss=getLoss(margin),
+        mean.squared.error=getLoss(0),
+        incorrect.intervals=colSums(is.error))
       if(!is.null(incorrect.labels.db)){
         dt$negative.auc <- NA_real_
         dt$incorrect.labels <- NA_real_
@@ -195,11 +242,24 @@ IntervalRegressionCV <- structure(function
   ), by=list(margin, regularization, variable)][folds==max(folds)]
   vstats.wide <- dcast(vstats, margin + regularization ~ variable, value.var="mean")
   validation.metrics <- if(is.null(incorrect.labels.db)){
-    c(#"incorrect.intervals",
-      "squared.hinge.loss")
+    if(length(margin.vec)==1){
+      ## only one margin parameter, so it is fine to use the squared
+      ## hinge loss to choose the best model.
+      "squared.hinge.loss"
+    }else{
+      ## several margin parameters, so it does not really make sense
+      ## to compare them using the squared hinge loss. Also it does
+      ## not make sense to use the mean squared error, since that
+      ## favors models with small margin sizes. So we use the number
+      ## of incorrect targets, and maybe the squared hinge loss to
+      ## break ties.
+      c("incorrect.intervals", "squared.hinge.loss")
+    }
   }else{
+    ## When we have AUC, use it first and then use other metrics to
+    ## break ties.
     c("negative.auc",
-      ##"incorrect.labels",
+      "incorrect.labels",
       "squared.hinge.loss")
   }
   ord.arg.list <- lapply(validation.metrics, function(N)vstats.wide[[N]])
