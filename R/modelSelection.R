@@ -180,7 +180,7 @@ modelSelectionR <- structure(function # Exact model selection function
 
 })
 
-modelSelection <- function # Compute exact model selection functions
+modelSelection <- function # Compute exact model selection function
 ### Given loss.vec L_i, model.complexity K_i, the model selection
 ### function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 ### the solutions (i, min.lambda, max.lambda) with i being the
@@ -221,7 +221,7 @@ modelSelection <- function # Compute exact model selection functions
   }
   ord <- order(models[[complexity]], models[[loss]])
   sorted <- models[ord,]
-  keep <- c(TRUE, diff(sorted$error) < 0)
+  keep <- c(TRUE, diff(sorted[[loss]]) < 0)
   filtered <- sorted[keep, ]
   loss.vec <- filtered[[loss]]
   complexity.vec <- filtered[[complexity]]

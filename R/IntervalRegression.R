@@ -1,36 +1,126 @@
 ### The squared hinge loss.
-squared.hinge <- function(x){
-  ifelse(x<1,(x-1)^2,0)
+squared.hinge <- function(x, e=1){
+  ifelse(x<e,(x-e)^2,0)
 }
 
-IntervalRegressionCV <- structure(function
-### Use cross-validation to estimate the optimal regularization, by
-### picking the value that minimizes the number of incorrectly
-### predicted target intervals. K-fold cross-validation is
-### parallelized using the foreach package.
+IntervalRegressionCVmargin <- structure(function 
+### Use cross-validation to fit an L1-regularized linear interval
+### regression model by optimizing both margin and regularization
+### parameters. This function just calls IntervalRegressionCV with a
+### margin.vec parameter that is computed based on the finite target
+### interval limits. If default parameters are used, this function
+### should be about 10 times slower than IntervalRegressionCV
+### (since this function computes n.margin=10 models
+### per regularization parameter whereas IntervalRegressionCV
+### only computes one).
+### On large (N > 1000 rows) data sets,
+### this function should yield a model which is a little
+### more accurate than IntervalRegressionCV
+### (since the margin parameter is optimized).
 (feature.mat,
 ### Numeric feature matrix, n observations x p features.
- target.mat,
+  target.mat,
 ### Numeric target matrix, n observations x 2 limits.
- n.folds=ifelse(nrow(feature.mat) < 10, 3L, 5L),
+  log10.diff=2,
+### Numeric scalar: factors of 10 below the largest finite limit
+### difference to use as a minimum margin value (difference on the
+### log10 scale which is used to generate margin parameters). Bigger
+### values mean a grid of margin parameters with a larger range. For
+### example if the largest finite limit in target.mat is 26 and the
+### smallest finite limit is -4 then the largest limit difference is
+### 30, which will be used as the maximum margin parameter. If
+### log10.diff is the default of 2 then that means the smallest margin
+### parameter will be 0.3 (two factors of 10 smaller than 30).
+  n.margin=10L,
+### Integer scalar: number of margin parameters, by default 10.
+  ...
+### Passed to IntervalRegressionCV.
+) {
+  if(!(
+    is.numeric(log10.diff) &&
+    length(log10.diff)==1 &&
+    is.finite(log10.diff)
+  )){
+    stop(paste(
+      "log10.diff must be a finite numeric value",
+      "(the number of factors of 10 below",
+      "the largest limit difference",
+      "to use as a minimum margin value)"))
+  }
+  if(!(
+    is.integer(n.margin) &&
+    length(n.margin)==1 &&
+    is.finite(n.margin) &&
+    0 < n.margin
+  )){
+    stop(paste(
+      "n.margin must be a positive integer",
+      "(number of margin parameters)"))
+  }
+  n.observations <- check_features_targets(feature.mat, target.mat)
+  t.vec <- sort(target.mat[is.finite(target.mat)])
+  d.vec <- diff(t.vec)
+  pos.vec <- d.vec[0 < d.vec]
+  log10.range <- log10(t.vec[length(t.vec)]-t.vec[1])
+  IntervalRegressionCV(
+    feature.mat,
+    target.mat,
+    ...,
+    margin.vec=10^seq(
+      log10.range-log10.diff,
+      log10.range,
+      l=n.margin))
+### Model fit list from IntervalRegressionCV.
+}, ex=function() {
+  if(interactive()){
+    library(penaltyLearning)
+    data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+    if(require(future)){
+      plan(multiprocess)
+    }
+    set.seed(1)
+    fit <- with(neuroblastomaProcessed, IntervalRegressionCVmargin(
+      feature.mat, target.mat, verbose=1))
+    plot(fit)
+    print(fit$plot.heatmap)
+  }
+})
+
+IntervalRegressionCV <- structure(function
+### Use cross-validation to fit an L1-regularized linear interval
+### regression model by optimizing margin and/or regularization
+### parameters. 
+### This function repeatedly calls IntervalRegressionRegularized, and by
+### default assumes that margin=1. To optimize the margin,
+### specify the margin.vec parameter
+### manually, or use IntervalRegressionCVmargin
+### (which takes more computation time
+### but yields more accurate models).
+### If the future package is available,
+### two levels of future_lapply are used 
+### to parallelize on validation.fold and margin.
+(feature.mat,
+### Numeric feature matrix, n observations x p features.
+  target.mat,
+### Numeric target matrix, n observations x 2 limits.
+  n.folds=ifelse(nrow(feature.mat) < 10, 3L, 5L),
 ### Number of cross-validation folds.
- fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
+  fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
 ### Integer vector of fold id numbers.
- verbose=0,
+  verbose=0,
 ### numeric: 0 for silent, bigger numbers (1 or 2) for more output.
- min.observations=10,
+  min.observations=10,
 ### stop with an error if there are fewer than this many observations.
- reg.type="min(mean)",
-### Either "1sd", "min(mean)" or "mean(min)" which specifies how the
-### regularization parameter is chosen during the internal
-### cross-validation loop. min(mean): first take the mean of the K-CV
-### error functions, then minimize it (this is the default since it
-### tends to yield the least test error). 1sd: take the least complex
-### model which is within one standard deviation of that minimum (this
-### model is typically a bit less accurate, but much less complex, so
-### better if you want to interpret the coefficients). mean(min): take
-### the min of each K-CV error function, and then take their mean.
- incorrect.labels.db=NULL,
+  reg.type="min",
+### Either "1sd" or "min" which specifies how the regularization
+### parameter is chosen during the internal cross-validation
+### loop. min: first take the mean of the K-CV error functions, then
+### minimize it (this is the default since it tends to yield the least
+### test error). 1sd: take the most regularized model with the same
+### margin which is within one standard deviation of that minimum 
+### (this model is typically a bit less accurate, but much less
+### complex, so better if you want to interpret the coefficients).
+  incorrect.labels.db=NULL,
 ### either NULL or a data.table, which specifies the error function to
 ### compute for selecting the regularization parameter on the
 ### validation set. NULL means to minimize the squared hinge loss,
@@ -43,13 +133,20 @@ IntervalRegressionCV <- structure(function
 ### the plot this is negative.auc, which is minimized). This
 ### data.table can be computed via
 ### labelError(modelSelection(...),...)$model.errors -- see
-### example(ROChange).
- initial.regularization=0.001
+### example(ROChange). In practice this makes the computation longer,
+### and it should only result in more accurate models if there are
+### many labels per data sequence.
+  initial.regularization=0.001,
 ### Passed to IntervalRegressionRegularized.
+  margin.vec=1
+### numeric vector of margin size hyper-parameters. The computation
+### time is linear in the number of elements of margin.vec -- more
+### values takes more computation time, but yields slightly more
+### accurate models (if there is enough data).
 ){
   validation.fold <- negative.auc <- threshold <- incorrect.labels <-
     variable <- value <- regularization <- folds <- status <- type <-
-      vjust <- NULL
+      vjust <- upper.limit <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### IntervalRegressionCV: no visible binding for global variable
   n.observations <- check_features_targets(feature.mat, target.mat)
@@ -59,7 +156,7 @@ IntervalRegressionCV <- structure(function
   stopifnot(
     is.character(reg.type),
     length(reg.type)==1,
-    reg.type %in% c("1sd", "mean(min)", "min(mean)"))
+    reg.type %in% c("1sd", "min"))
   if(n.observations < min.observations){
     stop(
       n.observations,
@@ -71,16 +168,32 @@ IntervalRegressionCV <- structure(function
   if(sum(all.finite)==0){
     stop("after filtering NA features, none remain for training")
   }
+  if(!(
+    is.numeric(margin.vec) &&
+    0 < length(margin.vec) &&
+    all(is.finite(margin.vec))
+  )){
+    stop("margin.vec must be a numeric vector of finite margin size parameters")
+  }
   validation.fold.vec <- unique(fold.vec)
-  validation.data <- foreach(
-    validation.fold=validation.fold.vec, .combine=rbind) %dopar% {
-      ##print(validation.fold)
-      is.validation <- fold.vec == validation.fold
-      is.train <- !is.validation
-      train.features <- feature.mat[is.train, all.finite, drop=FALSE]
-      train.targets <- target.mat[is.train, , drop=FALSE]
+  LAPPLY <- if(requireNamespace("future")){
+    future::future_lapply
+  }else{
+    lapply
+  }
+  validation.data.list <- LAPPLY(validation.fold.vec, function(validation.fold){
+    ##print(validation.fold)
+    is.validation <- fold.vec == validation.fold
+    is.train <- !is.validation
+    train.features <- feature.mat[is.train, all.finite, drop=FALSE]
+    train.targets <- target.mat[is.train, , drop=FALSE]
+    dt.list <- LAPPLY(margin.vec, function(margin){
+      if(1 <= verbose){
+        cat(sprintf("margin=%f vfold=%d\n", margin, validation.fold))
+      }
       fit <- IntervalRegressionRegularized(
         train.features, train.targets, verbose=verbose,
+        margin=margin,
         initial.regularization=initial.regularization)
       validation.features <- feature.mat[is.validation, , drop=FALSE]
       pred.log.lambda <- fit$predict(validation.features)
@@ -88,15 +201,17 @@ IntervalRegressionCV <- structure(function
       too.small <- pred.log.lambda < validation.targets[, 1]
       too.big <- validation.targets[, 2] < pred.log.lambda
       is.error <- too.small | too.big
-      left.term <- squared.hinge(pred.log.lambda-validation.targets[, 1])
-      right.term <- squared.hinge(validation.targets[, 2]-pred.log.lambda)
-      loss.vec <- colMeans(left.term+right.term)
-      error.vec <- colSums(is.error)
+      getLoss <- function(m)colMeans({
+        squared.hinge(pred.log.lambda-validation.targets[, 1], m)+
+        squared.hinge(validation.targets[, 2]-pred.log.lambda, m)
+      })
       dt <- data.table(
+        margin,
         validation.fold,
         regularization=fit$regularization.vec,
-        squared.hinge.loss=loss.vec,
-        incorrect.intervals=error.vec)
+        squared.hinge.loss=getLoss(margin),
+        mean.squared.error=getLoss(0),
+        incorrect.intervals=colSums(is.error))
       if(!is.null(incorrect.labels.db)){
         dt$negative.auc <- NA_real_
         dt$incorrect.labels <- NA_real_
@@ -113,111 +228,148 @@ IntervalRegressionCV <- structure(function
         }
       }
       dt
-    }
-  variable.name <- if(!is.null(incorrect.labels.db)){
-    "negative.auc"
-  }else{
-    "squared.hinge.loss"
-  }
+    })
+    do.call(rbind, dt.list)
+  })
+  validation.data <- do.call(rbind, validation.data.list)
   vtall <- melt(
     validation.data,
-    id.vars=c("validation.fold", "regularization"))
-  variable.data <- vtall[variable==variable.name, ]
-  stats <- variable.data[, list(
+    id.vars=c("validation.fold", "regularization", "margin"))
+  vstats <- vtall[, list(
     mean=mean(value),
     sd=sd(value),
     folds=.N
-    ), by=list(variable, regularization)][folds==max(folds),]
-  min.each <- variable.data[, {
-    .SD[which.min(value), ]
-  }, by=validation.fold]
-  min.mean <- stats[which.min(mean), ]
-  upper.limit <- min.mean[, mean+sd]
-  simplest.within.1sd <-
-    stats[mean < upper.limit, ][which.max(regularization),]
-  min.dt <- data.table(
-    type=c("mean(min)", "min(mean)", "1sd"),
-    vjust=c(1,2,1),
-    regularization=c(
-      mean(min.each$regularization),
-      min.mean$regularization,
-      simplest.within.1sd$regularization),
-    variable=variable.name)
-  min.dt[, status := ifelse(type == reg.type, "selected", "not")]
-  fit <- IntervalRegressionRegularized(
-    feature.mat, target.mat,
-    initial.regularization=min.dt[status=="selected", regularization],
-    factor.regularization=NULL,
-    verbose=verbose)
-  fit$plot.selectRegularization <- fit$plot <- ggplot()+
+  ), by=list(margin, regularization, variable)][folds==max(folds)]
+  vstats.wide <- dcast(
+    vstats, margin + regularization ~ variable, value.var="mean")
+  validation.metrics <- if(is.null(incorrect.labels.db)){
+    if(length(margin.vec)==1){
+      ## only one margin parameter, so it is fine to use the squared
+      ## hinge loss to choose the best model.
+      "squared.hinge.loss"
+    }else{
+      ## several margin parameters, so it does not really make sense
+      ## to compare them using the squared hinge loss. Also it does
+      ## not make sense to use the mean squared error, since that
+      ## favors models with small margin sizes. So we use the number
+      ## of incorrect targets, and maybe the squared hinge loss to
+      ## break ties.
+      c("incorrect.intervals", "squared.hinge.loss")
+    }
+  }else{
+    ## When we have AUC, use it first and then use other metrics to
+    ## break ties.
+    c("negative.auc",
+      "incorrect.labels",
+      "squared.hinge.loss")
+  }
+  ord.arg.list <- lapply(validation.metrics, function(N)vstats.wide[[N]])
+  ord.vec <- do.call(order, ord.arg.list)
+  validation.ord <- vstats.wide[ord.vec]
+  validation.best <- validation.ord[1]
+  best.margin.stats <- vstats[margin==validation.best$margin]
+  first.variable <- best.margin.stats[variable==validation.metrics[1], ]
+  best.regularization <-
+    first.variable[regularization==validation.best$regularization]
+  best.regularization[, upper.limit := mean+sd]
+  within.1sd <- first.variable[mean < best.regularization$upper.limit]
+  least.complex <- within.1sd[which.max(regularization)]
+  dot.dt <- rbind(
+    data.table(type="1sd", least.complex, upper.limit=NA_real_),
+    data.table(type="min", best.regularization))
+  best.margin.folds <- vtall[margin==validation.best$margin]
+  color.scale <- scale_color_manual(
+    values=c(
+      "1sd"="blue",
+      "min"="red"))
+  selected <- dot.dt[type==reg.type]
+  gg.bands <- ggplot()+
     ggtitle(paste0(
       "Regularization parameter selection using ",
       length(validation.fold.vec),
-      "-fold cross-validation"
-      ))+
+      "-fold cross-validation, margin=",
+      validation.best$margin
+    ))+
     theme_bw()+
-    geom_vline(aes(xintercept=-log(regularization)),
-               data=min.dt[status=="selected",],
-               color="grey",
-               size=2)+
-    geom_vline(aes(xintercept=-log(regularization), color=type),
-               data=min.dt)+
     guides(color="none")+
-    geom_text(aes(-log(regularization), max(variable.data$value),
-                  vjust=vjust,
-                  label=paste0(type, " "),
-                  color=type),
-              hjust=1,
-              data=min.dt)+
-    geom_segment(aes(
-      -log(regularization), mean,
-      xend=-log(min.mean$regularization), yend=mean,
-      color=type),
-               data=data.table(
-                 simplest.within.1sd, type="1sd"))+
     theme_no_space()+
     facet_grid(variable ~ ., scales="free")+
-    scale_color_manual(values=c(
-                         "1sd"="red",
-                         "mean(min)"="blue",
-                         "min(mean)"="black"))+
+    color.scale+
+    geom_vline(aes(
+      xintercept=-log10(regularization),
+      color=type
+    ), data=selected)+
     geom_ribbon(aes(
-      -log(regularization),
+      -log10(regularization),
       ymin=mean-sd,
       ymax=mean+sd),
-                fill="grey",
-                alpha=0.5,
-                data=stats)+
-    geom_line(aes(
-      -log(regularization),
-      mean,
-      color="min(mean)"),
-              data=stats)+
-    geom_line(aes(-log(regularization), value, group=validation.fold),
-              color="grey50",
-              data=vtall[variable!="auc",])+
+      fill="grey",
+      alpha=0.5,
+      data=best.margin.stats)+
+      geom_line(aes(
+        -log10(regularization),
+        value,
+        group=validation.fold),
+        color="grey",
+        data=best.margin.folds)+
+        geom_line(aes(
+          -log10(regularization),
+          mean),
+          size=1,
+          data=best.margin.stats)+
+          geom_text(aes(-log10(regularization), mean,
+                        label=paste0(type, " "),
+                        color=type),
+                    vjust=1,
+                    hjust=1,
+                    data=dot.dt)+
+              geom_point(aes(-log10(regularization), mean,
+                             color=type),
+                         data=dot.dt)+
+              xlab("model complexity -log(regularization)")+
+              ylab("")
+  gg.heatmap <- ggplot()+
+    geom_tile(aes(
+      -log10(regularization),
+      log10(margin),
+      fill=log10(mean)
+    ), data=vstats[variable==validation.metrics[1],])+
+    scale_fill_gradient(low="white", high="red")+
+    color.scale+
     geom_point(aes(
-      -log(regularization),
-      value,
-      color="mean(min)"),
-               data=min.each)+
-    xlab("model complexity -log(regularization)")+
-    ylab("")
-  fit$plot.selectRegularization.data <- validation.data
-  fit$plot.selectRegularization.vlines <- min.dt
+      -log10(regularization),
+      log10(margin),
+      color=type
+    ), data=dot.dt)
+  fit <- IntervalRegressionRegularized(
+    feature.mat, target.mat,
+    initial.regularization=selected$regularization,
+    factor.regularization=NULL,
+    margin=selected$margin,
+    verbose=verbose)
+  fit$plot.selectRegularization <- fit$plot <- gg.bands
+  fit$plot.selectRegularization.line <- best.margin.folds
+  fit$plot.selectRegularization.ribbon <- best.margin.stats
+  fit$plot.selectRegularization.point <- dot.dt
+  fit$plot.selectRegularization.vlines <- selected
+  fit$plot.heatmap <- gg.heatmap
+  fit$plot.heatmap.tile <- vstats
+  fit$validation.data <- validation.data
   fit
+### List representing regularized linear model.
 }, ex=function(){
-
+  
   if(interactive()){
     library(penaltyLearning)
     data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
-    if(require(doParallel)){
-      registerDoParallel()
+    if(require(future)){
+      plan(multiprocess)
     }
     set.seed(1)
-    i.train <- 1:200
+    i.train <- 1:100
     fit <- with(neuroblastomaProcessed, IntervalRegressionCV(
-      feature.mat[i.train,], target.mat[i.train,]))
+      feature.mat[i.train,], target.mat[i.train,],
+      verbose=0))
     ## When only features and target matrices are specified for
     ## training, the squared hinge loss is used as the metric to
     ## minimize on the validation set.
@@ -302,6 +454,8 @@ IntervalRegressionRegularized <- structure(function
 ### (initial.regularization).
  verbose=0,
 ### Print messages if >= 1.
+ margin=1,
+### Non-negative margin size parameter, default 1.
  ...
 ### Other parameters to pass to IntervalRegressionInternal.
 ){
@@ -354,6 +508,7 @@ IntervalRegressionRegularized <- structure(function
         param.vec,
         regularization,
         verbose=verbose,
+        margin=margin,
         ...)
     n.zero <- sum(param.vec == 0)
     n.nonzero <- sum(param.vec != 0)
@@ -395,6 +550,7 @@ IntervalRegressionRegularized <- structure(function
   pred.param.mat <-
     param.mat[c("(Intercept)", pred.feature.names),,drop=FALSE]
   L <- list(
+    margin=margin,
     param.mat=param.mat,
     regularization.vec=do.call(c, regularization.vec.list),
     train.feature.names=train.feature.names,
@@ -481,7 +637,8 @@ IntervalRegressionRegularized <- structure(function
 print.IntervalRegression <- function(x, ...){
   if(ncol(x$pred.param.mat)==1){
     cat(
-      "IntervalRegression model for regularization ",
+      "IntervalRegression model for margin=",
+      x$margin, " regularization=",
       x$regularization.vec, 
       " with weights:\n",
       sep="")
@@ -490,7 +647,9 @@ print.IntervalRegression <- function(x, ...){
     print(x)
   }else{
     cat(
-      "IntervalRegression models [",
+      "IntervalRegression models for margin=",
+      x$margin,
+      " [",
       nrow(x$pred.param.mat),
       " weights x ",
       ncol(x$pred.param.mat),
@@ -549,10 +708,19 @@ IntervalRegressionInternal <- function
  Lipschitz=NULL,
 ### A numeric scalar or NULL, which means to compute Lipschitz as the
 ### mean of the squared L2-norms of the rows of the feature matrix.
- verbose=2
+ verbose=2,
 ### Cat messages: for restarts and at the end if >= 1, and for every
 ### iteration if >= 2.
+ margin=1
+### Margin size hyper-parameter, default 1.
  ){
+  if(!(
+    is.numeric(margin) &&
+    length(margin)==1 &&
+    is.finite(margin)
+    )){
+    stop("margin must be finite numeric scalar")
+  }
   stopifnot(is.matrix(features))
   stopifnot(is.numeric(features))
   n.features <- ncol(features)
@@ -587,21 +755,21 @@ IntervalRegressionInternal <- function
   positive.part <- function(x){
     ifelse(x<0, 0, x)
   }
-  squared.hinge.deriv <- function(x){
-    ifelse(x<1,2*(x-1),0)
+  squared.hinge.deriv <- function(x,e=1){
+    ifelse(x<e,2*(x-e),0)
   }  
   calc.loss <- function(x){
     linear.predictor <- as.numeric(features %*% x)
-    left.term <- squared.hinge(linear.predictor-targets[,1])
-    right.term <- squared.hinge(targets[,2]-linear.predictor)
+    left.term <- squared.hinge(linear.predictor-targets[,1], margin)
+    right.term <- squared.hinge(targets[,2]-linear.predictor, margin)
     both.terms <- left.term+right.term
     weighted.loss.vec <- both.terms * weight.vec
     mean(weighted.loss.vec)
   }
   calc.grad <- function(x){
     linear.predictor <- as.numeric(features %*% x)
-    left.term <- squared.hinge.deriv(linear.predictor-targets[,1])
-    right.term <- squared.hinge.deriv(targets[,2]-linear.predictor)
+    left.term <- squared.hinge.deriv(linear.predictor-targets[,1], margin)
+    right.term <- squared.hinge.deriv(targets[,2]-linear.predictor, margin)
     full.grad <- features * (left.term-right.term) * weight.vec
     colSums(full.grad)/nrow(full.grad)
   }    

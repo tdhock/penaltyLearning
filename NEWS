@@ -1,9 +1,15 @@
 TODOs
 
-tests/support for L1 regularized models?
+tests/support for flsa and HMM?
 
 - option to not stop in labelError if there is the same number of
   changes in two models.
+
+IntervalRegressionCV uses future instead of foreach.
+
+2017.05.08
+
+future instead of do
 
 2017.05.05
 

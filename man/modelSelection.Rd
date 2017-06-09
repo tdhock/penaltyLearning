@@ -1,6 +1,6 @@
 \name{modelSelection}
 \alias{modelSelection}
-\title{Compute exact model selection functions}
+\title{Compute exact model selection function}
 \description{Given loss.vec L_i, model.complexity K_i, the model selection
 function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 the solutions (i, min.lambda, max.lambda) with i being the
