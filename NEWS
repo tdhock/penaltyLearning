@@ -5,11 +5,16 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
-IntervalRegressionCV uses future instead of foreach.
+2017.06.14
+
+labelError bugfix and test case for no predicted changes.
+
+Simplify examples -- avoid running Segmentor since this crashes on new
+versions of R on windows.
 
 2017.05.08
 
-future instead of do
+IntervalRegressionCV uses future instead of foreach.
 
 2017.05.05
 
