@@ -131,18 +131,24 @@ labelError <- structure(function # Compute incorrect labels
     print(bad.models)
     stop("each model should have a different number of changes, problems displayed above")
   }
-  over.dt <- changes.dt[model.labels, list(
-    pred.changes=.N
-  ), by=.EACHI, on=c(
-    problem.vars, model.vars,
-    paste0(change.var, c(">", "<="), label.vars))]
-  ## Is this a bug in data.table? Why should I have to set names back
-  ## to start and end (they are both pos after the
-  ## join). https://github.com/Rdatatable/data.table/issues/1700
-  setnames(over.dt, c(
-    problem.vars, model.vars,
-    label.vars,
-    "pred.changes"))
+  if(nrow(changes.dt)==0){
+    over.dt <- data.table(
+      model.labels[, c(problem.vars, model.vars, label.vars), with=FALSE],
+      pred.changes=0L)
+  }else{
+    over.dt <- changes.dt[model.labels, list(
+      pred.changes=.N
+      ), by=.EACHI, on=c(
+      problem.vars, model.vars,
+      paste0(change.var, c(">", "<="), label.vars))]
+    ## Is this a bug in data.table? Why should I have to set names back
+    ## to start and end (they are both pos after the
+    ## join). https://github.com/Rdatatable/data.table/issues/1700
+    setnames(over.dt, c(
+      problem.vars, model.vars,
+      label.vars,
+      "pred.changes"))
+  }
   changes.per.label <- over.dt[model.labels, on=c(
     problem.vars, model.vars, label.vars)]
   changes.per.label[, fp := ifelse(max.changes < pred.changes, weight, 0)]
