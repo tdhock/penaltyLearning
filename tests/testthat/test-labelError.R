@@ -87,6 +87,17 @@ test_that("label error OK when more models than labels", {
   expect_equal(nrow(errors$model.errors), sum(labeled.model.counts$models))
 })
 
+test_that("no predicted changes is fine", {
+  err.no.changes <- labelError(
+    selection[n.segments==1], labels, changes[n.segments==1],
+    change.var="chromStart",
+    label.vars=c("min", "max"),
+    problem.vars=c("profile.id", "chromosome"))
+  expected.dt <- errors$label.errors[n.segments==1]
+  computed.dt <- err.no.changes$label.errors
+  expect_equal(computed.dt, expected.dt)
+})
+
 test_that("error for missing columns in targetIntervals", {
   expect_error({
     targetIntervals(selection, problem.vars=c("profile.id", "chromosome"))
