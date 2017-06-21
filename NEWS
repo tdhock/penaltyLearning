@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+there is some problem with Segmentor3IsBack on windows, which crashes
+our examples/tests/vignette re-building in CRAN checks... why and how
+to fix?
+
 2017.06.14
 
 labelError bugfix and test case for no predicted changes.
