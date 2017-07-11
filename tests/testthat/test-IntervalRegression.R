@@ -20,3 +20,8 @@ test_that("perfect prediction for six profiles", {
   expect_equal(roc.list$auc, 1)
   expect_equal(roc.list$thresholds[threshold=="predicted", errors], 0)
 })
+
+test_that("threshold argument passed to IntervalRegressionInternal", {
+  fit <- IntervalRegressionCV(
+    train.feature.mat, train.target.mat, threshold=0.1)
+})
