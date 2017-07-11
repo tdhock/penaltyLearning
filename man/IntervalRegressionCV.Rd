@@ -17,7 +17,7 @@ to parallelize on validation.fold and margin.}
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
     verbose = 0, min.observations = 10, reg.type = "min", 
     incorrect.labels.db = NULL, initial.regularization = 0.001, 
-    margin.vec = 1)}
+    margin.vec = 1, ...)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix, n observations x p features.}
   \item{target.mat}{Numeric target matrix, n observations x 2 limits.}
@@ -53,6 +53,7 @@ many labels per data sequence.}
 time is linear in the number of elements of margin.vec -- more
 values takes more computation time, but yields slightly more
 accurate models (if there is enough data).}
+  \item{\dots}{passed to IntervalRegressionRegularized.}
 }
 
 \value{List representing regularized linear model.}
