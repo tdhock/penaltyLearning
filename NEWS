@@ -5,9 +5,14 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2017.07.11
+
 there is some problem with Segmentor3IsBack on windows, which crashes
-our examples/tests/vignette re-building in CRAN checks... why and how
-to fix?
+our vignette re-building in CRAN checks on solaris... not sure why but
+try to fix via adding tryCatch in vignette.
+
+Add ... passed from IntervalRegressionCV to
+IntervalRegressionRegularized.
 
 2017.06.14
 
