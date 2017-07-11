@@ -11,7 +11,7 @@ all.errors.list <- list()
 for(sample.id in names(coverage.list)){
   sample.coverage <- coverage.list[[sample.id]]
   sample.labels <- label.list[[sample.id]]
-  fit <- coseg::PeakSegPDPAchrom(sample.coverage, 5L)
+  fit <- PeakSegOptimal::PeakSegPDPAchrom(sample.coverage, 5L)
   sample.peaks <- data.table(fit$segments)[status=="peak", ]
   setkey(sample.peaks, peaks)
   selection <- modelSelection(fit$loss, "PoissonLoss", "peaks")

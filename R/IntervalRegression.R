@@ -138,11 +138,13 @@ IntervalRegressionCV <- structure(function
 ### many labels per data sequence.
   initial.regularization=0.001,
 ### Passed to IntervalRegressionRegularized.
-  margin.vec=1
+  margin.vec=1,
 ### numeric vector of margin size hyper-parameters. The computation
 ### time is linear in the number of elements of margin.vec -- more
 ### values takes more computation time, but yields slightly more
 ### accurate models (if there is enough data).
+ ...
+### passed to IntervalRegressionRegularized.
 ){
   validation.fold <- negative.auc <- threshold <- incorrect.labels <-
     variable <- value <- regularization <- folds <- status <- type <-
@@ -194,7 +196,8 @@ IntervalRegressionCV <- structure(function
       fit <- IntervalRegressionRegularized(
         train.features, train.targets, verbose=verbose,
         margin=margin,
-        initial.regularization=initial.regularization)
+        initial.regularization=initial.regularization,
+        ...)
       validation.features <- feature.mat[is.validation, , drop=FALSE]
       pred.log.lambda <- fit$predict(validation.features)
       validation.targets <- target.mat[is.validation, , drop=FALSE]
