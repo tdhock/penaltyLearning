@@ -9,4 +9,9 @@ notifications:
 
 r_packages:
   - ggplot2
+  - directlabels
 
+r_github_packages:
+  - tdhock/coseg
+  - tdhock/PeakSegDP
+  - tdhock/PeakError
