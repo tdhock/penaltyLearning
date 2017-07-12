@@ -85,6 +85,7 @@ minimum error with repect to the labels). Below we use the Segmentor
 function to compute a maximum likelihood Gaussian model.
 
 <<changes-and-loss>>=
+
 library(data.table)
 data(neuroblastoma, package="neuroblastoma")
 ids.str <- paste(c(1, 4, 6, 8, 10, 11))
@@ -101,46 +102,41 @@ for(problem.i in seq_along(problem.list)){
   pro <- problem.list[[problem.name]]
   meta <- pro[1, .(profile.id, chromosome)]
   max.segments <- min(nrow(pro), 10)
-  fit <- tryCatch({
-    Segmentor3IsBack::Segmentor(
-      pro$logratio, model=2, Kmax=max.segments)
-  }, error=function(e){
-    print(problem.name)
-    NULL
-  })
-  if(!is.null(fit)){
-    rss.vec <- rep(NA, max.segments)
-    for(n.segments in 1:max.segments){
-      end <- fit@breaks[n.segments, 1:n.segments]
-      data.before.change <- end[-n.segments]
-      data.after.change <- data.before.change+1
-      pos.before.change <- as.integer(
-        (pro$position[data.before.change]+pro$position[data.after.change])/2)
-      start <- c(1, data.after.change)
-      chromStart <- c(pro$position[1], pos.before.change)
-      chromEnd <- c(pos.before.change, max(pro$position))
-      seg.mean.vec <- fit@parameters[n.segments, 1:n.segments]
-      data.mean.vec <- rep(seg.mean.vec, end-start+1)
-      residual.vec <- pro$logratio - data.mean.vec
-      rss.vec[n.segments] <- sum(residual.vec * residual.vec)
-      segs.list[[paste(problem.name, n.segments)]] <- data.table(
-        meta,
-        n.segments,
-        start,
-        end,
-        chromStart,
-        chromEnd,
-        mean=seg.mean.vec)
-    }
-    loss.list[[paste(problem.name, n.segments)]] <- data.table(
+  fit <- cghseg:::segmeanCO(pro$logratio, max.segments)
+  rss.vec <- rep(NA, max.segments)
+  for(n.segments in 1:max.segments){
+    end <- fit$t.est[n.segments, 1:n.segments]
+    data.before.change <- end[-n.segments]
+    data.after.change <- data.before.change+1
+    pos.before.change <- as.integer(
+      (pro$position[data.before.change]+pro$position[data.after.change])/2)
+    start <- c(1, data.after.change)
+    chromStart <- c(pro$position[1], pos.before.change)
+    chromEnd <- c(pos.before.change, max(pro$position))
+    seg.mean.vec <- sapply(seq_along(start), function(i){
+      indices <- start[i]:end[i]
+      mean(pro$logratio[indices])
+    })
+    data.mean.vec <- rep(seg.mean.vec, end-start+1)
+    residual.vec <- pro$logratio - data.mean.vec
+    rss.vec[n.segments] <- sum(residual.vec * residual.vec)
+    segs.list[[paste(problem.name, n.segments)]] <- data.table(
       meta,
-      n.segments=1:max.segments,
-      loss=rss.vec,
-      lik=as.numeric(fit@likelihood))
+      n.segments,
+      start,
+      end,
+      chromStart,
+      chromEnd,
+      mean=seg.mean.vec)
   }
+  loss.list[[paste(problem.name, n.segments)]] <- data.table(
+    meta,
+    n.segments=1:max.segments,
+    loss=rss.vec)
 }
 loss <- do.call(rbind, loss.list)
 segs <- do.call(rbind, segs.list)
+
 @ 
 
 Note that since we have saved the segment starts and ends, we can easily
