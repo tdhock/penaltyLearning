@@ -349,7 +349,8 @@ IntervalRegressionCV <- structure(function
     initial.regularization=selected$regularization,
     factor.regularization=NULL,
     margin=selected$margin,
-    verbose=verbose)
+    verbose=verbose,
+    ...)
   fit$plot.selectRegularization <- fit$plot <- gg.bands
   fit$plot.selectRegularization.line <- best.margin.folds
   fit$plot.selectRegularization.ribbon <- best.margin.stats
