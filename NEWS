@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2017.07.12
+
+try to fix vignette by using cghseg:::segmeanCO instead of Segmentor.
+
 2017.07.11
 
 there is some problem with Segmentor3IsBack on windows, which crashes
