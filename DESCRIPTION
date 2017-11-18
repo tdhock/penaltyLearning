@@ -1,7 +1,7 @@
 Package: penaltyLearning
 Maintainer: Toby Dylan Hocking <toby.hocking@r-project.org>
 Author: Toby Dylan Hocking
-Version: 2017.07.12
+Version: 2017.11.17
 License: GPL-3
 Title: Penalty Learning
 Description: Implementations of algorithms from 
@@ -10,7 +10,7 @@ Description: Implementations of algorithms from
  Hocking, Rigaill, Vert, Bach
  <http://proceedings.mlr.press/v28/hocking13.html>
  published in proceedings of ICML2013.
-Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, cghseg,
+Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, 
  testthat, future,
  PeakSegDP, PeakError, PeakSegOptimal,
  directlabels (>= 2017.03.31)

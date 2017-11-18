@@ -5,6 +5,11 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2017.11.17
+
+In vignette, remove cghseg since it has memory problems, use Segmentor
+instead, with trivial 1 segment model when Segmentor fails.
+
 2017.07.12
 
 try to fix vignette by using cghseg:::segmeanCO instead of Segmentor.
