@@ -101,17 +101,25 @@ for(problem.i in seq_along(problem.list)){
   problem.name <- names(problem.list)[[problem.i]]
   pro <- problem.list[[problem.name]]
   meta <- pro[1, .(profile.id, chromosome)]
-  max.segments <- min(nrow(pro), 10)
-  break.mat <- tryCatch({
+  max.segments <- floor(min(nrow(pro)/2 + 1, 10))
+  break.mat <- if(.Platform$OS.type=="unix"){
     fit <- Segmentor3IsBack::Segmentor(
       pro$logratio, model=2, Kmax=max.segments)
     fit@breaks
-  }, error=function(e){
-    ## This should only happen on windows, 
-    ## where for some reason there is a problem with Segmentor.
-    matrix(nrow(pro))
-  })
-  max.segments <- ncol(break.mat)
+  }else{
+    ## This should only happen on windows CRAN checks, 
+    ## where for some reason there is a problem with Segmentor,
+    ## so we use the slow quadratic time 
+    ## classic dynamic programming algorithm instead.
+    fit <- changepoint::cpt.mean(
+      pro$logratio, 
+      penalty="None", 
+      method="SegNeigh", 
+      Q=max.segments)
+    ends <- rbind(NA, fit@cpts.full)
+    diag(ends) <- nrow(pro)
+    ends
+  }
   rss.vec <- rep(NA, max.segments)
   for(n.segments in 1:max.segments){
     end <- break.mat[n.segments, 1:n.segments]
@@ -165,10 +173,12 @@ We use penaltyLearning::modelSelection to compute the exact path of
 models that will be selected for every possible non-negative penalty
 value,
 <<modelSelection>>=
+
 selection <- loss[, {
   penaltyLearning::modelSelection(.SD, "loss", "n.segments")
 }, by=list(profile.id, chromosome)]
 print(selection[profile.id==1 & chromosome==1])
+
 @ 
 
 Note that the model selection function $s_i(\lambda)$ is the number of segments
@@ -181,6 +191,7 @@ that is selected for a given penalty $\lambda$ and data sequence $i$,
 These functions are piecewise constant, and specific to each data
 sequence:
 <<modelSelectionplot, fig=TRUE>>=
+
 some.selection <- selection[profile.id==1 & chromosome %in% c(11, 17)]
 some.selection[, list(
   pid.chr=paste(profile.id, chromosome),
@@ -197,6 +208,7 @@ gg.selection <- ggplot()+
   scale_y_continuous(breaks=1:max(some.selection$n.segments))+
   xlab("log(penalty)")
 print(gg.selection)
+
 @ 
 
 \subsection{Label error}
@@ -206,8 +218,10 @@ incorrect labels for data sequence $i$ as a function of penalty
 $\lambda$), we need to first get the positions of predicted
 changepoints:
 <<changes>>=
+
 changes <- segs[1 < start, ]
 changes[, list(profile.id, chromosome, n.segments, changepoint=chromStart)]
+
 @ 
 
 Then, we use penaltyLearning::labelError to compute the number of
@@ -224,11 +238,13 @@ named arguments specify how the three input data tables are used:
 \end{description}
 
 <<labelError>>=
+
 errors <- penaltyLearning::labelError(
   selection, labels, changes,
   change.var="chromStart",
   label.vars=c("min", "max"),
   problem.vars=c("profile.id", "chromosome"))
+
 @ 
 
 The labelError function returns a list of two data tables:
@@ -243,6 +259,7 @@ incorrect labels as a function of penalty $\lambda$):
 \end{equation}
 
 <<model-errors, fig=TRUE>>=
+
 some.errors <- errors$model.errors[some.selection, on=list(
   profile.id, chromosome, n.segments)]
 gg.err <- ggplot()+
@@ -254,6 +271,7 @@ gg.err <- ggplot()+
     data=some.errors)+
   xlab("log(penalty)")
 print(gg.err)
+
 @ 
 
 \subsection{Target intervals}
@@ -263,8 +281,10 @@ train and evaluate a learned penalty function. We use labels in
 chromosome 11 as a test set, and use all other labels as a train set.
 
 <<all-errors>>=
+
 all.errors <- data.table(errors$model.errors)
 all.errors[, set := ifelse(chromosome=="11", "test", "train")]
+
 @ 
 
 To train a penalty learning model, we compute target intervals of
@@ -274,12 +294,14 @@ machine learning problem, which is a (n x 2) matrix that we compute
 using the penaltyLearning::targetIntervals function.
 
 <<targetIntervals>>=
+
 target.dt <- penaltyLearning::targetIntervals(
   all.errors[set=="train", ],
   c("profile.id", "chromosome"))
 target.mat <- target.dt[, cbind(min.log.lambda, max.log.lambda)]
 rownames(target.mat) <- target.dt[, paste(profile.id, chromosome)]
 print(head(target.mat))
+
 @ 
 
 Note that the first column is the lower limit (possibly -Inf) of
@@ -295,6 +317,7 @@ variance estimate, and log.data = $\log d_i$ is log of the number of
 data points to segment). 
 
 <<featureMatrix>>=
+
 feature.dt <- profiles[, list(
   log.data=log(.N),
   log.var=log(median(abs(diff(logratio))))
@@ -303,6 +326,7 @@ all.feature.mat <- feature.dt[, cbind(log.data, log.var)]
 rownames(all.feature.mat) <- feature.dt[, paste(profile.id, chromosome)]
 train.feature.mat <- all.feature.mat[rownames(target.mat), ]
 print(head(train.feature.mat))
+
 @ 
 
 You can also use penaltyLearning::featureMatrix for computing a larger
@@ -350,6 +374,7 @@ function which can perfectly discriminate between positive and negatve
 labels in the test set.
 
 <<ROC, fig=TRUE>>=
+
 test.pred <- feature.dt[chromosome=="11",]
 roc <- penaltyLearning::ROChange(
   all.errors, test.pred, c("profile.id", "chromosome"))
@@ -363,6 +388,7 @@ gg.roc <- ggplot()+
     data=pred.thresh)
 print(gg.roc)
 print(pred.thresh)
+
 @ 
 
 Using the ROC output you can also easily plot the number of incorrect
@@ -370,6 +396,7 @@ labels as a function of threshold $\tau\in\RR$ added to the predicted
 log(penalty) function $f(x_i) + \tau$,
 
 <<roc-thresh, fig=TRUE>>=
+
 gg.thresh <- ggplot()+
   geom_segment(aes(
     min.thresh, errors,
@@ -380,6 +407,7 @@ gg.thresh <- ggplot()+
     data=pred.thresh)+
   xlab("threshold")
 print(gg.thresh)
+
 @ 
 
 We draw a dot at $\tau=0$ to show the number of incorrectly predicted
@@ -393,6 +421,7 @@ of segments for each penalty value). Then we plot the predicted
 models along with the data and labels.
 
 <<vizpred, fig=TRUE>>=
+
 pred.models <- feature.dt[selection, nomatch=0L, on=list(
   profile.id, chromosome,
   pred.log.lambda < max.log.lambda,
@@ -434,6 +463,7 @@ viz.learned <- ggplot()+
              color="green",
              linetype="dashed")
 print(viz.learned)
+
 @ 
 
 The plot above can be interpreted in the following manner
@@ -462,6 +492,7 @@ penalty function $f(x_i) = \log\log d_i$ which is unsupervised
 set (chromosome 11) as we used for the learned model.
 
 <<bic-roc>>=
+
 bic.dt <- profiles[, list(
   pred.log.lambda=log(log(.N))
 ), by=list(profile.id, chromosome)]
@@ -469,6 +500,7 @@ bic.test <- bic.dt[chromosome==11]
 bic.roc <- penaltyLearning::ROChange(
   all.errors, bic.test, c("profile.id", "chromosome"))
 print(bic.roc$thresholds[threshold=="predicted"])
+
 @ 
 
 It is clear that the BIC suffers from a false negative in chromosome
@@ -476,6 +508,7 @@ It is clear that the BIC suffers from a false negative in chromosome
 visualize the model along with the data and labels in the plot below,
 
 <<bic-viz, fig=TRUE>>=
+
 bic.models <- bic.dt[selection, nomatch=0L, on=list(
   profile.id, chromosome,
   pred.log.lambda < max.log.lambda,
@@ -514,6 +547,7 @@ viz.bic <- ggplot()+
              color="green",
              linetype="dashed")
 print(viz.bic)
+
 @ 
 
 It is clear from the plot above that there are many false negatives --
@@ -524,6 +558,7 @@ Finally we can make the scatterplot that compare the predicted penalty
 values of the learned model and the BIC:
 
 <<scatter, fig=TRUE>>=
+
 scatter.dt <- data.table(
   bic=bic.dt$pred.log.lambda, 
   learned=feature.dt$pred.log.lambda)
@@ -535,10 +570,11 @@ gg.scatter <- ggplot()+
     data=scatter.dt)+
   coord_equal()
 print(gg.scatter)
+
 @ 
 
-It is clear from the scatterplot that the learned model always
-predicts larger log(penalty) values than the BIC. 
+It is clear from the scatterplot that the learned model 
+predicts log(penalty) values which are quite different from the BIC. 
 
 \section{Conclusion}
 
