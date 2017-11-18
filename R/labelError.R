@@ -43,7 +43,7 @@ labelError <- structure(function # Compute incorrect labels
   model.vars="n.segments",
 ### character: column names used to identify model complexity. The
 ### default "n.segments" is for change-point models such as in the
-### Segmentor3IsBack and cghseg packages.
+### Segmentor3IsBack and changepoint packages.
   problem.vars=character(0),
 ### character: column names used to identify data set / segmentation
 ### problem, should be present in all three data tables (models,

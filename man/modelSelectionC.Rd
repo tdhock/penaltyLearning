@@ -34,9 +34,9 @@ library(penaltyLearning)
 data(neuroblastoma, package="neuroblastoma", envir=environment())
 pro <- subset(neuroblastoma$profiles, profile.id==1 & chromosome=="X")
 max.segments <- 20
-fit <- cghseg:::segmeanCO(pro$logratio, Kmax=max.segments)
+fit <- Segmentor3IsBack::Segmentor(pro$logratio, 2, max.segments)
 seg.vec <- 1:max.segments
-exact.df <- modelSelectionC(fit$J.est, seg.vec, seg.vec)
+exact.df <- modelSelectionC(fit@likelihood, seg.vec, seg.vec)
 ## Solve the optimization using grid search.
 L.grid <- with(exact.df,{
   seq(min(max.log.lambda)-1,

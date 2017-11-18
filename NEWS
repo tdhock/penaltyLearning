@@ -10,6 +10,8 @@ tests/support for flsa and HMM?
 In vignette, remove cghseg since it has memory problems, use Segmentor
 instead, with trivial 1 segment model when Segmentor fails.
 
+Remove cghseg from example(modelSelectionC).
+
 Don't use fullpage in vignette because that causes a NOTE on CRAN mac.
 
 2017.07.12

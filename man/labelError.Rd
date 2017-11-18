@@ -43,7 +43,7 @@ between start=10 and end=20 means that any predicted changepoint
 at 11, ..., 20 is a false positive.}
   \item{model.vars}{character: column names used to identify model complexity. The
 default "n.segments" is for change-point models such as in the
-Segmentor3IsBack and cghseg packages.}
+Segmentor3IsBack and changepoint packages.}
   \item{problem.vars}{character: column names used to identify data set / segmentation
 problem, should be present in all three data tables (models,
 labels, changes).}
