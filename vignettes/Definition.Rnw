@@ -1,6 +1,6 @@
 \documentclass{article}
 %\VignetteIndexEntry{Definition of penalty function learning}
-\usepackage[cm]{fullpage}
+%\usepackage[cm]{fullpage}%Dont use because not found on mac.
 \usepackage{verbatim}
 \usepackage{hyperref} 
 \usepackage{graphicx}
