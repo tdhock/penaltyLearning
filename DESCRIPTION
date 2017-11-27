@@ -10,7 +10,7 @@ Description: Implementations of algorithms from
  Hocking, Rigaill, Vert, Bach
  <http://proceedings.mlr.press/v28/hocking13.html>
  published in proceedings of ICML2013.
-Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, changepoint,
+Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, jointseg,
  testthat, future,
  PeakSegDP, PeakError, PeakSegOptimal,
  directlabels (>= 2017.03.31)
