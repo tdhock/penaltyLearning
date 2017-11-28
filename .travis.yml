@@ -11,6 +11,9 @@ r_packages:
   - ggplot2
   - directlabels
 
+bioc_packages:
+  - DNAcopy
+
 r_github_packages:
   - tdhock/coseg
   - tdhock/PeakSegDP
