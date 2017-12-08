@@ -1,7 +1,7 @@
 Package: penaltyLearning
 Maintainer: Toby Dylan Hocking <toby.hocking@r-project.org>
 Author: Toby Dylan Hocking
-Version: 2017.11.17
+Version: 2017.12.08
 License: GPL-3
 Title: Penalty Learning
 Description: Implementations of algorithms from 
@@ -16,4 +16,4 @@ Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark, jointseg,
  directlabels (>= 2017.03.31)
 Depends: R (>= 2.10), data.table (>= 1.9.8)
 Imports: geometry, ggplot2
-Remotes: tdhock/PeakSegDP, tdhock/PeakError, tdhock/coseg, tdhock/directlabels
+Remotes: tdhock/PeakSegDP, tdhock/PeakError, tdhock/PeakSegOptimal, tdhock/directlabels

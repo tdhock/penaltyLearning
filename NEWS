@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2017.12.08
+
+remove vignette to pass CRAN check.
+
 2017.11.17
 
 In vignette, remove cghseg since it has memory problems, use Segmentor
