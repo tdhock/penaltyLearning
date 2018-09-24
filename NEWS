@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2018.09.24
+
+labelError stops for unrecognized annotations.
+
 2018.09.04
 
 use future.apply::future_lapply.

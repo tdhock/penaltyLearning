@@ -110,7 +110,7 @@ labelError <- structure(function # Compute incorrect labels
   }else{
     labels.dt[, weight := 1 ]
   }
-  labels.info <- annotations[labels.dt, on=list(annotation)]
+  labels.info <- annotations[labels.dt, on=list(annotation), nomatch=0L]
   if(nrow(labels.info)!=nrow(labels.dt)){
     stop("labels$annotation must be one of annotations$annotation")
   }

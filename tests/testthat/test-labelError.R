@@ -285,3 +285,17 @@ test_that("error for overlapping labels", {
       model.vars="complexity")
   }, "each label end must be <= next label start", fixed=TRUE)
 })
+
+ann.unrecognized <- rbind(
+  label("oneChange", 5, 8),
+  label("0changes", 2, 4))
+test_that("error for unrecognized labels", {
+  expect_error({
+    labelError(
+      models, ann.unrecognized, changes,
+      problem.vars="prob",
+      label.vars=c("start", "end"),
+      change.var="pos",
+      model.vars="complexity")
+  }, "labels$annotation must be one of annotations$annotation", fixed=TRUE)
+})
