@@ -178,8 +178,8 @@ IntervalRegressionCV <- structure(function
     stop("margin.vec must be a numeric vector of finite margin size parameters")
   }
   validation.fold.vec <- unique(fold.vec)
-  LAPPLY <- if(requireNamespace("future")){
-    future::future_lapply
+  LAPPLY <- if(requireNamespace("future.apply")){
+    future.apply::future_lapply
   }else{
     lapply
   }
