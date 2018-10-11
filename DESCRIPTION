@@ -15,5 +15,7 @@ Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark,
  PeakSegDP, PeakError, PeakSegOptimal, jointseg,
  directlabels (>= 2017.03.31)
 Depends: R (>= 2.10), data.table (>= 1.9.8)
+URL: https://github.com/tdhock/penaltyLearning
+BugReports: https://github.com/tdhock/penaltyLearning/issues
 Imports: geometry, ggplot2
 Remotes: tdhock/PeakSegDP, tdhock/PeakError, tdhock/PeakSegOptimal, tdhock/directlabels
