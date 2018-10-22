@@ -16,4 +16,3 @@ Suggests: Segmentor3IsBack, neuroblastoma, microbenchmark,
  directlabels (>= 2017.03.31)
 Depends: R (>= 2.10), data.table (>= 1.9.8)
 Imports: geometry, ggplot2
-Remotes: tdhock/PeakSegDP, tdhock/PeakError, tdhock/PeakSegOptimal, tdhock/directlabels
