@@ -43,7 +43,8 @@ ROChange <- structure(function # ROC curve for changepoints
   }
   pred <- data.table(predictions)
   err <- data.table(models)
-  total.dt <- err[pred, on=problem.vars, .SD[1,], by=problem.vars][, list(
+  first.dt <- err[max.log.lambda==Inf]
+  total.dt <- first.dt[, list(
     labels=sum(labels),
     possible.fp=sum(possible.fp),
     possible.fn=sum(possible.fn))]
@@ -82,8 +83,8 @@ ROChange <- structure(function # ROC curve for changepoints
     total.dt,
     min.thresh=c(thresh, -Inf),
     max.thresh=c(Inf, thresh),
-    fp=cumsum(c(0, fp)),
-    fn=total.dt$possible.fn+cumsum(c(0, fn)))]
+    fp=cumsum(c(sum(first.dt$fp), fp)),
+    fn=sum(first.dt$fn)+cumsum(c(0, fn)))]
   interval.dt[, errors := fp+fn]
   interval.dt[, FPR := fp/possible.fp]
   interval.dt[, tp := possible.fn - fn]
