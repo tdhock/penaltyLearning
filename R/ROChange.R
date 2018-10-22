@@ -72,7 +72,7 @@ ROChange <- structure(function # ROC curve for changepoints
     ##browser(expr=sample.id=="McGill0322")
     rbind(fp.dt, fn.dt)
   }, by=problem.vars]
-  pred.with.thresh <- thresh.dt[pred, on=problem.vars]
+  pred.with.thresh <- thresh.dt[pred, on=problem.vars, nomatch=0L]
   pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
   uniq.thresh <- pred.with.thresh[, list(
     fp=sum(fp),
