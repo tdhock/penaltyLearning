@@ -5,7 +5,7 @@ library(penaltyLearning)
 m <- function(problem, min.log.lambda, max.log.lambda, errors, fp, fn, labels, possible.fp, possible.fn){
   data.table(problem, min.log.lambda, max.log.lambda, errors, fp, fn, labels, possible.fp, possible.fn)
 }
-model.dt <- rbind(
+model.dt <- rbind(#           Er fp fn N  fp fn 
   m("no-thresh", -Inf, Inf,   0, 0, 0, 2, 0, 2),
   m("two-thresh", -Inf, -500, 1, 1, 0, 1, 1, 1),
   m("two-thresh", -500, 500,  0, 0, 0, 1, 1, 1),
@@ -17,4 +17,9 @@ pred.dt <- data.table(
 test_that("problem with no thresh is OK", {
   L <- ROChange(model.dt, pred.dt, "problem")
   expect_is(L, "list")
+  expect_identical(L$roc$fp, fp <- c(0, 0, 1))
+  expect_identical(L$roc$fn, fn <- c(1, 0, 0))
+  expect_identical(L$roc$FPR, fp)
+  expect_identical(L$roc$TPR, 1-fn/3)
 })
+
