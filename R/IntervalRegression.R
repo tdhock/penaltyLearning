@@ -177,6 +177,17 @@ IntervalRegressionCV <- structure(function
   )){
     stop("margin.vec must be a numeric vector of finite margin size parameters")
   }
+  fold.limits <- data.table(
+    lower=is.finite(target.mat[,1]),
+    upper=is.finite(target.mat[,2]),
+    fold=fold.vec)[, list(
+      lower.limits=sum(lower),
+      upper.limits=sum(upper)
+    ), by=list(fold)]
+  if(fold.limits[, any(lower.limits==0 | upper.limits==0)]){
+    print(fold.limits)
+    stop("some folds have no upper/lower limits; each fold should have at least one upper and one lower limit")
+  }
   validation.fold.vec <- unique(fold.vec)
   LAPPLY <- if(requireNamespace("future.apply")){
     future.apply::future_lapply
