@@ -431,6 +431,16 @@ check_features_targets <- function
   )){
     stop("target.mat should be a numeric matrix with two columns (lower and upper limits of correct outputs)")
   }
+  if(!(
+    any(is.finite(target.mat[,1]))
+  )){
+    stop("target.mat has no lower limits, but should have at least one")
+  }
+  if(!(
+    any(is.finite(target.mat[,2]))
+  )){
+    stop("target.mat has no upper limits, but should have at least one")
+  }
   if(nrow(target.mat) != nrow(feature.mat)){
     stop("feature.mat and target.mat should have the same number of rows")
   }
@@ -705,8 +715,8 @@ IntervalRegressionInternal <- function
 ### When the stopping criterion gets below this threshold, the
 ### algorithm stops and declares the solution as optimal.
  max.iterations=1e3,
-### Error if the algorithm has not found an optimal solution after
-### this many iterations.
+### If the algorithm has not found an optimal solution after this many
+### iterations, increase Lipschitz constant and max.iterations.
  weight.vec=NULL,
 ### A numeric vector of weights for each training example.
  Lipschitz=NULL,

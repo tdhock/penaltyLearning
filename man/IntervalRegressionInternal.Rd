@@ -22,8 +22,8 @@ column/feature should be all ones and will not be regularized.}
   \item{regularization}{Degree of L1-regularization.}
   \item{threshold}{When the stopping criterion gets below this threshold, the
 algorithm stops and declares the solution as optimal.}
-  \item{max.iterations}{Error if the algorithm has not found an optimal solution after
-this many iterations.}
+  \item{max.iterations}{If the algorithm has not found an optimal solution after this many
+iterations, increase Lipschitz constant and max.iterations.}
   \item{weight.vec}{A numeric vector of weights for each training example.}
   \item{Lipschitz}{A numeric scalar or NULL, which means to compute Lipschitz as the
 mean of the squared L2-norms of the rows of the feature matrix.}
