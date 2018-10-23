@@ -37,11 +37,21 @@ test_that("error when no lower limits", {
 })
 
 no.upper <- train.target.mat[,2] == Inf
-test_that("error when no lower limits", {
+test_that("error when no upper limits", {
   expect_error({
     IntervalRegressionCV(
       train.feature.mat[no.upper,],
       train.target.mat[no.upper,],
       min.observations=sum(no.upper))
   }, "no upper limits")
+})
+
+fold.vec <- as.integer(ifelse(no.lower, 1, 2))
+test_that("error when one fold has no upper/lower limits", {
+  expect_error({
+    IntervalRegressionCV(
+      train.feature.mat,
+      train.target.mat,
+      fold.vec=fold.vec)
+  }, "each fold should have at least one upper and one lower limit")
 })
