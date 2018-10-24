@@ -148,7 +148,7 @@ IntervalRegressionCV <- structure(function
 ){
   validation.fold <- negative.auc <- threshold <- incorrect.labels <-
     variable <- value <- regularization <- folds <- status <- type <-
-      vjust <- upper.limit <- NULL
+      vjust <- upper.limit <- lower <- upper <- fold <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### IntervalRegressionCV: no visible binding for global variable
   n.observations <- check_features_targets(feature.mat, target.mat)
@@ -176,6 +176,17 @@ IntervalRegressionCV <- structure(function
     all(is.finite(margin.vec))
   )){
     stop("margin.vec must be a numeric vector of finite margin size parameters")
+  }
+  fold.limits <- data.table(
+    lower=is.finite(target.mat[,1]),
+    upper=is.finite(target.mat[,2]),
+    fold=fold.vec)[, list(
+      lower=sum(lower),
+      upper=sum(upper)
+    ), by=list(fold)]
+  if(fold.limits[, any(lower==0 | upper==0)]){
+    print(fold.limits)
+    stop("some folds have no upper/lower limits; each fold should have at least one upper and one lower limit")
   }
   validation.fold.vec <- unique(fold.vec)
   LAPPLY <- if(requireNamespace("future.apply")){
@@ -430,6 +441,16 @@ check_features_targets <- function
     ncol(target.mat) == 2
   )){
     stop("target.mat should be a numeric matrix with two columns (lower and upper limits of correct outputs)")
+  }
+  if(!(
+    any(is.finite(target.mat[,1]))
+  )){
+    stop("target.mat has no lower limits, but should have at least one")
+  }
+  if(!(
+    any(is.finite(target.mat[,2]))
+  )){
+    stop("target.mat has no upper limits, but should have at least one")
   }
   if(nrow(target.mat) != nrow(feature.mat)){
     stop("feature.mat and target.mat should have the same number of rows")
@@ -705,8 +726,8 @@ IntervalRegressionInternal <- function
 ### When the stopping criterion gets below this threshold, the
 ### algorithm stops and declares the solution as optimal.
  max.iterations=1e3,
-### Error if the algorithm has not found an optimal solution after
-### this many iterations.
+### If the algorithm has not found an optimal solution after this many
+### iterations, increase Lipschitz constant and max.iterations.
  weight.vec=NULL,
 ### A numeric vector of weights for each training example.
  Lipschitz=NULL,

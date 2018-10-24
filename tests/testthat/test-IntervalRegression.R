@@ -11,7 +11,7 @@ allchr.rows <- grep(allchr.pattern, rownames(neuroblastomaProcessed$target.mat),
 train.rows <- grep("[.]11$", allchr.rows, invert=TRUE, value=TRUE)
 train.feature.mat <- neuroblastomaProcessed$feature.mat[train.rows, ]
 train.target.mat <- neuroblastomaProcessed$target.mat[train.rows, ]
-set.seed(1)
+set.seed(2)
 fit <- IntervalRegressionCV(train.feature.mat, train.target.mat)
 pred.vec <- predict(fit, neuroblastomaProcessed$feature.mat[allchr.rows, ])
 roc.list <- targetIntervalROC(neuroblastomaProcessed$target.mat[allchr.rows, ], pred.vec)
@@ -24,4 +24,34 @@ test_that("perfect prediction for six profiles", {
 test_that("threshold argument passed to IntervalRegressionInternal", {
   fit <- IntervalRegressionCV(
     train.feature.mat, train.target.mat, threshold=0.1)
+})
+
+no.lower <- train.target.mat[,1] == -Inf
+test_that("error when no lower limits", {
+  expect_error({
+    IntervalRegressionCV(
+      train.feature.mat[no.lower,],
+      train.target.mat[no.lower,],
+      min.observations=sum(no.lower))
+  }, "no lower limits")
+})
+
+no.upper <- train.target.mat[,2] == Inf
+test_that("error when no upper limits", {
+  expect_error({
+    IntervalRegressionCV(
+      train.feature.mat[no.upper,],
+      train.target.mat[no.upper,],
+      min.observations=sum(no.upper))
+  }, "no upper limits")
+})
+
+fold.vec <- as.integer(ifelse(no.lower, 1, 2))
+test_that("error when one fold has no upper/lower limits", {
+  expect_error({
+    IntervalRegressionCV(
+      train.feature.mat,
+      train.target.mat,
+      fold.vec=fold.vec)
+  }, "each fold should have at least one upper and one lower limit")
 })

@@ -7,14 +7,15 @@ notifications:
     on_success: change
     on_failure: change
 
-r_packages:
-  - ggplot2
-  - directlabels
+# r_packages:
+#   - ggplot2
+#   - directlabels
 
+# DNAcopy not used but needed for checks.
 bioc_packages:
   - DNAcopy
 
-r_github_packages:
-  - tdhock/coseg
-  - tdhock/PeakSegDP
-  - tdhock/PeakError
+# r_github_packages:
+#   - tdhock/coseg
+#   - tdhock/PeakSegDP
+#   - tdhock/PeakError
