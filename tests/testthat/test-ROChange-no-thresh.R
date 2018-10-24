@@ -35,6 +35,16 @@ test_that("inconsistent possible.fn/possible.fp/labels is an error", {
   }
 })
 
+test_that("negative possible.fn/possible.fp/labels is an error", {
+  for(col.name in c("possible.fn", "possible.fp", "labels")){
+    negative.dt <- data.table(model.dt)
+    negative.dt[[col.name]][1:3] <- -1
+    expect_error({
+      ROChange(negative.dt, pred.dt, "problem")
+    }, "possible.fn/possible.fp/labels should be non-negative")
+  }
+})
+
 test_that("missing data is an error", {
   for(col.name in names(model.dt)){
     missing.dt <- data.table(model.dt)
@@ -70,4 +80,27 @@ test_that("problem with inconsistent min/max.log.lambda is an error", {
   }, "max.log.lambda should be equal to the next min.log.lambda")
 })
 
-## TODO 0 <= errors <= labels, etc.
+possible.name.vec <- c(
+  errors="labels",
+  fp="possible.fp",
+  fn="possible.fn")
+test_that("problem with fp/fn/errors out of range is an error", {
+  for(col.name in c("fn", "fp", "errors")){
+    out.dt <- data.table(model.dt)
+    for(bad.value in c(-1, 2)){
+      out.dt[[col.name]][1] <- bad.value
+      poss.name <- possible.name.vec[[col.name]]
+      msg <- paste0(
+        col.name,
+        " should be in [0,",
+        poss.name,
+        "]")
+      expect_error({
+        ROChange(out.dt, pred.dt, "problem")
+      }, msg, fixed=TRUE)
+    }
+  }
+})
+
+
+

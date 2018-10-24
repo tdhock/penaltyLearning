@@ -81,6 +81,29 @@ ROChange <- structure(function # ROC curve for changepoints
     print(possible.inconsistent)
     stop("possible.fn/possible.fp/labels should be constant for each problem")
   }
+  negative <- err[possible.fp<0 | possible.fn<0 | labels<0]
+  if(nrow(negative)){
+    print(negative)
+    stop("possible.fn/possible.fp/labels should be non-negative")
+  }
+  possible.name.vec <- c(
+    errors="labels",
+    fp="possible.fp",
+    fn="possible.fn")
+  for(err.name in names(possible.name.vec)){
+    poss.name <- possible.name.vec[[err.name]]
+    poss.num <- err[[poss.name]]
+    err.num <- err[[err.name]]
+    out.of.range <- err[poss.num < err.num | err.num < 0]
+    if(nrow(out.of.range)){
+      print(out.of.range)
+      stop(
+        err.name,
+        " should be in [0,",
+        poss.name,
+        "]")
+    }
+  }
   first.dt <- err[max.log.lambda==Inf]
   total.dt <- first.dt[, list(
     labels=sum(labels),
