@@ -48,10 +48,38 @@ ROChange <- structure(function # ROC curve for changepoints
   }
   pred <- data.table(predictions)
   err <- data.table(models)[pred, on=problem.vars]
+  setkeyv(err, c(problem.vars, "min.log.lambda"))
   err.missing <- err[is.na(labels)]
   if(nrow(err.missing)){
     print(err.missing)
     stop("some predictions do not exist in models")
+  }
+  min.max.not.Inf <- err[, list(
+    min=min(min.log.lambda),
+    max=max(max.log.lambda)
+  ), by=problem.vars][-Inf < min | max < Inf]
+  if(nrow(min.max.not.Inf)){
+    print(min.max.not.Inf)
+    stop("for every problem, the smallest min.log.lambda should be -Inf, and the largest max.log.lambda should be Inf")
+  }
+  err[, next.min := c(min.log.lambda[-1], Inf), by=problem.vars]
+  min.max.inconsistent <- err[next.min != max.log.lambda]
+  if(nrow(min.max.inconsistent)){
+    print(min.max.inconsistent)
+    stop("max.log.lambda should be equal to the next min.log.lambda")
+  }
+  err.molt <- melt(
+    err,
+    measure.vars=c("labels", "possible.fp", "possible.fn"),
+    id.vars="problem")
+  possible.ranges <- dcast(
+    err.molt,
+    problem+variable~.,
+    fun.aggregate=list(min, max))
+  possible.inconsistent <- possible.ranges[value_min != value_max]
+  if(nrow(possible.inconsistent)){
+    print(possible.inconsistent)
+    stop("possible.fn/possible.fp/labels should be constant for each problem")
   }
   first.dt <- err[max.log.lambda==Inf]
   total.dt <- first.dt[, list(

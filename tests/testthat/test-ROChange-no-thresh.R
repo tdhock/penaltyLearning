@@ -29,10 +29,9 @@ test_that("inconsistent possible.fn/possible.fp/labels is an error", {
   for(col.name in c("possible.fn", "possible.fp", "labels")){
     inconsistent.dt <- data.table(model.dt)
     inconsistent.dt[[col.name]][1] <- inconsistent.dt[[col.name]][1]+1
-    msg <- paste(col.name, "should be constant for each problem")
     expect_error({
       ROChange(inconsistent.dt, pred.dt, "problem")
-    }, msg)
+    }, "possible.fn/possible.fp/labels should be constant for each problem")
   }
 })
 
@@ -47,3 +46,28 @@ test_that("missing data is an error", {
   }
 })
 
+test_that("problem with no Inf max.log.lambda is an error", {
+  no.Inf <- data.table(model.dt)
+  no.Inf[.N, max.log.lambda := -600]
+  expect_error({
+    ROChange(no.Inf, pred.dt, "problem")
+  }, "for every problem, the smallest min.log.lambda should be -Inf, and the largest max.log.lambda should be Inf")
+})
+
+test_that("problem with no -Inf min.log.lambda is an error", {
+  no.Inf <- data.table(model.dt)
+  no.Inf[1, min.log.lambda := -600]
+  expect_error({
+    ROChange(no.Inf, pred.dt, "problem")
+  }, "for every problem, the smallest min.log.lambda should be -Inf, and the largest max.log.lambda should be Inf")
+})
+
+test_that("problem with inconsistent min/max.log.lambda is an error", {
+  inconsistent.dt <- data.table(model.dt)
+  inconsistent.dt[1, max.log.lambda := -6]
+  expect_error({
+    ROChange(inconsistent.dt, pred.dt, "problem")
+  }, "max.log.lambda should be equal to the next min.log.lambda")
+})
+
+## TODO 0 <= errors <= labels, etc.
