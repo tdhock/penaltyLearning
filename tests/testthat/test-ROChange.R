@@ -74,6 +74,7 @@ test_that("(FPR=1, TPR=0) in polygon but not roc", {
 bad.pred <- data.table(
   chromosome=paste(1:24),
   pred.log.lambda=0)
+error.list$model.errors[, table(chromosome)]
 test_that("informative error when predicting for unlabeled data", {
   expect_error({
     ROChange(error.list$model.errors, bad.pred, "chromosome")

@@ -42,15 +42,17 @@ ROChange <- structure(function # ROC curve for changepoints
     stop("predictions should be a data.frame with at least one row and a column named pred.log.lambda")
   }
   pred <- data.table(predictions)
-  err <- data.table(models)
+  err <- data.table(models)[pred, on=problem.vars]
+  err.missing <- err[is.na(labels)]
+  if(nrow(err.missing)){
+    print(err.missing)
+    stop("some predictions do not exist in models")
+  }
   first.dt <- err[max.log.lambda==Inf]
   total.dt <- first.dt[, list(
     labels=sum(labels),
     possible.fp=sum(possible.fp),
     possible.fn=sum(possible.fn))]
-  if(is.na(total.dt$labels)){
-    stop("some predictions do not exist in models")
-  }
   if(total.dt$possible.fp==0){
     stop("no negative labels")
   }
