@@ -15,7 +15,8 @@ ROChange <- structure(function # ROC curve for changepoints
 ){
   possible.fp <- possible.fn <- min.log.lambda <- fp <- fn <- thresh <-
     log.lambda <- pred.log.lambda <- errors <- FPR <- tp <- TPR <-
-      error.percent <- min.thresh <- max.thresh <- max.log.lambda <- NULL
+      error.percent <- min.thresh <- max.thresh <- max.log.lambda <- 
+        next.min <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### ROChange: no visible binding for global variable
   if(!(

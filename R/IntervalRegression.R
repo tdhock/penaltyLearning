@@ -148,7 +148,7 @@ IntervalRegressionCV <- structure(function
 ){
   validation.fold <- negative.auc <- threshold <- incorrect.labels <-
     variable <- value <- regularization <- folds <- status <- type <-
-      vjust <- upper.limit <- NULL
+      vjust <- upper.limit <- lower <- upper <- fold <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### IntervalRegressionCV: no visible binding for global variable
   n.observations <- check_features_targets(feature.mat, target.mat)
@@ -181,10 +181,10 @@ IntervalRegressionCV <- structure(function
     lower=is.finite(target.mat[,1]),
     upper=is.finite(target.mat[,2]),
     fold=fold.vec)[, list(
-      lower.limits=sum(lower),
-      upper.limits=sum(upper)
+      lower=sum(lower),
+      upper=sum(upper)
     ), by=list(fold)]
-  if(fold.limits[, any(lower.limits==0 | upper.limits==0)]){
+  if(fold.limits[, any(lower==0 | upper==0)]){
     print(fold.limits)
     stop("some folds have no upper/lower limits; each fold should have at least one upper and one lower limit")
   }
