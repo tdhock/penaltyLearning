@@ -31,7 +31,7 @@ test_that("inconsistent possible.fn/possible.fp/labels is an error", {
     inconsistent.dt[[col.name]][1] <- inconsistent.dt[[col.name]][1]+1
     msg <- paste(col.name, "should be constant for each problem")
     expect_error({
-      ROChange(model.dt, pred.dt, "problem")
+      ROChange(inconsistent.dt, pred.dt, "problem")
     }, msg)
   }
 })
@@ -42,7 +42,7 @@ test_that("missing data is an error", {
     missing.dt[[col.name]][1] <- NA
     msg <- paste(col.name, "should not be NA")
     expect_error({
-      ROChange(model.dt, pred.dt, "problem")
+      ROChange(missing.dt, pred.dt, "problem")
     }, msg)
   }
 })

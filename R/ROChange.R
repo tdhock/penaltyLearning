@@ -27,12 +27,17 @@ ROChange <- structure(function # ROC curve for changepoints
   }
   exp.cols <- c(
     "fp", "possible.fp", "fn", "possible.fn", "errors", "labels",
-    problem.vars, "min.log.lambda")
+    problem.vars, "min.log.lambda", "max.log.lambda")
   if(!(
     is.data.frame(models) &&
       all(exp.cols %in% names(models))
     )){
     stop("models should have columns ", paste(exp.cols, collapse=", "))
+  }
+  for(col.name in exp.cols){
+    if(any(is.na(models[[col.name]]))){
+      stop(col.name, " should not be NA")
+    }
   }
   if(!(
     is.data.frame(predictions) &&
