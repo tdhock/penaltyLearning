@@ -68,18 +68,20 @@ ROChange <- structure(function # ROC curve for changepoints
     print(min.max.inconsistent)
     stop("max.log.lambda should be equal to the next min.log.lambda")
   }
-  err.molt <- melt(
-    err,
-    measure.vars=c("labels", "possible.fp", "possible.fn"),
-    id.vars="problem")
-  possible.ranges <- dcast(
-    err.molt,
-    problem+variable~.,
-    fun.aggregate=list(min, max))
-  possible.inconsistent <- possible.ranges[value_min != value_max]
-  if(nrow(possible.inconsistent)){
-    print(possible.inconsistent)
-    stop("possible.fn/possible.fp/labels should be constant for each problem")
+  for(col.name in c("labels", "possible.fp", "possible.fn")){
+    possible.ranges <- err[, {
+      x <- .SD[[col.name]]
+      list(
+        min=min(x),
+        max=max(x)
+      )}, by=problem.vars]
+    possible.inconsistent <- possible.ranges[min != max]
+    if(nrow(possible.inconsistent)){
+      print(possible.inconsistent)
+      stop(
+        col.name,
+        " should be constant for each problem")
+    }
   }
   negative <- err[possible.fp<0 | possible.fn<0 | labels<0]
   if(nrow(negative)){

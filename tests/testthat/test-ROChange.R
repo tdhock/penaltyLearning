@@ -3,9 +3,11 @@ context("ROChange")
 library(penaltyLearning)
 
 data(neuroblastoma, package="neuroblastoma", envir=environment())
-pid <- 81
+pid <- 81L
 pro <- subset(neuroblastoma$profiles, profile.id==pid)
+pro$pid <- pid
 ann <- subset(neuroblastoma$annotations, profile.id==pid)
+ann$pid <- pid
 max.segments <- 20
 segs.list <- list()
 selection.list <- list()
@@ -15,7 +17,9 @@ for(chr in unique(ann$chromosome)){
     pro.chr$logratio, model=2, Kmax=max.segments)
   model.df <- data.frame(loss=fit@likelihood, n.segments=1:max.segments)
   selection.df <- modelSelection(model.df, complexity="n.segments")
-  selection.list[[chr]] <- data.table(chromosome=chr, selection.df)
+  selection.list[[chr]] <- data.table(
+    pid,
+    chromosome=chr, selection.df)
   for(n.segments in 1:max.segments){
     end <- fit@breaks[n.segments, 1:n.segments]
     data.before.change <- end[-n.segments]
@@ -27,6 +31,7 @@ for(chr in unique(ann$chromosome)){
     chromStart <- c(pro.chr$position[1], pos.before.change)
     chromEnd <- c(pos.before.change, max(pro.chr$position))
     segs.list[[paste(chr, n.segments)]] <- data.table(
+      pid,
       chromosome=chr,
       n.segments,
       start,
@@ -39,26 +44,31 @@ for(chr in unique(ann$chromosome)){
 segs <- do.call(rbind, segs.list)
 selection <- do.call(rbind, selection.list)
 changes <- segs[1 < start,]
+pvars <- c("chromosome", "pid")
 error.list <- labelError(
   selection, ann, changes,
-  problem.vars="chromosome", # for all three data sets.
+  problem.vars=pvars, # for all three data sets.
   model.vars="n.segments", # for changes and selection.
   change.var="chromStart", # column of changes with breakpoint position.
   label.vars=c("min", "max")) # limit of labels in ann.
 pro.with.ann <- data.table(pro)[chromosome %in% ann$chromosome, ]
 
-bad.pred <- pro.with.ann[, list(pred.log.penalty=log(log(.N))), by=chromosome]
+bad.pred <- pro.with.ann[, list(
+  pred.log.penalty=log(log(.N))
+), by=pvars]
 test_that("informative error for no pred.log.lambda column", {
   expect_error({
-    ROChange(error.list$model.errors, bad.pred, "chromosome")
+    ROChange(error.list$model.errors, bad.pred, pvars)
   }, "predictions should be a data.frame with at least one row and a column named pred.log.lambda")
 })
 
 ## The BIC model selection criterion is lambda = log(n), where n is
 ## the number of data points to segment. This implies log(lambda) =
 ## log(log(n)) = the log2.n feature in all.features.mat.
-pred <- pro.with.ann[, list(pred.log.lambda=log(log(.N))), by=chromosome]
-result <- ROChange(error.list$model.errors, pred, "chromosome")
+pred <- pro.with.ann[, list(
+  pred.log.lambda=log(log(.N))
+), by=pvars]
+result <- ROChange(error.list$model.errors, pred, pvars)
 test_that("seven rows for six labels", {
   expect_equal(result$roc$fn, c(3, 2, 1, 0, 0, 0, 0))
   expect_equal(result$roc$fp, c(0, 0, 0, 0, 1, 2, 3))
@@ -72,12 +82,13 @@ test_that("(FPR=1, TPR=0) in polygon but not roc", {
   expect_equal(result$roc[, sum(FPR==1 & TPR==0)], 0)
 })
 bad.pred <- data.table(
+  pid,
   chromosome=paste(1:24),
   pred.log.lambda=0)
 error.list$model.errors[, table(chromosome)]
 test_that("informative error when predicting for unlabeled data", {
   expect_error({
-    ROChange(error.list$model.errors, bad.pred, "chromosome")
+    ROChange(error.list$model.errors, bad.pred, pvars)
   }, "some predictions do not exist in models")
 })
 
@@ -86,12 +97,12 @@ test_that("informative error when predicting for unlabeled data", {
 ## function), it is extremely unlikely to have tied thresholds (that
 ## would mean the log.lambda values in modelSelection were the same
 ## for two data sets). Anyways, here is a test for that case.
-some <- data.table(chromosome=paste(c(1, 2)), n.segments=c(2, 1))
+some <- data.table(pid, chromosome=paste(c(1, 2)), n.segments=c(2, 1))
 ##error.list$model.errors[chromosome %in% c(1,2), .(chromosome, errors, n.segments, min.log.lambda)]
 tie.pred <- data.table(pred)
 tie.pred$pred.log.lambda[1:2] <- error.list$model.errors[some, on=list(
-  chromosome, n.segments), min.log.lambda - 2]
-tie.result <- ROChange(error.list$model.errors, tie.pred, "chromosome")
+  pid, chromosome, n.segments), min.log.lambda - 2]
+tie.result <- ROChange(error.list$model.errors, tie.pred, pvars)
 test_that("six rows for six labels with one tie", {
   fn.vec <- c(3, 2, 1, 0, 0, 0)
   fp.vec <- c(0, 0, 0, 1, 2, 3)

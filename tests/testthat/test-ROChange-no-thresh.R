@@ -29,9 +29,12 @@ test_that("inconsistent possible.fn/possible.fp/labels is an error", {
   for(col.name in c("possible.fn", "possible.fp", "labels")){
     inconsistent.dt <- data.table(model.dt)
     inconsistent.dt[[col.name]][1] <- inconsistent.dt[[col.name]][1]+1
+    msg <- paste(
+      col.name,
+      "should be constant for each problem")
     expect_error({
       ROChange(inconsistent.dt, pred.dt, "problem")
-    }, "possible.fn/possible.fp/labels should be constant for each problem")
+    }, msg)
   }
 })
 
