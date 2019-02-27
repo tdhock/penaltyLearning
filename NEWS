@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.02.27
+
+import rather than Depend data.table
+
 2018.10.23
 
 IntervalRegression* stops with an informative error if there are no

@@ -1,6 +1,8 @@
 library(testthat)
 context("labelError")
 library(penaltyLearning)
+library(data.table)
+
 ids.str <- paste(c(1, 4, 6, 8, 10, 11))
 someProfiles <- function(all.profiles){
   data.table(all.profiles)[profile.id %in% ids.str, ]

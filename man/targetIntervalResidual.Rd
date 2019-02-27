@@ -24,6 +24,7 @@ target.mat[,1]) get negative residuals.}
 \examples{
 
 library(penaltyLearning)
+library(data.table)
 data(neuroblastomaProcessed, envir=environment())
 ## The BIC model selection criterion is lambda = log(n), where n is
 ## the number of data points to segment. This implies log(lambda) =

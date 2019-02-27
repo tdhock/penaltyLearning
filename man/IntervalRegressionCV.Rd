@@ -82,6 +82,7 @@ if(interactive()){
   plot(fit)
   ## Create an incorrect labels data.table (first key is same as
   ## rownames of feature.mat and target.mat).
+  library(data.table)
   errors.per.model <- data.table(neuroblastomaProcessed$errors)
   errors.per.model[, pid.chr := paste0(profile.id, ".", chromosome)]
   setkey(errors.per.model, pid.chr)

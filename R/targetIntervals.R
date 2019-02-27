@@ -85,6 +85,7 @@ targetIntervalROC <- structure(function
 }, ex=function(){
 
   library(penaltyLearning)
+  library(data.table)
   data(neuroblastomaProcessed, envir=environment())
 
   pid.vec <- c("1", "4")
@@ -136,6 +137,7 @@ targetIntervalResidual <- structure(function
 }, ex=function(){
 
   library(penaltyLearning)
+  library(data.table)
   data(neuroblastomaProcessed, envir=environment())
   ## The BIC model selection criterion is lambda = log(n), where n is
   ## the number of data points to segment. This implies log(lambda) =

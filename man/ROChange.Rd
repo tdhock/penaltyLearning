@@ -31,6 +31,8 @@ the area inside the auc.polygon.}
 \examples{
 
 library(penaltyLearning)
+library(data.table)
+
 data(neuroblastomaProcessed, envir=environment())
 ## Get incorrect labels data for one profile.
 pid <- 11

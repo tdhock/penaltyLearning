@@ -1,8 +1,10 @@
 library(testthat)
 context("peaks")
 library(penaltyLearning)
+library(data.table)
 library(PeakSegDP)
 library(PeakError)
+
 data(chr11ChIPseq, package="PeakSegDP")
 coverage.list <- with(chr11ChIPseq, split(coverage, coverage$sample.id))
 label.list <- with(chr11ChIPseq, split(regions, regions$sample.id))

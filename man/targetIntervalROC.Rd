@@ -24,6 +24,7 @@ yield minimal incorrect labels.}
 \examples{
 
 library(penaltyLearning)
+library(data.table)
 data(neuroblastomaProcessed, envir=environment())
 
 pid.vec <- c("1", "4")

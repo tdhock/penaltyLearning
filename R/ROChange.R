@@ -179,6 +179,8 @@ ROChange <- structure(function # ROC curve for changepoints
 }, ex=function(){
 
   library(penaltyLearning)
+  library(data.table)
+  
   data(neuroblastomaProcessed, envir=environment())
   ## Get incorrect labels data for one profile.
   pid <- 11

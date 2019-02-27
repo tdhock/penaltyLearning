@@ -178,6 +178,7 @@ labelError <- structure(function # Compute incorrect labels
   if(interactive()){
   
     library(penaltyLearning)
+    library(data.table)
     data(neuroblastoma, package="neuroblastoma", envir=environment())
     pro4 <- subset(neuroblastoma$profiles, profile.id==4)
     ann4 <- subset(neuroblastoma$annotations, profile.id==4)

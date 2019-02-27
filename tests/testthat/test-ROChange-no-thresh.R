@@ -1,6 +1,7 @@
 library(testthat)
 context("ROChange-no-thresh")
 library(penaltyLearning)
+library(data.table)
 
 m <- function(problem, min.log.lambda, max.log.lambda, errors, fp, fn, labels, possible.fp, possible.fn){
   data.table(problem, min.log.lambda, max.log.lambda, errors, fp, fn, labels, possible.fp, possible.fn)

@@ -1,6 +1,7 @@
 library(testthat)
 context("ROChange")
 library(penaltyLearning)
+library(data.table)
 
 data(neuroblastoma, package="neuroblastoma", envir=environment())
 pid <- 81L
