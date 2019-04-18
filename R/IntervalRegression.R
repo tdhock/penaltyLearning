@@ -3,7 +3,7 @@ squared.hinge <- function(x, e=1){
   ifelse(x<e,(x-e)^2,0)
 }
 
-IntervalRegressionCVmargin <- structure(function 
+IntervalRegressionCVmargin <- structure(function
 ### Use cross-validation to fit an L1-regularized linear interval
 ### regression model by optimizing both margin and regularization
 ### parameters. This function just calls IntervalRegressionCV with a
@@ -89,7 +89,7 @@ IntervalRegressionCVmargin <- structure(function
 IntervalRegressionCV <- structure(function
 ### Use cross-validation to fit an L1-regularized linear interval
 ### regression model by optimizing margin and/or regularization
-### parameters. 
+### parameters.
 ### This function repeatedly calls IntervalRegressionRegularized, and by
 ### default assumes that margin=1. To optimize the margin,
 ### specify the margin.vec parameter
@@ -97,7 +97,7 @@ IntervalRegressionCV <- structure(function
 ### (which takes more computation time
 ### but yields more accurate models).
 ### If the future package is available,
-### two levels of future_lapply are used 
+### two levels of future_lapply are used
 ### to parallelize on validation.fold and margin.
 (feature.mat,
 ### Numeric feature matrix, n observations x p features.
@@ -117,7 +117,7 @@ IntervalRegressionCV <- structure(function
 ### loop. min: first take the mean of the K-CV error functions, then
 ### minimize it (this is the default since it tends to yield the least
 ### test error). 1sd: take the most regularized model with the same
-### margin which is within one standard deviation of that minimum 
+### margin which is within one standard deviation of that minimum
 ### (this model is typically a bit less accurate, but much less
 ### complex, so better if you want to interpret the coefficients).
   incorrect.labels.db=NULL,
@@ -207,8 +207,8 @@ IntervalRegressionCV <- structure(function
       fit <- IntervalRegressionRegularized(
         train.features, train.targets, verbose=verbose,
         margin=margin,
-        initial.regularization=initial.regularization,
-        ...)
+        initial.regularization=initial.regularization
+      )#, ...)
       validation.features <- feature.mat[is.validation, , drop=FALSE]
       pred.log.lambda <- fit$predict(validation.features)
       validation.targets <- target.mat[is.validation, , drop=FALSE]
@@ -289,7 +289,8 @@ IntervalRegressionCV <- structure(function
   within.1sd <- first.variable[mean < best.regularization$upper.limit]
   least.complex <- within.1sd[which.max(regularization)]
   dot.dt <- rbind(
-    data.table(type="1sd", least.complex, upper.limit=NA_real_),
+    if(nrow(least.complex))data.table(
+      type="1sd", least.complex, upper.limit=NA_real_),
     data.table(type="min", best.regularization))
   best.margin.folds <- vtall[margin==validation.best$margin]
   color.scale <- scale_color_manual(
@@ -297,6 +298,13 @@ IntervalRegressionCV <- structure(function
       "1sd"="blue",
       "min"="red"))
   selected <- dot.dt[type==reg.type]
+  if(nrow(selected)==0){
+    stop(
+      "reg.type=", reg.type,
+      " undefined; try another reg.type (",
+      paste(dot.dt$type, collapse=","),
+      ") or decrease initial.regularization")
+  }
   gg.bands <- ggplot()+
     ggtitle(paste0(
       "Regularization parameter selection using ",
@@ -373,7 +381,7 @@ IntervalRegressionCV <- structure(function
   fit
 ### List representing regularized linear model.
 }, ex=function(){
-  
+
   if(interactive()){
     library(penaltyLearning)
     data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
@@ -403,7 +411,7 @@ IntervalRegressionCV <- structure(function
       incorrect.labels.db=errors.per.model))
     plot(fit)
   }
-  
+
 })
 
 IntervalRegressionUnregularized <- function
@@ -414,7 +422,7 @@ IntervalRegressionUnregularized <- function
 ### passed to IntervalRegressionRegularized.
  ){
   IntervalRegressionRegularized(
-    ..., 
+    ...,
     initial.regularization=0,
     factor.regularization=NULL)
 ### List representing fit model, see
@@ -430,15 +438,15 @@ check_features_targets <- function
 ### n x 2 matrix of target interval limits.
   ){
   if(!(
-    is.numeric(feature.mat) && 
+    is.numeric(feature.mat) &&
     is.matrix(feature.mat) &&
     is.character(colnames(feature.mat))
   )){
     stop("feature.mat should be a numeric matrix with colnames (input features)")
   }
   if(!(
-    is.numeric(target.mat) && 
-    is.matrix(target.mat) && 
+    is.numeric(target.mat) &&
+    is.matrix(target.mat) &&
     ncol(target.mat) == 2
   )){
     stop("target.mat should be a numeric matrix with two columns (lower and upper limits of correct outputs)")
@@ -665,7 +673,7 @@ print.IntervalRegression <- function(x, ...){
     cat(
       "IntervalRegression model for margin=",
       x$margin, " regularization=",
-      x$regularization.vec, 
+      x$regularization.vec,
       " with weights:\n",
       sep="")
     x <- t(x$pred.param.mat)
@@ -783,7 +791,7 @@ IntervalRegressionInternal <- function
   }
   squared.hinge.deriv <- function(x,e=1){
     ifelse(x<e,2*(x-e),0)
-  }  
+  }
   calc.loss <- function(x){
     linear.predictor <- as.numeric(features %*% x)
     left.term <- squared.hinge(linear.predictor-targets[,1], margin)
@@ -798,7 +806,7 @@ IntervalRegressionInternal <- function
     right.term <- squared.hinge.deriv(targets[,2]-linear.predictor, margin)
     full.grad <- features * (left.term-right.term) * weight.vec
     colSums(full.grad)/nrow(full.grad)
-  }    
+  }
   calc.penalty <- function(x){
     regularization * sum(abs(x[-1]))
   }

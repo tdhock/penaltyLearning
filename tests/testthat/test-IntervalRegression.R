@@ -2,6 +2,30 @@ library(testthat)
 context("IntervalRegression")
 library(penaltyLearning)
 
+feature.mat <- structure(c(1.79565978525711, 1.79606119914403, 1.71572069625467,
+1.61288792166534, 1.65564225297093, 1.66162385851159, 1.57115110896884,
+1.78610128168745), .Dim = c(8L, 1L), .Dimnames = list(c("199_chr2",
+"479_chr2", "409_chr2", "18_chr3", "69_chr17", "68_chr4", "168_chr11",
+"551_chr3"), "log2.n"))
+target.mat <- structure(c(-2.9286431049021, -2.98647204509594, -1.86813212772763,
+-Inf, -2.0471474145434, -4.31207055103816, -Inf, -2.12592617754227,
+Inf, Inf, Inf, 2.48942330405145, Inf, Inf, 1.58204507943406,
+Inf), .Dim = c(8L, 2L), .Dimnames = list(c("199_chr2", "479_chr2",
+"409_chr2", "18_chr3", "69_chr17", "68_chr4", "168_chr11", "551_chr3"
+), c("min.log.lambda", "max.log.lambda")))
+fold.vec <- c(2L, 1L, 1L, 1L, 1L, 2L, 2L, 2L)
+test_that("cv works for 8 observations", {
+  fit <- IntervalRegressionCV(X.train, y.train, fold.vec=fold.vec, min.obs=8)
+  expect_is(fit, "list")
+})
+
+test_that("cv errors when 1sd specified but is not defined", {
+  expect_error({
+    IntervalRegressionCV(X.train, y.train, fold.vec=fold.vec, min.obs=8, reg.type="1sd")
+  }, "reg.type=1sd undefined; try another reg.type (min) or decrease initial.regularization",
+  fixed=TRUE)
+})
+
 followup <- data.frame(
   profile.id=c(10L, 8L, 4L, 6L, 11L, 1L),
   status=c("ok", "relapse", "relapse", "ok", "ok", "relapse"))

@@ -11,5 +11,5 @@ rm penaltyLearning-release/tests/testthat/test-modelSelection.R
 rm penaltyLearning-release/tests/testthat/test-peaks.R
 rm penaltyLearning-release/tests/testthat/test-ROChange.R
 rm -rf penaltyLearning-release/vignettes
-PKG_TGZ=$(R CMD build penaltyLearning-release|grep penaltyLearning_|sed 's/.*‘//'|sed 's/’.*//')
+PKG_TGZ=$(R CMD build penaltyLearning-release|grep penaltyLearning_|sed "s/.* building [‘']//"|sed "s/['’].*//")
 R CMD check --as-cran $PKG_TGZ
