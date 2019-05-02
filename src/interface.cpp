@@ -1,6 +1,7 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
 #include "modelSelection.h"
+#include "modelSelectionFwd.h"
 #include "largestContinuousMinimum.h"
 #include <R.h>
 #include <R_ext/Rdynload.h>
@@ -33,7 +34,30 @@ void modelSelection_interface
   }
 }
   
+void modelSelectionFwd_interface
+(double *loss_vec, double *complexity_vec, int *n_models,
+ int *selected_model_vec, double *selected_penalty_vec,
+ int *loop_eval_vec
+ ){
+  int status = modelSelectionFwd
+    (loss_vec, complexity_vec, n_models,
+     selected_model_vec, selected_penalty_vec, loop_eval_vec);
+  if(status == ERROR_FWD_LOSS_NOT_DECREASING){
+    error("loss not decreasing");
+  }
+  if(status == ERROR_FWD_COMPLEXITY_NOT_INCREASING){
+    error("complexity not increasing");
+  }
+  if(status != 0){
+    error("error code %d", status);
+  }
+}
+  
 R_CMethodDef cMethods[] = {
+  {"modelSelectionFwd_interface",
+   (DL_FUNC) &modelSelectionFwd_interface, 5
+   //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
+  },
   {"modelSelection_interface",
    (DL_FUNC) &modelSelection_interface, 5
    //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
