@@ -20,7 +20,7 @@ void largestContinuousMinimum_interface
 
 void modelSelection_interface
 (double *loss, double *complexity, int *n_models,
- int *before, double *lambda
+ int *before, double *lambda 
  ){
   int status = modelSelection(loss, complexity, *n_models, before, lambda);
   if(status == ERROR_LOSS_NOT_DECREASING){
@@ -33,7 +33,7 @@ void modelSelection_interface
     error("error code %d", status);
   }
 }
-  
+   
 void modelSelectionFwd_interface
 (double *loss_vec, double *complexity_vec, int *n_models,
  int *selected_model_vec, double *selected_penalty_vec,
@@ -55,7 +55,7 @@ void modelSelectionFwd_interface
   
 R_CMethodDef cMethods[] = {
   {"modelSelectionFwd_interface",
-   (DL_FUNC) &modelSelectionFwd_interface, 5
+   (DL_FUNC) &modelSelectionFwd_interface, 6
    //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
   },
   {"modelSelection_interface",
