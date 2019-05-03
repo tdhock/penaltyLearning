@@ -2,6 +2,7 @@
 
 #include "modelSelection.h"
 #include "modelSelectionFwd.h"
+#include "modelSelectionQuadratic.h"
 #include "largestContinuousMinimum.h"
 #include <R.h>
 #include <R_ext/Rdynload.h>
@@ -53,7 +54,29 @@ void modelSelectionFwd_interface
   }
 }
   
+void modelSelectionQuadratic_interface
+(double *loss_vec, double *complexity_vec, int *n_models,
+ int *selected_model_vec, double *selected_penalty_vec
+ ){
+  int status = modelSelectionQuadratic
+    (loss_vec, complexity_vec, n_models,
+     selected_model_vec, selected_penalty_vec);
+  if(status == ERROR_QUAD_LOSS_NOT_DECREASING){
+    error("loss not decreasing");
+  }
+  if(status == ERROR_QUAD_COMPLEXITY_NOT_INCREASING){
+    error("complexity not increasing");
+  }
+  if(status != 0){
+    error("error code %d", status);
+  }
+}
+ 
 R_CMethodDef cMethods[] = {
+  {"modelSelectionQuadratic_interface",
+   (DL_FUNC) &modelSelectionQuadratic_interface, 5
+   //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
+  },
   {"modelSelectionFwd_interface",
    (DL_FUNC) &modelSelectionFwd_interface, 6
    //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
