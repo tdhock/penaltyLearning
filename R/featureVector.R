@@ -52,7 +52,7 @@ featureVector <- structure(function
 
   one <- subset(neuroblastoma$profiles, profile.id=="1" & chromosome=="1")
   (f.vec <- featureVector(one$logratio))
-  
+
 })
 
 featureMatrix <- structure(function
@@ -76,7 +76,7 @@ featureMatrix <- structure(function
     is.character(problem.vars) &&
     sum(is.na(problem.vars)==0) &&
     0 < length(problem.vars) &&
-    problem.vars %in% names(data.sequences)
+    all(problem.vars %in% names(data.sequences))
   )){
     stop("problem.vars must be a character vector of column names of data.sequences (IDs for separate segmentation problems)")
   }
@@ -98,9 +98,9 @@ featureMatrix <- structure(function
 ### Numeric feature matrix. Some entries may be missing or infinite;
 ### these columns should be removed before model training.
 }, ex=function(){
-  
-  data(neuroblastoma, package="neuroblastoma", envir=environment())
 
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
+  library(penaltyLearning)
   one <- subset(neuroblastoma$profiles, profile.id %in% c(1,2))
   f.mat <- featureMatrix(one, c("profile.id", "chromosome"), "logratio")
 
