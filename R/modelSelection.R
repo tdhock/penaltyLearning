@@ -23,12 +23,13 @@ modelSelectionC <- structure(function # Exact model selection function
   after.vec <- rep(-1L, n.models)
   lambda.vec <- rep(-1, n.models)
   result.list <- .C(
-    "modelSelection_interface",
+    "modelSelectionFwd_interface",
     loss.vec=as.double(loss.vec),
     model.complexity=as.double(model.complexity),
     n.models=as.integer(n.models),
-    after.vec=as.integer(after.vec),
-    lambda.vec=as.double(lambda.vec),
+    selected.model.vec=as.integer(after.vec),
+    pen.break.vec=as.double(lambda.vec),
+    loop.eval.vec=integer(n.models),
     PACKAGE="penaltyLearning")
   is.out <- 0 < result.list$lambda.vec
   lambda.out <- result.list$lambda.vec[is.out]
@@ -84,7 +85,7 @@ modelSelectionC <- structure(function # Exact model selection function
                data=grid.df, color="red", pch=1)+
     ylab("optimal model complexity (segments)")+
     xlab("log(lambda)")
-  
+
 })
 
 modelSelectionR <- structure(function # Exact model selection function
@@ -215,7 +216,7 @@ modelSelection <- function # Compute exact model selection function
     is.numeric(models[[complexity]]) &&
     is.numeric(models[[loss]]) &&
     all(!is.na(models[[complexity]])) &&
-    all(!is.na(models[[loss]])) 
+    all(!is.na(models[[loss]]))
   )){
     stop("models must be data.frame with at least one row and numeric columns models[[complexity]] and models[[loss]] which are not missing/NA")
   }
