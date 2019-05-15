@@ -1,16 +1,7 @@
 library(testthat)
 context("ROChange")
 library(penaltyLearning)
-##library(data.table)
-
-model.df <- structure(list(loss = c(11.9627022758106, 3.94540257494294, 2.94169197856002,
-2.82924533907096, 2.72992938630457, 2.65399631185225, 2.55135727898647,
-2.45833675556102, 2.37610825176777, 2.28285831363641, 2.2104078498086,
-2.12689344888736, 2.05444298505956, 1.99401389635343, 1.92156343252562,
-1.86727640796262, 1.81044827035527, 1.77872585064518, 1.72189771303783,
-1.67261156766267), n.segments = 1:20), class = "data.frame", row.names = c(NA,
--20L))
-modelSelection(model.df, complexity="n.segments")
+library(data.table)
 
 data(neuroblastoma, package="neuroblastoma", envir=environment())
 pid <- 81L
@@ -21,26 +12,18 @@ ann$pid <- pid
 max.segments <- 20
 segs.list <- list()
 selection.list <- list()
-chr <- "1"
-
 for(chr in unique(ann$chromosome)){
   pro.chr <- subset(pro, chromosome==chr)
-  print(chr)
-  print(dim(pro.chr))
-  fit <- jointseg::Fpsn(pro.chr$logratio, max.segments)
-  str(fit)
-  model.df <- data.frame(loss=fit$cost, n.segments=1:max.segments)
-  print(model.df)
-  dput(model.df)
-  print(l <- modelSelectionC(model.df$loss, model.df$n.segments, 1:nrow(model.df)))
+  fit <- Segmentor3IsBack::Segmentor(
+    pro.chr$logratio, model=2, Kmax=max.segments)
+  model.df <- data.frame(loss=fit@likelihood, n.segments=1:max.segments)
   selection.df <- modelSelection(model.df, complexity="n.segments")
-  str(selection.df)
-  selection.list[[chr]] <- data.frame(
+  selection.list[[chr]] <- data.table(
     pid,
     chromosome=chr, selection.df)
   for(n.segments in 1:max.segments){
     cat(sprintf("chr=%s segments=%d\n", chr, n.segments))
-    end <- fit$t.est[n.segments, 1:n.segments]
+    end <- fit@breaks[n.segments, 1:n.segments]
     data.before.change <- end[-n.segments]
     data.after.change <- data.before.change+1
     pos.before.change <- as.integer(
@@ -49,7 +32,7 @@ for(chr in unique(ann$chromosome)){
     start <- c(1, data.after.change)
     chromStart <- c(pro.chr$position[1], pos.before.change)
     chromEnd <- c(pos.before.change, max(pro.chr$position))
-    segs.list[[paste(chr, n.segments)]] <- data.frame(
+    segs.list[[paste(chr, n.segments)]] <- data.table(
       pid,
       chromosome=chr,
       n.segments,
@@ -59,7 +42,6 @@ for(chr in unique(ann$chromosome)){
       chromEnd)
   }
 }
-
 segs <- do.call(rbind, segs.list)
 selection <- do.call(rbind, selection.list)
 changes <- segs[1 < start,]

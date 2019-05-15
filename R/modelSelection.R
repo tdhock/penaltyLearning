@@ -20,31 +20,29 @@ modelSelectionC <- structure(function # Exact model selection function
   stopifnot(length(loss.vec) == length(model.complexity))
   stopifnot(length(model.id) == length(model.complexity))
   n.models <- length(loss.vec)
-  after.vec <- rep(-1L, n.models)
-  lambda.vec <- rep(-1, n.models)
   result.list <- .C(
     "modelSelectionFwd_interface",
     loss.vec=as.double(loss.vec),
     model.complexity=as.double(model.complexity),
     n.models=as.integer(n.models),
-    selected.model.vec=as.integer(after.vec),
-    pen.break.vec=as.double(lambda.vec),
+    selected.model.vec=integer(n.models),
+    pen.break.vec=double(n.models),
     loop.eval.vec=integer(n.models),
     PACKAGE="penaltyLearning")
-  is.out <- 0 < result.list$lambda.vec
-  lambda.out <- result.list$lambda.vec[is.out]
-  i <- c(n.models, result.list$after.vec[is.out]+1)
-  min.lambda <- c(0, lambda.out)
-  max.lambda <- c(lambda.out, Inf)
+  index.vec <- (result.list$n.models+1L):1
+  selected <- result.list$selected.model.vec[index.vec]+1L
+  max.lambda <- result.list$pen.break.vec[index.vec]
+  min.lambda <- c(0, max.lambda[-length(max.lambda)])
   data.frame(
     min.lambda,
     max.lambda,
     min.log.lambda = log(min.lambda),
     max.log.lambda = log(max.lambda),
-    model.complexity = model.complexity[i],
-    model.id=model.id[i],
-    model.loss=loss.vec[i],
-    row.names=model.id[i])
+    cum.iterations=cumsum(result.list$loop.eval.vec)[selected],
+    model.complexity = model.complexity[selected],
+    model.id=model.id[selected],
+    model.loss=loss.vec[selected],
+    row.names=model.id[selected])
 ### data.frame with a row for each model that can be selected for at
 ### least one lambda value, and the following columns. (min.lambda,
 ### max.lambda) and (min.log.lambda, max.log.lambda) are intervals of
@@ -117,6 +115,7 @@ modelSelectionR <- structure(function # Exact model selection function
   vL <- 0
   vP <- model.id[n.models]
   i <- 2
+  iterations.vec <- 0
   min.complexity <- model.complexity[1]
   while(Kcurrent > min.complexity) {
     is.smaller <- model.complexity < Kcurrent
@@ -131,6 +130,7 @@ modelSelectionR <- structure(function # Exact model selection function
     Lcurrent <- min(lambdaTransition)
     vL[i] <- Lcurrent
     vK[i] <- Kcurrent
+    iterations.vec[i] <- length(lambdaTransition)
     vP[i] <- smallerID[next.i]
     i <- i + 1
   }
@@ -140,6 +140,7 @@ modelSelectionR <- structure(function # Exact model selection function
     max.lambda = c(vL[-1], Inf),
     min.log.lambda = L,
     max.log.lambda = c(L[-1], Inf),
+    cum.iterations=cumsum(iterations.vec),
     model.complexity = vK,
     model.id=vP,
     model.loss=loss.vec[vP],
