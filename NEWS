@@ -7,8 +7,8 @@ tests/support for flsa and HMM?
 
 2019.05.15
 
-Fix featureMatrix argument checks, if(logical vector length bigger
-than 1) was used and is now being checked in R-3.6.0.
+Fix featureMatrix/labelError/ROChange argument checks, if(logical vector length
+bigger than 1) was used and is now being checked in R-3.6.0.
 
 2019.05.03
 

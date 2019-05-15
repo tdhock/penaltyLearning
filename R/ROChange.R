@@ -11,18 +11,20 @@ ROChange <- structure(function # ROC curve for changepoints
 ### log(penalty) value for each segmentation problem.
   problem.vars=character()
 ### character: column names used to identify data set / segmentation
-### problem. 
+### problem.
 ){
   possible.fp <- possible.fn <- min.log.lambda <- fp <- fn <- thresh <-
     log.lambda <- pred.log.lambda <- errors <- FPR <- tp <- TPR <-
-      error.percent <- min.thresh <- max.thresh <- max.log.lambda <- 
+      error.percent <- min.thresh <- max.thresh <- max.log.lambda <-
         next.min <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### ROChange: no visible binding for global variable
   if(!(
     is.character(problem.vars) &&
       0 < length(problem.vars) &&
-      !is.na(problem.vars)
+      all(!is.na(problem.vars)) &&
+      all(problem.vars %in% names(predictions)) &&
+      all(problem.vars %in% names(models))
     )){
     stop("problem.vars should be a character vector of column names (IDs for predictions and models)")
   }
@@ -180,7 +182,7 @@ ROChange <- structure(function # ROC curve for changepoints
 
   library(penaltyLearning)
   library(data.table)
-  
+
   data(neuroblastomaProcessed, envir=environment())
   ## Get incorrect labels data for one profile.
   pid <- 11
@@ -197,7 +199,7 @@ ROChange <- structure(function # ROC curve for changepoints
   ggplot()+
     geom_path(aes(FPR, TPR), data=result$roc)+
     geom_point(aes(FPR, TPR, color=threshold), data=result$thresholds, shape=1)
-  
+
   ## Plot the number of incorrect labels as a function of threshold.
   ggplot()+
     geom_segment(aes(

@@ -74,9 +74,9 @@ featureMatrix <- structure(function
   }
   if(!(
     is.character(problem.vars) &&
-    sum(is.na(problem.vars)==0) &&
-    0 < length(problem.vars) &&
-    all(problem.vars %in% names(data.sequences))
+      0 < length(problem.vars) &&
+      all(!is.na(problem.vars)) &&
+      all(problem.vars %in% names(data.sequences))
   )){
     stop("problem.vars must be a character vector of column names of data.sequences (IDs for separate segmentation problems)")
   }
