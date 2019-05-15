@@ -5,9 +5,24 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.05.15
+
+Use modelSelectionFwd C algo for modelSelectionC R function.
+
+Fix featureMatrix/labelError/ROChange argument checks, if(logical vector length
+bigger than 1) was used and is now being checked in R-3.6.0.
+
+2019.05.03
+
+modelSelectionFwd and modelSelectionQuadratic.
+
 2019.04.18
 
 IntervalRegressionCV: informative reg.type undefined error.
+
+2019.02.28
+
+set last_lambda=0 when popping.
 
 2019.02.27
 

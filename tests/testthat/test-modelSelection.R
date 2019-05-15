@@ -85,8 +85,9 @@ fit <- Segmentor(one$logratio, model=2, Kmax=max.segments)
 lik.df <- data.frame(lik=fit@likelihood, segments=1:max.segments)
 pathR <- with(lik.df, modelSelectionR(lik, segments, segments))
 pathC <- with(lik.df, modelSelectionC(lik, segments, segments))
+compare.cols <- c("min.lambda", "max.lambda", "model.id")
 test_that("C code agrees with R code for big data set", {
-  expect_identical(pathR, pathC)
+  expect_identical(pathR[, compare.cols], pathC[, compare.cols])
 })
 
 ## This is a data set with n=9 data points to segments, but only 8

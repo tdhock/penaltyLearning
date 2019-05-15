@@ -22,6 +22,7 @@ for(chr in unique(ann$chromosome)){
     pid,
     chromosome=chr, selection.df)
   for(n.segments in 1:max.segments){
+    cat(sprintf("chr=%s segments=%d\n", chr, n.segments))
     end <- fit@breaks[n.segments, 1:n.segments]
     data.before.change <- end[-n.segments]
     data.after.change <- data.before.change+1
@@ -38,8 +39,7 @@ for(chr in unique(ann$chromosome)){
       start,
       end,
       chromStart,
-      chromEnd,
-      mean=fit@parameters[n.segments, 1:n.segments])
+      chromEnd)
   }
 }
 segs <- do.call(rbind, segs.list)
@@ -200,8 +200,7 @@ for(chr in unique(ann$chromosome)){
       start,
       end,
       chromStart,
-      chromEnd,
-      mean=fit@parameters[n.segments, 1:n.segments])
+      chromEnd)
   }
 }
 segs <- do.call(rbind, segs.list)
@@ -254,8 +253,7 @@ for(chr in unique(ann$chromosome)){
       start,
       end,
       chromStart,
-      chromEnd,
-      mean=fit@parameters[n.segments, 1:n.segments])
+      chromEnd)
   }
 }
 segs <- do.call(rbind, segs.list)

@@ -63,10 +63,11 @@ labelError <- structure(function # Compute incorrect labels
   stopifnot(is.data.frame(changes))
   if(!(
     is.character(problem.vars) &&
-    0 < length(problem.vars) &&
-    problem.vars %in% names(changes) &&
-    problem.vars %in% names(labels) &&
-    problem.vars %in% names(models)
+      0 < length(problem.vars) &&
+      all(!is.na(problem.vars)) &&
+      all(problem.vars %in% names(changes)) &&
+      all(problem.vars %in% names(labels)) &&
+      all(problem.vars %in% names(models))
   )){
     stop("problem.vars should be a character vector of column names present in models, changes, and labels (ID for separate changepoint detection problems)")
   }
@@ -88,7 +89,7 @@ labelError <- structure(function # Compute incorrect labels
     stop("change.var should be a column name of changes (position of predicted changepoints)")
   }
   if(!(
-    is.character(model.vars) && 
+    is.character(model.vars) &&
     0 < length(model.vars) &&
     model.vars %in% names(models) &&
     model.vars %in% names(changes)
@@ -176,7 +177,7 @@ labelError <- structure(function # Compute incorrect labels
 }, ex=function() {
 
   if(interactive()){
-  
+
     library(penaltyLearning)
     library(data.table)
     data(neuroblastoma, package="neuroblastoma", envir=environment())
@@ -219,7 +220,7 @@ labelError <- structure(function # Compute incorrect labels
     }
     segs <- do.call(rbind, segs.list)
     models <- do.call(rbind, models.list)
-    
+
     changes <- segs[1 < start,]
     error.list <- labelError(
       models, ann, changes,
@@ -227,7 +228,7 @@ labelError <- structure(function # Compute incorrect labels
       model.vars="n.segments", # for changes and selection.
       change.var="chromStart", # column of changes with breakpoint position.
       label.vars=c("min", "max")) # limit of labels in ann.
-    
+
     library(ggplot2)
     ggplot()+
       theme_bw()+
@@ -259,7 +260,7 @@ labelError <- structure(function # Compute incorrect labels
                  color="green")
 
   }
-  
+
 })
 
 ### Describe an annotated region label for supervised change-point detection.

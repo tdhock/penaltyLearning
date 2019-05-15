@@ -29,14 +29,14 @@ int modelSelection
       lo = hi - 1;
       last_lambda = lambda;
     }else{
-      //printf("pop()\n");
       break_list.pop_back();
       if(break_list.size()){
 	hi = break_list.back().optimal_after;
+	last_lambda = break_list.back().penalty;
       }else{
 	hi = n_input-1;
+	last_lambda = 0;
       }
-      last_lambda = break_list.back().penalty;
     }
   }
   std::list<breakpoint>::iterator it;

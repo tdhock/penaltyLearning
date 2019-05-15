@@ -20,30 +20,29 @@ modelSelectionC <- structure(function # Exact model selection function
   stopifnot(length(loss.vec) == length(model.complexity))
   stopifnot(length(model.id) == length(model.complexity))
   n.models <- length(loss.vec)
-  after.vec <- rep(-1L, n.models)
-  lambda.vec <- rep(-1, n.models)
   result.list <- .C(
-    "modelSelection_interface",
+    "modelSelectionFwd_interface",
     loss.vec=as.double(loss.vec),
     model.complexity=as.double(model.complexity),
     n.models=as.integer(n.models),
-    after.vec=as.integer(after.vec),
-    lambda.vec=as.double(lambda.vec),
+    selected.model.vec=integer(n.models),
+    pen.break.vec=double(n.models),
+    loop.eval.vec=integer(n.models),
     PACKAGE="penaltyLearning")
-  is.out <- 0 < result.list$lambda.vec
-  lambda.out <- result.list$lambda.vec[is.out]
-  i <- c(n.models, result.list$after.vec[is.out]+1)
-  min.lambda <- c(0, lambda.out)
-  max.lambda <- c(lambda.out, Inf)
+  index.vec <- (result.list$n.models+1L):1
+  selected <- result.list$selected.model.vec[index.vec]+1L
+  max.lambda <- result.list$pen.break.vec[index.vec]
+  min.lambda <- c(0, max.lambda[-length(max.lambda)])
   data.frame(
     min.lambda,
     max.lambda,
     min.log.lambda = log(min.lambda),
     max.log.lambda = log(max.lambda),
-    model.complexity = model.complexity[i],
-    model.id=model.id[i],
-    model.loss=loss.vec[i],
-    row.names=model.id[i])
+    cum.iterations=cumsum(result.list$loop.eval.vec)[selected],
+    model.complexity = model.complexity[selected],
+    model.id=model.id[selected],
+    model.loss=loss.vec[selected],
+    row.names=model.id[selected])
 ### data.frame with a row for each model that can be selected for at
 ### least one lambda value, and the following columns. (min.lambda,
 ### max.lambda) and (min.log.lambda, max.log.lambda) are intervals of
@@ -84,7 +83,7 @@ modelSelectionC <- structure(function # Exact model selection function
                data=grid.df, color="red", pch=1)+
     ylab("optimal model complexity (segments)")+
     xlab("log(lambda)")
-  
+
 })
 
 modelSelectionR <- structure(function # Exact model selection function
@@ -116,6 +115,7 @@ modelSelectionR <- structure(function # Exact model selection function
   vL <- 0
   vP <- model.id[n.models]
   i <- 2
+  iterations.vec <- 0
   min.complexity <- model.complexity[1]
   while(Kcurrent > min.complexity) {
     is.smaller <- model.complexity < Kcurrent
@@ -130,6 +130,7 @@ modelSelectionR <- structure(function # Exact model selection function
     Lcurrent <- min(lambdaTransition)
     vL[i] <- Lcurrent
     vK[i] <- Kcurrent
+    iterations.vec[i] <- length(lambdaTransition)
     vP[i] <- smallerID[next.i]
     i <- i + 1
   }
@@ -139,6 +140,7 @@ modelSelectionR <- structure(function # Exact model selection function
     max.lambda = c(vL[-1], Inf),
     min.log.lambda = L,
     max.log.lambda = c(L[-1], Inf),
+    cum.iterations=cumsum(iterations.vec),
     model.complexity = vK,
     model.id=vP,
     model.loss=loss.vec[vP],
@@ -174,8 +176,46 @@ modelSelectionR <- structure(function # Exact model selection function
     ## However, modelSelectionC is much faster (linear time complexity)
     ## than modelSelectionR (quadratic time complexity).
     library(ggplot2)
-    ggplot()+
-      geom_point(aes(n.segments, time/1e9, color=expr), data=times)
+    library(data.table)
+    times.dt <- data.table(times)
+    times.dt[, seconds := time/1e9]
+    gg <- ggplot()+
+      geom_point(aes(
+        n.segments, seconds, color=expr),
+        data=times.dt,
+        shape=1)
+    gg+
+      scale_x_log10()+
+      scale_y_log10()
+    R.times <- times.dt[expr=="R"]
+    R.times[, log.seconds := log(seconds)]
+    R.times[, log.segs := log(n.segments)]
+    R.times[, segs.squared := n.segments*n.segments]
+    thresh <- 700
+    big.segs <- R.times[thresh < n.segments]
+    (log.fit <- lm(log.seconds ~ log.segs, data=big.segs))
+    (quad.fit <- lm(seconds ~ n.segments + segs.squared, data=R.times))
+    big.segs[, pred.seconds := exp(predict(log.fit))]
+    R.times[, pred.seconds := predict(quad.fit)]
+    pred.dt <- rbind(
+      big.segs[, data.table(model="log", expr="R", pred.seconds, n.segments)],
+      R.times[, data.table(model="quad", expr="R", pred.seconds, n.segments)])
+    ggfit <- gg+
+      geom_line(aes(
+        n.segments, pred.seconds, linetype=model),
+        data=pred.dt)
+    ggfit+
+      scale_x_log10()+
+      scale_y_log10()
+    extrapolate.dt <- data.table(
+      n.segments=c(100000, 250000, 500000, 1e6))
+    extrapolate.dt[, log.segs := log(n.segments)]
+    extrapolate.dt[, segs.squared := n.segments*n.segments]
+    pred.seconds.mat <- rbind(
+      quad=predict(quad.fit, extrapolate.dt),
+      log=exp(predict(log.fit, extrapolate.dt)))
+    colnames(pred.seconds.mat) <- extrapolate.dt$n.segments
+    (pred.hours.mat <- pred.seconds.mat/60/60)
   }
 
 })
@@ -215,7 +255,7 @@ modelSelection <- function # Compute exact model selection function
     is.numeric(models[[complexity]]) &&
     is.numeric(models[[loss]]) &&
     all(!is.na(models[[complexity]])) &&
-    all(!is.na(models[[loss]])) 
+    all(!is.na(models[[loss]]))
   )){
     stop("models must be data.frame with at least one row and numeric columns models[[complexity]] and models[[loss]] which are not missing/NA")
   }
