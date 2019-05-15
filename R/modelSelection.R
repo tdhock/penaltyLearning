@@ -174,8 +174,46 @@ modelSelectionR <- structure(function # Exact model selection function
     ## However, modelSelectionC is much faster (linear time complexity)
     ## than modelSelectionR (quadratic time complexity).
     library(ggplot2)
-    ggplot()+
-      geom_point(aes(n.segments, time/1e9, color=expr), data=times)
+    library(data.table)
+    times.dt <- data.table(times)
+    times.dt[, seconds := time/1e9]
+    gg <- ggplot()+
+      geom_point(aes(
+        n.segments, seconds, color=expr),
+        data=times.dt,
+        shape=1)
+    gg+
+      scale_x_log10()+
+      scale_y_log10()
+    R.times <- times.dt[expr=="R"]
+    R.times[, log.seconds := log(seconds)]
+    R.times[, log.segs := log(n.segments)]
+    R.times[, segs.squared := n.segments*n.segments]
+    thresh <- 700
+    big.segs <- R.times[thresh < n.segments]
+    (log.fit <- lm(log.seconds ~ log.segs, data=big.segs))
+    (quad.fit <- lm(seconds ~ n.segments + segs.squared, data=R.times))
+    big.segs[, pred.seconds := exp(predict(log.fit))]
+    R.times[, pred.seconds := predict(quad.fit)]
+    pred.dt <- rbind(
+      big.segs[, data.table(model="log", expr="R", pred.seconds, n.segments)],
+      R.times[, data.table(model="quad", expr="R", pred.seconds, n.segments)])
+    ggfit <- gg+
+      geom_line(aes(
+        n.segments, pred.seconds, linetype=model),
+        data=pred.dt)
+    ggfit+
+      scale_x_log10()+
+      scale_y_log10()
+    extrapolate.dt <- data.table(
+      n.segments=c(100000, 250000, 500000, 1e6))
+    extrapolate.dt[, log.segs := log(n.segments)]
+    extrapolate.dt[, segs.squared := n.segments*n.segments]
+    pred.seconds.mat <- rbind(
+      quad=predict(quad.fit, extrapolate.dt),
+      log=exp(predict(log.fit, extrapolate.dt)))
+    colnames(pred.seconds.mat) <- extrapolate.dt$n.segments
+    (pred.hours.mat <- pred.seconds.mat/60/60)
   }
 
 })

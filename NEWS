@@ -18,6 +18,10 @@ modelSelectionFwd and modelSelectionQuadratic.
 
 IntervalRegressionCV: informative reg.type undefined error.
 
+2019.02.28
+
+set last_lambda=0 when popping.
+
 2019.02.27
 
 import rather than Depend data.table
