@@ -5,6 +5,13 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.05.16
+
+non-strict equality in while(crossing point >= previous breakpoint) to
+avoid zero-length intervals.
+
+additional tests for modelSelectionFwd.
+
 2019.05.15
 
 Use modelSelectionFwd C algo for modelSelectionC R function.

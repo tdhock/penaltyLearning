@@ -90,6 +90,11 @@ test_that("C code agrees with R code for big data set", {
   expect_identical(pathR[, compare.cols], pathC[, compare.cols])
 })
 
+test_that("no zero-width intervals for big data set", {
+  same <- subset(pathC, min.lambda==max.lambda)
+  expect_equal(nrow(same), 0)
+})
+
 ## This is a data set with n=9 data points to segments, but only 8
 ## unique data points.
 small <- subset(neuroblastoma$profiles, profile.id==203 & chromosome=="Y")
@@ -138,6 +143,19 @@ test_that("loss not decreasing error in C code", {
       PACKAGE="penaltyLearning")
   }, "loss not decreasing")
 })
+test_that("loss not decreasing error in C code Fwd", {
+  expect_error({
+    .C(
+      "modelSelectionFwd_interface",
+      loss.vec=as.double(loss.vec),
+      model.complexity=as.double(model.complexity),
+      n.models=as.integer(n.models),
+      after.vec=integer(n.models),
+      lambda.vec=double(n.models),
+      iterations=integer(n.models),
+      PACKAGE="penaltyLearning")
+  }, "loss not decreasing")
+})
 
 loss.vec <- c(5,4,3)
 model.complexity <- c(1,2,2)
@@ -153,4 +171,71 @@ test_that("complexity not increasing error in C code", {
       lambda.vec=double(n.models),
       PACKAGE="penaltyLearning")
   }, "complexity not increasing")
+})
+test_that("complexity not increasing error in C code Fwd", {
+  expect_error({
+    .C(
+      "modelSelectionFwd_interface",
+      loss.vec=as.double(loss.vec),
+      model.complexity=as.double(model.complexity),
+      n.models=as.integer(n.models),
+      after.vec=integer(n.models),
+      lambda.vec=double(n.models),
+      iterations=integer(n.models),
+      PACKAGE="penaltyLearning")
+  }, "complexity not increasing")
+})
+
+## synthetic data from paper.
+N <- 5
+t <- 1:N
+test_that("2N-3 iterations for worst case synthetic loss values", {
+  df <- data.frame(loss=N-t+(1 < t & t < N)/2, complexity=t)
+  result <- .C(
+    "modelSelectionFwd_interface",
+    loss=as.double(df$loss),
+    complexity=as.double(df$complexity),
+    N=as.integer(nrow(df)),
+    models=integer(nrow(df)),
+    breaks=double(nrow(df)),
+    evals=integer(nrow(df)),
+    PACKAGE="penaltyLearning")
+  expect_equal(result$evals, c(0, 1, 2, 2, 2))
+})
+
+test_that("2N-3 iterations for another worst case", {
+  df <- data.frame(loss=N-t+N*(t!=N), complexity=t)
+  result <- .C(
+    "modelSelectionFwd_interface",
+    loss=as.double(df$loss),
+    complexity=as.double(df$complexity),
+    N=as.integer(nrow(df)),
+    models=integer(nrow(df)),
+    breaks=double(nrow(df)),
+    evals=integer(nrow(df)),
+    PACKAGE="penaltyLearning")
+  expect_equal(result$evals, c(0, 1, 2, 2, 2))
+})
+
+test_that("N-1 iterations for best case", {
+  df <- data.frame(loss=N-log(t), complexity=t)
+  if(FALSE){
+    library(ggplot2)
+    ggplot()+
+      geom_abline(aes(
+        slope=complexity, intercept=loss),
+        data=df)+
+      xlim(0, 10)+
+      ylim(0, 10)
+  }
+  result <- .C(
+    "modelSelectionFwd_interface",
+    loss=as.double(df$loss),
+    complexity=as.double(df$complexity),
+    N=as.integer(nrow(df)),
+    models=integer(nrow(df)),
+    breaks=double(nrow(df)),
+    evals=integer(nrow(df)),
+    PACKAGE="penaltyLearning")
+  expect_equal(result$evals, c(0, 1, 1, 1, 1))
 })

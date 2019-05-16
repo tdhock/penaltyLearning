@@ -66,7 +66,7 @@ int modelSelectionFwd
     // In the pseudocode this is the start of Algorithm 2.
     w[t] = 1;
     while
-      ((lambda = c(t, M, K, L, complexity_vec)) >
+      ((lambda = c(t, M, K, L, complexity_vec)) >=
        b[M]){
       M--;
       w[t]++;
