@@ -217,6 +217,20 @@ test_that("2N-3 iterations for another worst case", {
   expect_equal(result$evals, c(0, 1, 2, 2, 2))
 })
 
+test_that("2N-3 iterations for simple worst case", {
+  df <- data.frame(loss=N-t, complexity=t)
+  result <- .C(
+    "modelSelectionFwd_interface",
+    loss=as.double(df$loss),
+    complexity=as.double(df$complexity),
+    N=as.integer(nrow(df)),
+    models=integer(nrow(df)),
+    breaks=double(nrow(df)),
+    evals=integer(nrow(df)),
+    PACKAGE="penaltyLearning")
+  expect_equal(result$evals, c(0, 1, 2, 2, 2))
+})
+
 test_that("N-1 iterations for best case", {
   df <- data.frame(loss=N-log(t), complexity=t)
   if(FALSE){
@@ -237,5 +251,32 @@ test_that("N-1 iterations for best case", {
     breaks=double(nrow(df)),
     evals=integer(nrow(df)),
     PACKAGE="penaltyLearning")
+  expect_equal(result$evals, c(0, 1, 1, 1, 1))
+})
+
+test_that("N-1 iterations for another best case", {
+  df <- data.frame(loss=N-round(sqrt(t), 2), complexity=t)
+  result <- .C(
+    "modelSelectionFwd_interface",
+    loss=as.double(df$loss),
+    complexity=as.double(df$complexity),
+    N=as.integer(nrow(df)),
+    models=integer(nrow(df)),
+    breaks=double(nrow(df)),
+    evals=integer(nrow(df)),
+    PACKAGE="penaltyLearning")
+  if(FALSE){
+    library(ggplot2)
+    ggplot()+
+      geom_abline(aes(
+        slope=complexity, intercept=loss),
+        data=df)+
+      xlim(0, 1)+
+      ylim(3, 5)+
+      geom_point(aes(
+        penalty, cost),
+        data=with(result, data.frame(
+          penalty=breaks, cost=loss+complexity*breaks)))
+  }
   expect_equal(result$evals, c(0, 1, 1, 1, 1))
 })
