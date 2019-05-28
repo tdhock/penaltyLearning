@@ -16,7 +16,7 @@ ROChange <- structure(function # ROC curve for changepoints
   possible.fp <- possible.fn <- min.log.lambda <- fp <- fn <- thresh <-
     log.lambda <- pred.log.lambda <- errors <- FPR <- tp <- TPR <-
       error.percent <- min.thresh <- max.thresh <- max.log.lambda <-
-        next.min <- NULL
+        next.min <- problems <- n.inconsistent <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### ROChange: no visible binding for global variable
   if(!(
@@ -50,8 +50,8 @@ ROChange <- structure(function # ROC curve for changepoints
     stop("predictions should be a data.frame with at least one row and a column named pred.log.lambda")
   }
   pred <- data.table(predictions)
-  bad.pred.rows <- pred[, .(
-    rows=.N
+  bad.pred.rows <- pred[, list(
+    problems=.N
   ), by=problem.vars][1 < rows]
   if(nrow(bad.pred.rows)){
     print(pred[bad.pred.rows, on=problem.vars])
