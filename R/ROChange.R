@@ -73,7 +73,7 @@ ROChange <- structure(function # ROC curve for changepoints
     stop("for every problem, the smallest min.log.lambda should be -Inf, and the largest max.log.lambda should be Inf")
   }
   err[, next.min := c(min.log.lambda[-1], Inf), by=problem.vars]
-  inconsistent.counts <- err[, .(
+  inconsistent.counts <- err[, list(
     n.inconsistent=sum(next.min != max.log.lambda)
   ), by=problem.vars][0 < n.inconsistent]
   if(nrow(inconsistent.counts)){
