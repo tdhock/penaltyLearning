@@ -50,6 +50,13 @@ ROChange <- structure(function # ROC curve for changepoints
     stop("predictions should be a data.frame with at least one row and a column named pred.log.lambda")
   }
   pred <- data.table(predictions)
+  bad.pred.rows <- pred[, .(
+    rows=.N
+  ), by=problem.vars][1 < rows]
+  if(nrow(bad.pred.rows)){
+    print(pred[bad.pred.rows, on=problem.vars])
+    stop("more than one prediction per problem")
+  }
   err <- data.table(models)[pred, on=problem.vars]
   setkeyv(err, c(problem.vars, "min.log.lambda"))
   err.missing <- err[is.na(labels)]
@@ -66,9 +73,11 @@ ROChange <- structure(function # ROC curve for changepoints
     stop("for every problem, the smallest min.log.lambda should be -Inf, and the largest max.log.lambda should be Inf")
   }
   err[, next.min := c(min.log.lambda[-1], Inf), by=problem.vars]
-  min.max.inconsistent <- err[next.min != max.log.lambda]
-  if(nrow(min.max.inconsistent)){
-    print(min.max.inconsistent)
+  inconsistent.counts <- err[, .(
+    n.inconsistent=sum(next.min != max.log.lambda)
+  ), by=problem.vars][0 < n.inconsistent]
+  if(nrow(inconsistent.counts)){
+    print(err[inconsistent.counts, on=problem.vars])
     stop("max.log.lambda should be equal to the next min.log.lambda")
   }
   for(col.name in c("labels", "possible.fp", "possible.fn")){
