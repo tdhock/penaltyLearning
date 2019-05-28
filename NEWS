@@ -5,6 +5,11 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.5.28
+
+ROChange: informative error / test when there is more than one
+prediction per problem.
+
 2019.5.16
 
 non-strict equality in while(crossing point >= previous breakpoint) to
