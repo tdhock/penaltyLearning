@@ -50,11 +50,11 @@ ROChange <- structure(function # ROC curve for changepoints
     stop("predictions should be a data.frame with at least one row and a column named pred.log.lambda")
   }
   pred <- data.table(predictions)
-  bad.pred.rows <- pred[, list(
+  bad.pred <- pred[, list(
     problems=.N
-  ), by=problem.vars][1 < rows]
-  if(nrow(bad.pred.rows)){
-    print(pred[bad.pred.rows, on=problem.vars])
+  ), by=problem.vars][1 < problems]
+  if(nrow(bad.pred)){
+    print(pred[bad.pred, on=problem.vars])
     stop("more than one prediction per problem")
   }
   err <- data.table(models)[pred, on=problem.vars]
