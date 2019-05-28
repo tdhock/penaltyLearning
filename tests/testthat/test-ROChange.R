@@ -93,6 +93,21 @@ test_that("informative error when predicting for unlabeled data", {
   }, "some predictions do not exist in models")
 })
 
+ok.pred <- bad.pred[chromosome %in% c("1", "2")]
+test_that("predicting for one positive and one negative label is OK", {
+  L <- ROChange(error.list$model.errors, ok.pred, pvars)
+  expect_is(L, "list")
+  expect_equal(L$thresholds$possible.fp, c(1, 1))
+  expect_equal(L$thresholds$possible.fn, c(1, 1))
+})
+
+two.pred <- rbind(ok.pred, ok.pred)
+test_that("two predictions for the same problem is an error", {
+  expect_error({
+    ROChange(error.list$model.errors, two.pred, pvars)
+  }, "more than one prediction per problem")
+})
+
 ## Artificially tied penalty predictions. Although in real data sets
 ## it is possible to have the same predicted penalty (constant penalty
 ## function), it is extremely unlikely to have tied thresholds (that
@@ -281,3 +296,4 @@ test_that("error for missing columns in model table", {
     ROChange(data.table(chromosome="foo"), pred, "chromosome")
   }, "models should have columns")
 })
+
