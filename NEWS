@@ -5,6 +5,12 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.5.29
+
+ROChange: only return one threshold=="prediction" row, even if the
+predicted threshold=0 happens to be exactly on the border between two
+models.
+
 2019.5.28
 
 ROChange: informative error / test when there is more than one
