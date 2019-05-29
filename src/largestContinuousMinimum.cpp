@@ -10,7 +10,7 @@ int largestContinuousMinimum
   double min_cost = INFINITY;
   double cur_size = 0.0;
   double cur_cost = INFINITY;
-  int start;
+  int start = -1;
   for(int i=0; i<n_data; i++){
     if(size_vec[i] <= 0.0){
       return ERROR_SIZES_MUST_BE_POSITIVE;
