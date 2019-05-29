@@ -101,6 +101,23 @@ test_that("predicting for one positive and one negative label is OK", {
   expect_equal(L$thresholds$possible.fn, c(1, 1))
 })
 
+simple.err <- rbind(
+  data.table(
+    pid=81, chromosome="1", min.log.lambda=c(-Inf, 0), max.log.lambda=c(0, Inf),
+    errors=c(0, 1), labels=1,
+    fn=c(0, 1), possible.fn=1,
+    fp=0, possible.fp=0),
+  data.table(
+    pid=81, chromosome="2", min.log.lambda=c(-Inf, 1), max.log.lambda=c(1, Inf),
+    errors=c(1, 0), labels=1,
+    fn=0, possible.fn=0,
+    fp=c(1, 0), possible.fp=1))
+test_that("only one prediction row even when prediction is on threshold", {
+  L <- ROChange(simple.err, ok.pred, pvars)
+  pred.dt <- L$thresholds[threshold=="predicted"]
+  expect_equal(nrow(pred.dt), 1)
+})
+
 two.pred <- rbind(ok.pred, ok.pred)
 test_that("two predictions for the same problem is an error", {
   expect_error({
