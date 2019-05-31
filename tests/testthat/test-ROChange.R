@@ -3,38 +3,38 @@ context("ROChange")
 library(penaltyLearning)
 library(data.table)
 
-### TODO test AUC=1
-before.dt <- data.table(
-  tp=0,
-  fp=0,
-  possible.tp=1,
-  possible.fp=1)
-rep.dt <- data.table(
-  tp=c(1, 1, 0, 0),
-  fp=c(0, 1, 1, 0),
-  possible.tp=1,
-  possible.fp=1)
-after.dt <- data.table(
-  tp=c(1, 1),
-  fp=c(0, 1),
-  possible.tp=1,
-  possible.fp=1)
-
-rep.list <- replicate(0, rep.dt, simplify=FALSE)
-several.dt <- do.call(rbind, rep.list)
-segs.dt <- rbind(before.dt, several.dt, after.dt)
-n.breaks <- nrow(segs.dt)-1L
-break.vec <- 1:n.breaks
-segs.dt[, min.log.lambda := c(-Inf, break.vec)]
-segs.dt[, max.log.lambda := c(break.vec, Inf)]
-segs.dt[, problem := 1]
-segs.dt[, fn := possible.tp-tp]
-segs.dt[, possible.fn := possible.tp]
-segs.dt[, errors := fp+fn]
-segs.dt[, labels := 2]
-pred.dt <- data.table(pred.log.lambda=1.5, problem=1)
-L <- penaltyLearning::ROChange(segs.dt, pred.dt, "problem")
-###
+test_that("auc=2 for one error curve with one loop", {
+  before.dt <- data.table(
+    tp=0,
+    fp=0,
+    possible.tp=1,
+    possible.fp=1)
+  rep.dt <- data.table(
+    tp=c(1, 1, 0, 0),
+    fp=c(0, 1, 1, 0),
+    possible.tp=1,
+    possible.fp=1)
+  after.dt <- data.table(
+    tp=c(1, 1),
+    fp=c(0, 1),
+    possible.tp=1,
+    possible.fp=1)
+  rep.list <- replicate(1, rep.dt, simplify=FALSE)
+  several.dt <- do.call(rbind, rep.list)
+  segs.dt <- rbind(before.dt, several.dt, after.dt)
+  n.breaks <- nrow(segs.dt)-1L
+  break.vec <- 1:n.breaks
+  segs.dt[, min.log.lambda := c(-Inf, break.vec)]
+  segs.dt[, max.log.lambda := c(break.vec, Inf)]
+  segs.dt[, problem := 1]
+  segs.dt[, fn := possible.tp-tp]
+  segs.dt[, possible.fn := possible.tp]
+  segs.dt[, errors := fp+fn]
+  segs.dt[, labels := 2]
+  pred.dt <- data.table(pred.log.lambda=1.5, problem=1)
+  L <- ROChange(segs.dt, pred.dt, "problem")
+  expect_equal(L$auc, 2)
+})
 
 test_that("AUC of reverse ROC curve is 1", {
   segs.dt <- data.table(
@@ -52,11 +52,11 @@ test_that("AUC of reverse ROC curve is 1", {
   segs.dt[, errors := fp+fn]
   segs.dt[, labels := 1]
   pred.dt <- data.table(pred.log.lambda=1.5, problem=1)
-  L <- penaltyLearning::ROChange(segs.dt, pred.dt, "problem")
+  L <- ROChange(segs.dt, pred.dt, "problem")
   expect_equal(L$auc, 1)
 })
 
-test_that("AUC of reverse incomplete ROC curve is 1", {
+test_that("error for labels less than errors", {
   segs.dt <- data.table(
     tp=c(1, 2, 2),
     fp=c(1, 1, 2),
@@ -72,7 +72,29 @@ test_that("AUC of reverse incomplete ROC curve is 1", {
   segs.dt[, errors := fp+fn]
   segs.dt[, labels := 1]
   pred.dt <- data.table(pred.log.lambda=1.5, problem=1)
-  L <- penaltyLearning::ROChange(segs.dt, pred.dt, "problem")
+  expect_error({
+    ROChange(segs.dt, pred.dt, "problem")
+  }, "errors should be in [0,labels]", fixed=TRUE)
+})
+
+test_that("AUC of reverse incomplete ROC curve is 1", {
+  segs.dt <- data.table(
+    tp=c(1, 2, 2),
+    fp=c(0, 0, 1),
+    possible.tp=2,
+    possible.fp=2)
+  n.breaks <- nrow(segs.dt)-1L
+  break.vec <- 1:n.breaks
+  segs.dt[, min.log.lambda := c(-Inf, break.vec)]
+  segs.dt[, max.log.lambda := c(break.vec, Inf)]
+  segs.dt[, problem := 1]
+  segs.dt[, fn := possible.tp-tp]
+  segs.dt[, possible.fn := possible.tp]
+  segs.dt[, errors := fp+fn]
+  segs.dt[, labels := 2]
+  pred.dt <- data.table(pred.log.lambda=1.5, problem=1)
+  L <- ROChange(segs.dt, pred.dt, "problem")
+  L$roc
   expect_equal(L$auc, 1)
 })
 
@@ -84,7 +106,7 @@ ann <- subset(neuroblastoma$annotations, profile.id==pid)
 ann$pid <- pid
 segs.list <- list()
 selection.list <- list()
-for(chr in 1:4){
+for(chr in unique(pro$chr)){
   pro.chr <- subset(pro, chromosome==chr)
   max.segments <- min(20, nrow(pro.chr))
   fit <- Segmentor3IsBack::Segmentor(
