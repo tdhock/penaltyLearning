@@ -162,7 +162,14 @@ ROChange <- structure(function # ROC curve for changepoints
   interval.dt[, tp := possible.fn - fn]
   interval.dt[, TPR := tp/possible.fn]
   interval.dt[, error.percent := 100*errors/labels]
-  roc.polygon <- interval.dt[, {
+  dist00.vec <- interval.dt[c(1, .N), sqrt(FPR^2+TPR^2)]
+  indices <- if(dist00.vec[1]<dist00.vec[2]){
+    1:nrow(interval.dt)
+  }else{
+    nrow(interval.dt):1
+  }
+  sorted.dt <- interval.dt[indices]
+  roc.polygon <- sorted.dt[, {
     has11 <- FPR[.N]==1 & TPR[.N]==1
     has00 <- FPR[1]==0 & TPR[1]==0
     list(
