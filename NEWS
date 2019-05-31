@@ -5,6 +5,11 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.5.31
+
+ROC curve reversed if necessary in AUC computation. i.e. ROChange no
+longer assumes that small thresholds mean lots of fp/tp.
+
 2019.5.29
 
 ROChange: only return one threshold=="prediction" row, even if the
