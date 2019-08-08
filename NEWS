@@ -10,6 +10,8 @@ tests/support for flsa and HMM?
 ROC curve reversed if necessary in AUC computation. i.e. ROChange no
 longer assumes that small thresholds mean lots of fp/tp.
 
+no longer need geometry for AUC computation.
+
 2019.5.29 PR#13
 
 ROChange: only return one threshold=="prediction" row, even if the

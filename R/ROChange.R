@@ -177,6 +177,8 @@ ROChange <- structure(function # ROC curve for changepoints
       TPR=c(if(!has00)0, TPR, if(!has11)1, 0)
       )
   }]
+  left <- roc.polygon[-.N]
+  right <- roc.polygon[-1]
   list(
     roc=interval.dt,
     thresholds=rbind(
@@ -185,7 +187,7 @@ ROChange <- structure(function # ROC curve for changepoints
         interval.dt[min.thresh < 0 & 0 <= max.thresh, ]),
       data.table(threshold="min.error", interval.dt[which.min(errors), ])),
     auc.polygon=roc.polygon,
-    auc=roc.polygon[, geometry::polyarea(FPR, TPR)]
+    auc=sum((right$FPR-left$FPR)*(right$TPR+left$TPR)/2)
     )
 ### list of results describing ROC curve: roc is a data.table with one
 ### row for each point on the ROC curve; thresholds is the two rows of
