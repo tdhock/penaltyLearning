@@ -131,32 +131,44 @@ ROChange <- structure(function # ROC curve for changepoints
   }
   thresh.dt <- err[order(-min.log.lambda), {
     fp.diff <- diff(fp)
-    fp.change <- fp.diff != 0
     fn.diff <- diff(fn)
-    fn.change <- fn.diff != 0
-    fp.dt <- if(any(fp.change))data.table(
-      log.lambda=min.log.lambda[c(fp.change, FALSE)],
-      fp=as.numeric(fp.diff[fp.change]),
-      fn=0)
-    fn.dt <- if(any(fn.change))data.table(
-      log.lambda=min.log.lambda[c(fn.change, FALSE)],
-      fp=0,
-      fn=as.numeric(fn.diff[fn.change]))
-    ##browser(expr=sample.id=="McGill0322")
-    rbind(fp.dt, fn.dt)
+    any.change <- fp.diff != 0 | fn.diff != 0
+    data.table(
+      log.lambda=min.log.lambda[c(any.change, FALSE)],
+      fp.diff=as.numeric(fp.diff[any.change]),
+      fn.diff=as.numeric(fn.diff[any.change]))
   }, by=problem.vars]
   pred.with.thresh <- thresh.dt[pred, on=problem.vars, nomatch=0L]
   pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
   uniq.thresh <- pred.with.thresh[, list(
-    fp=sum(fp),
-    fn=sum(fn)
+    fp.diff=sum(fp.diff),
+    fn.diff=sum(fn.diff)
   ), by=thresh]
-  interval.dt <- uniq.thresh[order(-thresh), data.table(
-    total.dt,
+
+  thresh.ord <- uniq.thresh[, data.table(
     min.thresh=c(thresh, -Inf),
     max.thresh=c(Inf, thresh),
-    fp=cumsum(c(sum(first.dt$fp), fp)),
-    fn=sum(first.dt$fn)+cumsum(c(0, fn)))]
+    fp.diff=c(NA, fp.diff),
+    fn.diff=c(NA, fn.diff),
+    fp.between = cumsum(c(sum(first.dt$fp), fp.diff)),
+    fn.between = cumsum(c(sum(first.dt$fn), fn.diff))
+  )]
+  thresh.ord[, fp.at.max := fp.between-ifelse(fp.diff<0, fp.diff, 0)]
+  thresh.ord[, fn.at.max := fn.between-ifelse(fn.diff<0, fn.diff, 0)]
+  thresh.ord[, min.between := ifelse(
+    fp.between<fn.between, fp.between, fn.between)]
+  thresh.ord[, min.at.max := ifelse(
+    fp.at.max<fn.at.max, fp.at.max, fn.at.max)]
+  thresh.ord[, width.thresh := max.thresh-min.thresh]
+  thresh.ord[, diff.max.between := min.at.max-min.between]
+  thresh.ord[, diff.between.next.max := c(min.between[-.N]-min.at.max[-1], NA)]
+  ## TODO compute sub-differential lower and upper bounds.
+  interval.dt <- thresh.ord[, data.table(
+    total.dt,
+    min.thresh,
+    max.thresh,
+    fp=fp.between,
+    fn=fn.between)]
   interval.dt[, errors := fp+fn]
   interval.dt[, FPR := fp/possible.fp]
   interval.dt[, tp := possible.fn - fn]
@@ -187,7 +199,9 @@ ROChange <- structure(function # ROC curve for changepoints
         interval.dt[min.thresh < 0 & 0 <= max.thresh, ]),
       data.table(threshold="min.error", interval.dt[which.min(errors), ])),
     auc.polygon=roc.polygon,
-    auc=sum((right$FPR-left$FPR)*(right$TPR+left$TPR)/2)
+    auc=sum((right$FPR-left$FPR)*(right$TPR+left$TPR)/2),
+    aum=thresh.ord[, sum(ifelse(
+      min.between==0, 0, min.between*width.thresh))]
     )
 ### list of results describing ROC curve: roc is a data.table with one
 ### row for each point on the ROC curve; thresholds is the two rows of

@@ -3,6 +3,40 @@ context("ROChange")
 library(penaltyLearning)
 library(data.table)
 
+models <- data.table(
+  fp=c(1, 0, 0, 0),
+  fn=c(0, 0, 0, 1),
+  possible.fn=c(0,0,1,1),
+  possible.fp=c(1,1,0,0),
+  min.log.lambda=c(-Inf,0,-Inf,0),
+  max.log.lambda=c(0,Inf,0,Inf),
+  labels=1,
+  problem=c(1,1,2,2))
+models[, errors := fp+fn]
+test_that("aum=0 for pred=0", {
+  predictions <- data.table(problem=c(1,2), pred.log.lambda=0)
+  ROChange(models, predictions, "problem")
+})
+
+test_that("aum=0 for pred=1, -1", {
+  predictions <- data.table(problem=c(1,2), pred.log.lambda=c(1, -1))
+  ROChange(models, predictions, "problem")
+})
+
+test_that("aum=2 for pred=-1, 1", {
+  predictions <- data.table(problem=c(1,2), pred.log.lambda=c(-1, 1))
+  ROChange(models, predictions, "problem")
+})
+
+models2 <- data.table(models)
+models2[, problem := problem+2]
+models4 <- rbind(models, models2)
+test_that("aum=0, four pred=0", {
+  models <- models4
+  predictions <- data.table(problem=1:4, pred.log.lambda=0)
+  ROChange(models, predictions, "problem")
+})
+
 test_that("auc=2 for one error curve with one loop", {
   before.dt <- data.table(
     tp=0,
