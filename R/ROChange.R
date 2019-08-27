@@ -118,7 +118,7 @@ ROChange <- structure(function # ROC curve for changepoints
         "]")
     }
   }
-  first.dt <- err[max.log.lambda==Inf]
+  first.dt <- err[min.log.lambda==-Inf]
   total.dt <- first.dt[, list(
     labels=sum(labels),
     possible.fp=sum(possible.fp),
@@ -129,12 +129,12 @@ ROChange <- structure(function # ROC curve for changepoints
   if(total.dt$possible.fn==0){
     stop("no positive labels")
   }
-  thresh.dt <- err[order(-min.log.lambda), {
+  thresh.dt <- err[order(min.log.lambda), {
     fp.diff <- diff(fp)
     fn.diff <- diff(fn)
     any.change <- fp.diff != 0 | fn.diff != 0
     data.table(
-      log.lambda=min.log.lambda[c(any.change, FALSE)],
+      log.lambda=max.log.lambda[c(any.change, FALSE)],
       fp.diff=as.numeric(fp.diff[any.change]),
       fn.diff=as.numeric(fn.diff[any.change]))
   }, by=problem.vars]
@@ -146,8 +146,8 @@ ROChange <- structure(function # ROC curve for changepoints
   ), by=thresh]
 
   thresh.ord <- uniq.thresh[, data.table(
-    min.thresh=c(thresh, -Inf),
-    max.thresh=c(Inf, thresh),
+    min.thresh=c(-Inf, thresh),
+    max.thresh=c(thresh, Inf),
     fp.diff=c(NA, fp.diff),
     fn.diff=c(NA, fn.diff),
     fp.between = cumsum(c(sum(first.dt$fp), fp.diff)),

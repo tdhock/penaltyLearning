@@ -15,26 +15,53 @@ models <- data.table(
 models[, errors := fp+fn]
 test_that("aum=0 for pred=0", {
   predictions <- data.table(problem=c(1,2), pred.log.lambda=0)
-  ROChange(models, predictions, "problem")
+  L <- ROChange(models, predictions, "problem")
+  expect_equal(L$aum, 0)
 })
 
 test_that("aum=0 for pred=1, -1", {
   predictions <- data.table(problem=c(1,2), pred.log.lambda=c(1, -1))
-  ROChange(models, predictions, "problem")
+  L <- ROChange(models, predictions, "problem")
+  if(interactive() && require(ggplot2)){
+    ggplot()+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "lines"))+
+      facet_grid(problem ~ .)+
+      geom_segment(aes(
+        min.log.lambda, errors,
+        xend=max.log.lambda, yend=errors),
+        data=models)+
+      geom_vline(aes(
+        xintercept=pred.log.lambda),
+        data=predictions)
+    ggplot()+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "lines"))+
+      geom_rect(aes(
+        xmin=min.thresh, xmax=max.thresh,
+        ymin=-Inf, ymax=Inf),
+        alpha=0.5,
+        data=L$thresholds[threshold=="predicted"])+
+      geom_segment(aes(
+        min.thresh, errors,
+        xend=max.thresh, yend=errors),
+        data=L$roc)
+  }
+  expect_equal(L$aum, 0)
 })
 
 test_that("aum=2 for pred=-1, 1", {
   predictions <- data.table(problem=c(1,2), pred.log.lambda=c(-1, 1))
-  ROChange(models, predictions, "problem")
+  L <- ROChange(models, predictions, "problem")
+  expect_equal(L$aum, 0)
 })
 
-models2 <- data.table(models)
-models2[, problem := problem+2]
-models4 <- rbind(models, models2)
 test_that("aum=0, four pred=0", {
-  models <- models4
+  models2 <- data.table(models)
+  models2[, problem := problem+2]
+  models4 <- rbind(models, models2)
   predictions <- data.table(problem=1:4, pred.log.lambda=0)
-  ROChange(models, predictions, "problem")
+  ROChange(models4, predictions, "problem")
 })
 
 test_that("auc=2 for one error curve with one loop", {
