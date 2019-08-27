@@ -153,15 +153,17 @@ ROChange <- structure(function # ROC curve for changepoints
     fp.between = cumsum(c(sum(first.dt$fp), fp.diff)),
     fn.between = cumsum(c(sum(first.dt$fn), fn.diff))
   )]
-  thresh.ord[, fp.at.max := fp.between-ifelse(fp.diff<0, fp.diff, 0)]
-  thresh.ord[, fn.at.max := fn.between-ifelse(fn.diff<0, fn.diff, 0)]
-  thresh.ord[, min.between := ifelse(
+  thresh.ord[, fp.at.min := fp.between-ifelse(fp.diff<0, fp.diff, 0)]
+  thresh.ord[, fn.at.min := fn.between-ifelse(fn.diff<0, fn.diff, 0)]
+  thresh.ord[, min.fp.fn.between := ifelse(
     fp.between<fn.between, fp.between, fn.between)]
-  thresh.ord[, min.at.max := ifelse(
-    fp.at.max<fn.at.max, fp.at.max, fn.at.max)]
+  thresh.ord[, min.fp.fn.at.min.thresh := ifelse(
+    fp.at.min<fn.at.min, fp.at.min, fn.at.min)]
   thresh.ord[, width.thresh := max.thresh-min.thresh]
-  thresh.ord[, diff.max.between := min.at.max-min.between]
-  thresh.ord[, diff.between.next.max := c(min.between[-.N]-min.at.max[-1], NA)]
+  thresh.ord[, diff.min.prev.between := c(
+    NA, min.fp.fn.at.min.thresh[-1]-min.fp.fn.between[-.N])]
+  thresh.ord[, diff.between.min := min.fp.fn.between-min.fp.fn.at.min.thresh]
+
   ## TODO compute sub-differential lower and upper bounds.
   interval.dt <- thresh.ord[, data.table(
     total.dt,
