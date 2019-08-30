@@ -5,12 +5,17 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
-2019.5.31 PR#14
+2019.8.30 PR#14
 
 ROC curve reversed if necessary in AUC computation. i.e. ROChange no
 longer assumes that small thresholds mean lots of fp/tp.
 
 no longer need geometry for AUC computation.
+
+ROChange returns aum (Area Under Min{fp,fn}) and aum.subdiff
+(sub-differential) for predicted values.
+
+ROC curve thresholds sorted increasing rather than decreasing.
 
 2019.5.29 PR#13
 
