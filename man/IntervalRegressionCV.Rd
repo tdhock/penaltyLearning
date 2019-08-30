@@ -3,15 +3,15 @@
 \title{IntervalRegressionCV}
 \description{Use cross-validation to fit an L1-regularized linear interval
 regression model by optimizing margin and/or regularization
-parameters. 
-This function repeatedly calls IntervalRegressionRegularized, and by
+parameters.
+This function repeatedly calls \code{\link{IntervalRegressionRegularized}}, and by
 default assumes that margin=1. To optimize the margin,
-specify the margin.vec parameter
-manually, or use IntervalRegressionCVmargin
+specify the \code{margin.vec} parameter
+manually, or use \code{\link{IntervalRegressionCVmargin}}
 (which takes more computation time
 but yields more accurate models).
 If the future package is available,
-two levels of future_lapply are used 
+two levels of future_lapply are used
 to parallelize on validation.fold and margin.}
 \usage{IntervalRegressionCV(feature.mat, target.mat, n.folds = ifelse(nrow(feature.mat) < 
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
@@ -30,7 +30,7 @@ parameter is chosen during the internal cross-validation
 loop. min: first take the mean of the K-CV error functions, then
 minimize it (this is the default since it tends to yield the least
 test error). 1sd: take the most regularized model with the same
-margin which is within one standard deviation of that minimum 
+margin which is within one standard deviation of that minimum
 (this model is typically a bit less accurate, but much less
 complex, so better if you want to interpret the coefficients).}
   \item{incorrect.labels.db}{either NULL or a data.table, which specifies the error function to
@@ -38,22 +38,22 @@ compute for selecting the regularization parameter on the
 validation set. NULL means to minimize the squared hinge loss,
 which measures how far the predicted log(penalty) values are from
 the target intervals. If a data.table is specified, its first key
-should correspond to the rownames of feature.mat, and columns
+should correspond to the rownames of \code{feature.mat}, and columns
 min.log.lambda, max.log.lambda, fp, fn, possible.fp, possible.fn;
-these will be used with ROChange to compute the AUC for each
+these will be used with \code{\link{ROChange}} to compute the AUC for each
 regularization parameter, and the maximimum will be selected (in
 the plot this is negative.auc, which is minimized). This
 data.table can be computed via
-labelError(modelSelection(...),...)$model.errors -- see
-example(ROChange). In practice this makes the computation longer,
+labelError(modelSelection(\code{...}),...)$model.errors -- see
+example(\code{\link{ROChange}}). In practice this makes the computation longer,
 and it should only result in more accurate models if there are
 many labels per data sequence.}
-  \item{initial.regularization}{Passed to IntervalRegressionRegularized.}
+  \item{initial.regularization}{Passed to \code{\link{IntervalRegressionRegularized}}.}
   \item{margin.vec}{numeric vector of margin size hyper-parameters. The computation
-time is linear in the number of elements of margin.vec -- more
+time is linear in the number of elements of \code{margin.vec} -- more
 values takes more computation time, but yields slightly more
 accurate models (if there is enough data).}
-  \item{\dots}{passed to IntervalRegressionRegularized.}
+  \item{\dots}{passed to \code{\link{IntervalRegressionRegularized}}.}
 }
 
 \value{List representing regularized linear model.}

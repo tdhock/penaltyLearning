@@ -1,13 +1,13 @@
 \name{modelSelectionC}
 \alias{modelSelectionC}
 \title{Exact model selection function}
-\description{Given loss.vec L_i, model.complexity K_i, the model selection
+\description{Given \code{loss.vec} L_i, \code{model.complexity} K_i, the model selection
 function i*(lambda) = argmin_i L_i + lambda*K_i, compute all of
 the solutions (i, min.lambda, max.lambda) with i being the
 solution for every lambda in (min.lambda, max.lambda). This
 function uses the linear time algorithm implemented in C code.
 This function is mostly meant for internal use -- it is instead
-recommended to use modelSelection.}
+recommended to use \code{\link{modelSelection}}.}
 \usage{modelSelectionC(loss.vec, model.complexity, model.id)}
 \arguments{
   \item{loss.vec}{numeric vector: loss L_i}
@@ -19,7 +19,7 @@ recommended to use modelSelection.}
 least one lambda value, and the following columns. (min.lambda,
 max.lambda) and (min.log.lambda, max.log.lambda) are intervals of
 optimal penalty constants, on the original and log scale;
-model.complexity are the K_i values; model.id are the model
+\code{model.complexity} are the K_i values; \code{model.id} are the model
 identifiers (also used for row names); and model.loss are the C_i
 values.}
 

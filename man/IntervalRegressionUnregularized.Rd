@@ -1,16 +1,16 @@
 \name{IntervalRegressionUnregularized}
 \alias{IntervalRegressionUnregularized}
 \title{IntervalRegressionUnregularized}
-\description{Use IntervalRegressionRegularized with initial.regularization=0
+\description{Use \code{\link{IntervalRegressionRegularized}} with initial.regularization=0
 and factor.regularization=NULL, meaning fit one un-regularized
 interval regression model.}
 \usage{IntervalRegressionUnregularized(...)}
 \arguments{
-  \item{\dots}{passed to IntervalRegressionRegularized.}
+  \item{\dots}{passed to \code{\link{IntervalRegressionRegularized}}.}
 }
 
 \value{List representing fit model, see
-help(IntervalRegressionRegularized) for details.}
+help(\code{\link{IntervalRegressionRegularized}}) for details.}
 
 \author{Toby Dylan Hocking}
 

@@ -4,7 +4,7 @@
 \description{Compute a feature vector of constant length which can be used as
 an input for supervised penalty learning. The output is a target
 interval of log(penalty) values that achieve minimum incorrect
-labels (see targetIntervals).}
+labels (see \code{\link{targetIntervals}}).}
 \usage{featureVector(data.vec)}
 \arguments{
   \item{data.vec}{numeric vector of ordered data.}
