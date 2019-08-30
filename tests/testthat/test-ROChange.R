@@ -3,100 +3,6 @@ context("ROChange")
 library(penaltyLearning)
 library(data.table)
 
-models <- data.table(
-  fp=c(1, 0, 0, 0),
-  fn=c(0, 0, 0, 1),
-  possible.fn=c(0,0,1,1),
-  possible.fp=c(1,1,0,0),
-  min.log.lambda=c(-Inf,0,-Inf,0),
-  max.log.lambda=c(0,Inf,0,Inf),
-  labels=1,
-  problem=c(1,1,2,2))
-models[, errors := fp+fn]
-test_that("aum=0 for pred=0", {
-  predictions <- data.table(problem=c(1,2), pred.log.lambda=0)
-  L <- ROChange(models, predictions, "problem")
-  expect_equal(L$aum, 0)
-})
-
-test_that("aum=0 for pred=1, -1", {
-  predictions <- data.table(problem=c(1,2), pred.log.lambda=c(1, -1))
-  L <- ROChange(models, predictions, "problem")
-  if(interactive() && require(ggplot2)){
-    ggplot()+
-      theme_bw()+
-      theme(panel.margin=grid::unit(0, "lines"))+
-      facet_grid(problem ~ .)+
-      geom_segment(aes(
-        min.log.lambda, errors,
-        xend=max.log.lambda, yend=errors),
-        data=models)+
-      geom_vline(aes(
-        xintercept=pred.log.lambda),
-        data=predictions)
-    ggplot()+
-      theme_bw()+
-      theme(panel.margin=grid::unit(0, "lines"))+
-      geom_rect(aes(
-        xmin=min.thresh, xmax=max.thresh,
-        ymin=-Inf, ymax=Inf),
-        alpha=0.5,
-        data=L$thresholds[threshold=="predicted"])+
-      geom_segment(aes(
-        min.thresh, errors,
-        xend=max.thresh, yend=errors),
-        data=L$roc)
-  }
-  expect_equal(L$aum, 0)
-})
-
-test_that("aum=2 for pred=-1, 1", {
-  predictions <- data.table(problem=c(1,2), pred.log.lambda=c(-1, 1))
-  L <- ROChange(models, predictions, "problem")
-  expect_equal(L$aum, 0)
-})
-
-test_that("aum=0, four pred=0", {
-  models2 <- data.table(models)
-  models2[, problem := problem+2]
-  models4 <- rbind(models, models2)
-  predictions <- data.table(problem=1:4, pred.log.lambda=0)
-  ROChange(models4, predictions, "problem")
-})
-
-test_that("auc=2 for one error curve with one loop", {
-  before.dt <- data.table(
-    tp=0,
-    fp=0,
-    possible.tp=1,
-    possible.fp=1)
-  rep.dt <- data.table(
-    tp=c(1, 1, 0, 0),
-    fp=c(0, 1, 1, 0),
-    possible.tp=1,
-    possible.fp=1)
-  after.dt <- data.table(
-    tp=c(1, 1),
-    fp=c(0, 1),
-    possible.tp=1,
-    possible.fp=1)
-  rep.list <- replicate(1, rep.dt, simplify=FALSE)
-  several.dt <- do.call(rbind, rep.list)
-  segs.dt <- rbind(before.dt, several.dt, after.dt)
-  n.breaks <- nrow(segs.dt)-1L
-  break.vec <- 1:n.breaks
-  segs.dt[, min.log.lambda := c(-Inf, break.vec)]
-  segs.dt[, max.log.lambda := c(break.vec, Inf)]
-  segs.dt[, problem := 1]
-  segs.dt[, fn := possible.tp-tp]
-  segs.dt[, possible.fn := possible.tp]
-  segs.dt[, errors := fp+fn]
-  segs.dt[, labels := 2]
-  pred.dt <- data.table(pred.log.lambda=1.5, problem=1)
-  L <- ROChange(segs.dt, pred.dt, "problem")
-  expect_equal(L$auc, 2)
-})
-
 test_that("AUC of reverse ROC curve is 1", {
   segs.dt <- data.table(
     tp=c(0, 1, 1),
@@ -227,8 +133,8 @@ pred <- pro.with.ann[, list(
 ), by=pvars]
 result <- ROChange(error.list$model.errors, pred, pvars)
 test_that("seven rows for six labels", {
-  expect_equal(result$roc$fn, c(3, 2, 1, 0, 0, 0, 0))
-  expect_equal(result$roc$fp, c(0, 0, 0, 0, 1, 2, 3))
+  expect_equal(result$roc$fp, c(3, 2, 1, 0, 0, 0, 0))
+  expect_equal(result$roc$fn, c(0, 0, 0, 0, 1, 2, 3))
 })
 test_that("perfect prediction achieved", {
   expect_equal(result$thresholds$errors, c(3, 0))
@@ -293,8 +199,8 @@ tie.pred$pred.log.lambda[1:2] <- error.list$model.errors[some, on=list(
   pid, chromosome, n.segments), min.log.lambda - 2]
 tie.result <- ROChange(error.list$model.errors, tie.pred, pvars)
 test_that("six rows for six labels with one tie", {
-  fn.vec <- c(3, 2, 1, 0, 0, 0)
-  fp.vec <- c(0, 0, 0, 1, 2, 3)
+  fp.vec <- c(3, 2, 1, 0, 0, 0)
+  fn.vec <- c(0, 0, 0, 1, 2, 3)
   expect_equal(tie.result$roc$fp, fp.vec)
   expect_equal(tie.result$roc$fn, fn.vec)
   expect_equal(tie.result$roc$FPR, fp.vec/3)
@@ -315,8 +221,8 @@ error.breakBad <- labelError(
   label.vars=c("min", "max")) # limit of labels in ann.
 result.breakBad <- ROChange(error.breakBad$model.errors, tie.pred, "chromosome")
 test_that("six rows for six labels with one tie, fn worse", {
-  fn.vec <- c(6, 4, 2, 0, 0, 0)
-  fp.vec <- c(0, 0, 0, 1, 2, 3)
+  fn.vec <- rev(c(6, 4, 2, 0, 0, 0))
+  fp.vec <- rev(c(0, 0, 0, 1, 2, 3))
   expect_equal(result.breakBad$roc$fp, fp.vec)
   expect_equal(result.breakBad$roc$fn, fn.vec)
   expect_equal(result.breakBad$roc$FPR, fp.vec/3)
@@ -339,8 +245,8 @@ error.normBad <- labelError(
   label.vars=c("min", "max")) # limit of labels in ann.
 result.normBad <- ROChange(error.normBad$model.errors, tie.pred, "chromosome")
 test_that("six rows for six labels with one tie, fn worse", {
-  fn.vec <- c(3, 2, 1, 0, 0, 0)
-  fp.vec <- c(0, 0, 0, 2, 4, 6)
+  fn.vec <- rev(c(3, 2, 1, 0, 0, 0))
+  fp.vec <- rev(c(0, 0, 0, 2, 4, 6))
   expect_equal(result.normBad$roc$fp, fp.vec)
   expect_equal(result.normBad$roc$fn, fn.vec)
   expect_equal(result.normBad$roc$FPR, fp.vec/6)

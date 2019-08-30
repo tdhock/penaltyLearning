@@ -140,7 +140,7 @@ ROChange <- structure(function # ROC curve for changepoints
   }, by=problem.vars]
   pred.with.thresh <- thresh.dt[pred, on=problem.vars, nomatch=0L]
   pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
-  uniq.thresh <- pred.with.thresh[, list(
+  uniq.thresh <- pred.with.thresh[order(thresh), list(
     fp.diff=sum(fp.diff),
     fn.diff=sum(fn.diff)
   ), by=thresh]
@@ -148,29 +148,47 @@ ROChange <- structure(function # ROC curve for changepoints
   thresh.ord <- uniq.thresh[, data.table(
     min.thresh=c(-Inf, thresh),
     max.thresh=c(thresh, Inf),
-    fp.diff=c(NA, fp.diff),
-    fn.diff=c(NA, fn.diff),
-    fp.between = cumsum(c(sum(first.dt$fp), fp.diff)),
-    fn.between = cumsum(c(sum(first.dt$fn), fn.diff))
+    fp = cumsum(c(sum(first.dt$fp), fp.diff)),
+    fn = cumsum(c(sum(first.dt$fn), fn.diff))
   )]
-  thresh.ord[, fp.at.min := fp.between-ifelse(fp.diff<0, fp.diff, 0)]
-  thresh.ord[, fn.at.min := fn.between-ifelse(fn.diff<0, fn.diff, 0)]
-  thresh.ord[, min.fp.fn.between := ifelse(
-    fp.between<fn.between, fp.between, fn.between)]
-  thresh.ord[, min.fp.fn.at.min.thresh := ifelse(
-    fp.at.min<fn.at.min, fp.at.min, fn.at.min)]
-  thresh.ord[, width.thresh := max.thresh-min.thresh]
-  thresh.ord[, diff.min.prev.between := c(
-    NA, min.fp.fn.at.min.thresh[-1]-min.fp.fn.between[-.N])]
-  thresh.ord[, diff.between.min := min.fp.fn.between-min.fp.fn.at.min.thresh]
-
-  ## TODO compute sub-differential lower and upper bounds.
+  ## Compute aum = area under min(fp,fn).
+  thresh.ord[, min.fp.fn := ifelse(fp<fn, fp, fn)]
+  aum <- thresh.ord[, sum(ifelse(
+    min.fp.fn==0, 0, min.fp.fn*(max.thresh-min.thresh)))]
+  ## To compute the aum sub-differential we need to join total fp/fn
+  ## to the diffs with individual thresholds/problems.
+  pred.with.thresh[thresh.ord, fp.before := fp, on=.(thresh=max.thresh)]
+  pred.with.thresh[thresh.ord, fp.after := fp, on=.(thresh=min.thresh)]
+  pred.with.thresh[thresh.ord, fn.before := fn, on=.(thresh=max.thresh)]
+  pred.with.thresh[thresh.ord, fn.after := fn, on=.(thresh=min.thresh)]
+  ## Compute lower bound of sub-derivatives. The main idea is that the
+  ## lower bound is determined by what happens if the predicted value
+  ## for a particular problem is decreased, which results in a bigger
+  ## threshold. If that threshold/diff is relevant then it will result
+  ## in a change in the min after the threshold, relative to the
+  ## actual min after the threshold.
+  pred.with.thresh[, fp.after.bigger := fp.after-fp.diff]
+  pred.with.thresh[, fn.after.bigger := fn.after-fn.diff]
+  pred.with.thresh[, min.after.bigger := ifelse(
+    fp.after.bigger<fn.after.bigger, fp.after.bigger, fn.after.bigger)]
+  pred.with.thresh[, min.after := ifelse(
+    fp.after<fn.after, fp.after, fn.after)]
+  pred.with.thresh[, diff.bigger := min.after.bigger - min.after]
+  ## Compute upper bound of sub-derivatives. analogous.
+  pred.with.thresh[, fp.before.smaller := fp.before+fp.diff]
+  pred.with.thresh[, fn.before.smaller := fn.before+fn.diff]
+  pred.with.thresh[, min.before.smaller := ifelse(
+    fp.before.smaller<fn.before.smaller, fp.before.smaller, fn.before.smaller)]
+  pred.with.thresh[, min.before := ifelse(
+    fp.before<fn.before, fp.before, fn.before)]
+  pred.with.thresh[, diff.smaller := min.before.smaller - min.before]
+  ## Compute TPR/FPR rates for ROC-AUC analysis.
   interval.dt <- thresh.ord[, data.table(
     total.dt,
     min.thresh,
     max.thresh,
-    fp=fp.between,
-    fn=fn.between)]
+    fp=fp,
+    fn=fn)]
   interval.dt[, errors := fp+fn]
   interval.dt[, FPR := fp/possible.fp]
   interval.dt[, tp := possible.fn - fn]
@@ -202,8 +220,11 @@ ROChange <- structure(function # ROC curve for changepoints
       data.table(threshold="min.error", interval.dt[which.min(errors), ])),
     auc.polygon=roc.polygon,
     auc=sum((right$FPR-left$FPR)*(right$TPR+left$TPR)/2),
-    aum=thresh.ord[, sum(ifelse(
-      min.between==0, 0, min.between*width.thresh))]
+    aum=aum,
+    aum.subdiff=pred.with.thresh[, .(
+      lower=sum(-diff.bigger),
+      upper=sum(diff.smaller)
+    ), by=problem.vars]
     )
 ### list of results describing ROC curve: roc is a data.table with one
 ### row for each point on the ROC curve; thresholds is the two rows of
