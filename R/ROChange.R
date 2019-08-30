@@ -16,7 +16,12 @@ ROChange <- structure(function # ROC curve for changepoints
   possible.fp <- possible.fn <- min.log.lambda <- fp <- fn <- thresh <-
     log.lambda <- pred.log.lambda <- errors <- FPR <- tp <- TPR <-
       error.percent <- min.thresh <- max.thresh <- max.log.lambda <-
-        next.min <- problems <- n.inconsistent <- NULL
+        next.min <- problems <- n.inconsistent <- min.fp.fn <-
+          . <- fp.before <- fp.after <- fn.before <- fn.after <-
+            fp.after.bigger <- fn.after.bigger <- min.after.bigger <-
+              min.after <- diff.bigger <- fp.before.smaller <-
+                fn.before.smaller <- min.before.smaller <- min.before <-
+                  diff.smaller <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### ROChange: no visible binding for global variable
   if(!(
@@ -173,8 +178,10 @@ ROChange <- structure(function # ROC curve for changepoints
     fp.after.bigger<fn.after.bigger, fp.after.bigger, fn.after.bigger)]
   pred.with.thresh[, min.after := ifelse(
     fp.after<fn.after, fp.after, fn.after)]
-  pred.with.thresh[, diff.bigger := min.after.bigger - min.after]
-  ## Compute upper bound of sub-derivatives. analogous.
+  pred.with.thresh[, diff.bigger := min.after - min.after.bigger]
+  ## Compute upper bound of sub-derivatives. analogous. There is some
+  ## repetition here that could be eliminated, but the intent of the
+  ## code would be a lot more difficult to understand.
   pred.with.thresh[, fp.before.smaller := fp.before+fp.diff]
   pred.with.thresh[, fn.before.smaller := fn.before+fn.diff]
   pred.with.thresh[, min.before.smaller := ifelse(
@@ -211,28 +218,31 @@ ROChange <- structure(function # ROC curve for changepoints
   }]
   left <- roc.polygon[-.N]
   right <- roc.polygon[-1]
+  ##value<< named list of results:
   list(
-    roc=interval.dt,
-    thresholds=rbind(
+    roc=interval.dt, ##<< a data.table with one row for each point on
+                     ##the ROC curve
+    thresholds=rbind(##<< two rows of roc which correspond to the
+                     ##predicted and minimal error thresholds
       data.table(
         threshold="predicted",
         interval.dt[min.thresh < 0 & 0 <= max.thresh, ]),
       data.table(threshold="min.error", interval.dt[which.min(errors), ])),
-    auc.polygon=roc.polygon,
-    auc=sum((right$FPR-left$FPR)*(right$TPR+left$TPR)/2),
-    aum=aum,
-    aum.subdiff=pred.with.thresh[, .(
-      lower=sum(-diff.bigger),
-      upper=sum(diff.smaller)
-    ), by=problem.vars]
-    )
-### list of results describing ROC curve: roc is a data.table with one
-### row for each point on the ROC curve; thresholds is the two rows of
-### roc which correspond to the predicted and minimal error
-### thresholds; auc.polygon is a data.table with one row for each
-### vertex of the polygon used to compute AUC; auc is the numeric Area
-### Under the ROC curve, actually computed via geometry::polyarea as
-### the area inside the auc.polygon.
+    auc.polygon=roc.polygon, ##<<a data.table with one row for
+                             ##each vertex of the polygon used to
+                             ##compute AUC
+    auc=##<<numeric Area Under the ROC curve
+      sum((right$FPR-left$FPR)*(right$TPR+left$TPR)/2),
+    aum=aum, ##<< numeric Area Under Min(FP,FN)
+    aum.subdiff=##<< data.table with one row for each prediction, and
+                ##columns upper/lower bound for the aum
+                ##sub-differential.
+      pred.with.thresh[, .(
+        lower=sum(diff.bigger),
+        upper=sum(diff.smaller)
+      ), by=problem.vars]
+  )
+  ##end<<
 }, ex=function(){
 
   library(penaltyLearning)
@@ -241,13 +251,27 @@ ROChange <- structure(function # ROC curve for changepoints
   data(neuroblastomaProcessed, envir=environment())
   ## Get incorrect labels data for one profile.
   pid <- 11
-  pro.errors <- neuroblastomaProcessed$errors[profile.id==pid,]
+  pro.errors <- neuroblastomaProcessed$errors[
+    profile.id==pid][order(chromosome, min.log.lambda)]
+  dcast(pro.errors, n.segments ~ chromosome, value.var="errors")
   ## Get the feature that corresponds to the BIC penalty = log(n),
   ## meaning log(penalty) = log(log(n)).
   chr.vec <- paste(c(1:4, 11, 17))
   pid.names <- paste0(pid, ".", chr.vec)
   BIC.feature <- neuroblastomaProcessed$feature.mat[pid.names, "log2.n"]
   pred <- data.table(pred.log.lambda=BIC.feature, chromosome=chr.vec)
+  ## edit one prediction so that it ends up having the same threshold
+  ## as another one, to illustrate an aum sub-differential with
+  ## un-equal lower/upper bounds.
+  err.changes <- pro.errors[, {
+    .SD[c(NA, diff(errors) != 0), .(min.log.lambda)]
+  }, by=chromosome]
+  (ch.vec <- err.changes[, structure(min.log.lambda, names=chromosome)])
+  other <- "11"
+  (diff.other <- ch.vec[[other]]-pred[other, pred.log.lambda, on=.(chromosome)])
+  pred["1", pred.log.lambda := ch.vec[["1"]]-diff.other, on=.(chromosome)]
+  pred["4", pred.log.lambda := 2, on=.(chromosome)]
+  ch.vec[["1"]]-pred["1", pred.log.lambda, on=.(chromosome)]
   result <- ROChange(pro.errors, pred, "chromosome")
   library(ggplot2)
   ## Plot the ROC curves.
@@ -265,6 +289,113 @@ ROChange <- structure(function # ROC curve for changepoints
                data=result$thresholds,
                shape=1)+
     xlab("log(penalty) constant added to BIC penalty")
+
+  ## Plot area under Min(FP,FN).
+  result$roc[, `min(fp,fn)` := ifelse(fp<fn, fp, fn)]
+  err.colors <- c(
+    "fp"="red",
+    "fn"="deepskyblue",
+    "min(fp,fn)"="black")
+  err.sizes <- c(
+    "fp"=3,
+    "fn"=2,
+    "min(fp,fn)"=1)
+  roc.tall <- melt(result$roc, measure.vars=names(err.colors))
+  area.rects <- data.table(
+    chromosome="total",
+    result$roc[0<`min(fp,fn)`])
+  (gg.total <- ggplot()+
+     geom_vline(
+       xintercept=0,
+       color="grey")+
+     geom_rect(aes(
+       xmin=min.thresh, xmax=max.thresh,
+       ymin=0, ymax=`min(fp,fn)`),
+       data=area.rects,
+       alpha=0.5)+
+     geom_text(aes(
+       min.thresh, `min(fp,fn)`/2,
+       label=sprintf(
+         "Area Under Min(FP,FN)=%.3f ",
+         result$aum)),
+       data=area.rects[1],
+       hjust=1,
+       color="grey50")+
+     geom_segment(aes(
+       min.thresh, value,
+       xend=max.thresh, yend=value,
+       color=variable, size=variable),
+       data=data.table(chromosome="total", roc.tall))+
+     scale_size_manual(values=err.sizes)+
+     scale_color_manual(values=err.colors)+
+     theme_bw()+
+     theme(panel.grid.minor=element_blank())+
+     scale_x_continuous(
+       "Prediction threshold")+
+     scale_y_continuous(
+       "Incorrectly predicted labels",
+       breaks=0:10))
+
+  ## Add individual error curves.
+  tall.errors <- melt(
+    pro.errors[pred, on=.(chromosome)],
+    measure.vars=c("fp", "fn"))
+  gg.total+
+    geom_segment(aes(
+      min.log.lambda-pred.log.lambda, value,
+      xend=max.log.lambda-pred.log.lambda, yend=value,
+      size=variable, color=variable),
+      data=tall.errors)+
+    facet_grid(chromosome ~ ., scales="free", space="free")+
+    theme(panel.spacing=grid::unit(0, "lines"))+
+    geom_blank(aes(
+      0, errors),
+      data=data.table(errors=c(1.5, -0.5)))
+
+  print(result$aum.subdiff)
+  if(interactive()){#this can be too long for CRAN.
+    ## Plot how Area Under Min(FP,FN) changes with each predicted value.
+    aum.dt <- pred[, {
+      data.table(log.pen=seq(0, 4, by=0.5))[, {
+        chr <- paste(chromosome)
+        new.pred.dt <- data.table(pred)
+        new.pred.dt[chr, pred.log.lambda := log.pen, on=.(chromosome)]
+        with(
+          ROChange(pro.errors, new.pred.dt, "chromosome"),
+          data.table(aum))
+      }, by=log.pen]
+    }, by=chromosome]
+    bounds.dt <- melt(
+      result$aum.subdiff,
+      measure.vars=c("lower", "upper"),
+      variable.name="bound",
+      value.name="slope")[pred, on=.(chromosome)]
+    bounds.dt[, intercept := result$aum-slope*pred.log.lambda]
+    ggplot()+
+      geom_abline(aes(
+        slope=slope, intercept=intercept),
+        size=1,
+        data=bounds.dt)+
+      scale_color_manual(
+        values=c(
+          predicted="red",
+          new="black"))+
+      geom_point(aes(
+        log.pen, aum, color=type),
+        data=data.table(type="new", aum.dt))+
+      geom_point(aes(
+        pred.log.lambda, result$aum, color=type),
+        shape=1,
+        data=data.table(type="predicted", pred))+
+      theme_bw()+
+      theme(panel.spacing=grid::unit(0, "lines"))+
+      facet_wrap("chromosome")+
+      coord_equal()+
+      xlab("New log(penalty) value for chromosome")+
+      ylab("Area Under Min(FP,FN)
+using new log(penalty) for this chromosome
+and predicted log(penalty) for others")
+  }
 
 })
 
