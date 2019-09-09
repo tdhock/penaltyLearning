@@ -30,6 +30,28 @@ ggcost <- function(){
 }
 
 models <- data.table(
+  fp=c(1, 0, 1, 0, 0, 0,0,0),
+  fn=c(0, 0, 0, 0, 0, 1, 0, 1),
+  possible.fn=c(0,0,0,0,1,1,1,1),
+  possible.fp=c(1,1,1,1,0,0,0,0),
+  min.log.lambda=c(-Inf,-1, 0, 1,-Inf,-1,0,1),
+  max.log.lambda=c(-1,0,1, Inf,-1,0,1,Inf),
+  labels=1,
+  problem=c(1,1,1,1,2,2,2,2))
+models[, errors := fp+fn]
+predictions <- data.table(problem=c(1,2), pred.log.lambda=c(1,0))
+ggcost()
+
+test_that("noncvx 1fp[-1,0] 1fn[0,1]", {
+  L <- ROChange(models, predictions, "problem")
+  expect_equal(L$aum, 0)
+  print(L$aum.subdiff)
+  expect_equal(L$aum.subdiff$problem, c(1,2))
+  expect_equal(L$aum.subdiff$lower, c(-1,0))
+  expect_equal(L$aum.subdiff$upper, c(0,1))
+})
+
+models <- data.table(
   fp=c(1, 0, 0, 0),
   fn=c(0, 0, 0, 1),
   possible.fn=c(0,0,1,1),
