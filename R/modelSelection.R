@@ -21,7 +21,7 @@ modelSelectionC <- structure(function # Exact model selection function
   stopifnot(length(model.id) == length(model.complexity))
   n.models <- length(loss.vec)
   result.list <- .C(
-    "modelSelectionFwd_interface",
+    "modelSelectionLinear_interface",
     loss.vec=as.double(loss.vec),
     model.complexity=as.double(model.complexity),
     n.models=as.integer(n.models),

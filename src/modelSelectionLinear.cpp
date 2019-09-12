@@ -1,6 +1,6 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
-#include "modelSelectionFwd.h"
+#include "modelSelectionLinear.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -14,8 +14,8 @@ double c(int t, int i, int *K, const double *L, const double *C){
 }
 
 // Return value is an error status code defined in
-// modelSelectionFwd.h.
-int modelSelectionFwd
+// modelSelectionLinear.h.
+int modelSelectionLinear
 // This is Algorithm 1 from "Linear time dynamic programming for the
 // exact path of optimal models selected from a finite set." Argument
 // names in this C code are consistent with the variable names /
