@@ -52,10 +52,10 @@ int modelSelectionLinear
   int N = *n_models;
   for(int i=1; i < N; i++){
     if(L[i-1] <= L[i]){
-      return ERROR_FWD_LOSS_NOT_DECREASING;
+      return ERROR_LINEAR_LOSS_NOT_DECREASING;
     }
     if(complexity_vec[i] <= complexity_vec[i-1]){ 
-      return ERROR_FWD_COMPLEXITY_NOT_INCREASING;
+      return ERROR_LINEAR_COMPLEXITY_NOT_INCREASING;
     }
   }
   int M = 0; // index of largest selected model.

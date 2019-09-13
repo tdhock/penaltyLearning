@@ -43,10 +43,10 @@ void modelSelectionLinear_interface
   int status = modelSelectionLinear
     (loss_vec, complexity_vec, n_models,
      selected_model_vec, selected_penalty_vec, loop_eval_vec);
-  if(status == ERROR_FWD_LOSS_NOT_DECREASING){
+  if(status == ERROR_LINEAR_LOSS_NOT_DECREASING){
     error("loss not decreasing");
   }
-  if(status == ERROR_FWD_COMPLEXITY_NOT_INCREASING){
+  if(status == ERROR_LINEAR_COMPLEXITY_NOT_INCREASING){
     error("complexity not increasing");
   }
   if(status != 0){
