@@ -2,7 +2,8 @@
 
 #include "modelSelection.h"
 #include "modelSelectionLinear.h"
-#include "modelSelectionQuadratic.h"
+#include "modelSelectionQuadraticInput.h"
+#include "modelSelectionQuadraticOutput.h"
 #include "modelSelectionRigaill.h"
 #include "largestContinuousMinimum.h"
 #include <R.h>
@@ -55,29 +56,47 @@ void modelSelectionLinear_interface
   }
 }
   
-void modelSelectionQuadratic_interface
+void modelSelectionQuadraticInput_interface
 (double *loss_vec, double *complexity_vec, int *n_models,
  int *selected_model_vec, double *selected_penalty_vec
  ){
-  int status = modelSelectionQuadratic
+  int status = modelSelectionQuadraticInput
     (loss_vec, complexity_vec, n_models,
      selected_model_vec, selected_penalty_vec);
-  if(status == ERROR_QUAD_LOSS_NOT_DECREASING){
+  if(status == ERROR_QUAD_IN_LOSS_NOT_DECREASING){
     error("loss not decreasing");
   }
-  if(status == ERROR_QUAD_COMPLEXITY_NOT_INCREASING){
+  if(status == ERROR_QUAD_IN_COMPLEXITY_NOT_INCREASING){
     error("complexity not increasing");
   }
   if(status != 0){
     error("error code %d", status);
   }
 }
- 
+
+void modelSelectionQuadraticOutput_interface
+(double *loss_vec, double *complexity_vec, int *n_models,
+ int *selected_model_vec, double *selected_penalty_vec
+ ){
+  int status = modelSelectionQuadraticOutput
+    (loss_vec, complexity_vec, n_models,
+     selected_model_vec, selected_penalty_vec);
+  if(status == ERROR_QUAD_OUT_LOSS_NOT_DECREASING){
+    error("loss not decreasing");
+  }
+  if(status == ERROR_QUAD_OUT_COMPLEXITY_NOT_INCREASING){
+    error("complexity not increasing");
+  }
+  if(status != 0){
+    error("error code %d", status);
+  }
+}
+
 void modelSelectionRigaill_interface
 (double *loss_vec, double *complexity_vec, int *n_models,
  int *selected_model_vec, double *selected_penalty_vec
  ){
-  int status = modelSelectionQuadratic
+  int status = modelSelectionRigaill
     (loss_vec, complexity_vec, n_models,
      selected_model_vec, selected_penalty_vec);
   if(status == ERROR_RIGAILL_LOSS_NOT_DECREASING){
@@ -92,8 +111,12 @@ void modelSelectionRigaill_interface
 }
  
 R_CMethodDef cMethods[] = {
-  {"modelSelectionQuadratic_interface",
-   (DL_FUNC) &modelSelectionQuadratic_interface, 5
+  {"modelSelectionQuadraticInput_interface",
+   (DL_FUNC) &modelSelectionQuadraticInput_interface, 5
+   //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
+  },
+  {"modelSelectionQuadraticOutput_interface",
+   (DL_FUNC) &modelSelectionQuadraticOutput_interface, 5
    //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
   },
   {"modelSelectionRigaill_interface",
