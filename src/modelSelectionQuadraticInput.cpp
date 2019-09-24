@@ -31,7 +31,7 @@ int modelSelectionQuadraticInput
       }
     }
     // In the pseudocode this is the end of Algorithm 2.
-    b[M] = lambda;
+    b[M] = min_lambda;
     K[M] = t;
   }
   *n_models = M; 
