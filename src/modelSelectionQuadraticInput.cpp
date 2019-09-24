@@ -16,7 +16,7 @@ int modelSelectionQuadraticInput
       return ERROR_QUAD_IN_COMPLEXITY_NOT_INCREASING;
     }
   }
-  int M = 0; // index of largest selected model.
+  int M = 0, best_k; // index of largest selected model.
   b[0] = INFINITY;
   K[0] = 0;
   double lambda, min_lambda;
@@ -27,9 +27,11 @@ int modelSelectionQuadraticInput
       lambda = (L[k]-L[t])/(complexity_vec[t]-complexity_vec[k]);
       if(lambda < min_lambda){
 	min_lambda = lambda;
-	M = k+1;
+	best_k = k;
       }
     }
+    while(best_k < K[M])M--;
+    M++;
     // In the pseudocode this is the end of Algorithm 2.
     b[M] = min_lambda;
     K[M] = t;
