@@ -23,7 +23,7 @@ int modelSelectionQuadraticOutput
   for(int t=1; t<N; t++){
     // In the pseudocode this is the start of Algorithm 2.
     min_lambda=INFINITY;
-    for(int m=0; m<M; m++){
+    for(int m=0; m <= M; m++){
       int k=K[m];
       lambda = (L[k]-L[t])/(complexity_vec[t]-complexity_vec[k]);
       if(lambda < min_lambda){
