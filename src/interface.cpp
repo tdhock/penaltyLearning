@@ -1,8 +1,9 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
 #include "modelSelection.h"
-#include "modelSelectionFwd.h"
+#include "modelSelectionLinear.h"
 #include "modelSelectionQuadratic.h"
+#include "modelSelectionRigaill.h"
 #include "largestContinuousMinimum.h"
 #include <R.h>
 #include <R_ext/Rdynload.h>
@@ -35,18 +36,18 @@ void modelSelection_interface
   }
 }
    
-void modelSelectionFwd_interface
+void modelSelectionLinear_interface
 (double *loss_vec, double *complexity_vec, int *n_models,
  int *selected_model_vec, double *selected_penalty_vec,
  int *loop_eval_vec
  ){
-  int status = modelSelectionFwd
+  int status = modelSelectionLinear
     (loss_vec, complexity_vec, n_models,
      selected_model_vec, selected_penalty_vec, loop_eval_vec);
-  if(status == ERROR_FWD_LOSS_NOT_DECREASING){
+  if(status == ERROR_LINEAR_LOSS_NOT_DECREASING){
     error("loss not decreasing");
   }
-  if(status == ERROR_FWD_COMPLEXITY_NOT_INCREASING){
+  if(status == ERROR_LINEAR_COMPLEXITY_NOT_INCREASING){
     error("complexity not increasing");
   }
   if(status != 0){
@@ -72,13 +73,35 @@ void modelSelectionQuadratic_interface
   }
 }
  
+void modelSelectionRigaill_interface
+(double *loss_vec, double *complexity_vec, int *n_models,
+ int *selected_model_vec, double *selected_penalty_vec
+ ){
+  int status = modelSelectionQuadratic
+    (loss_vec, complexity_vec, n_models,
+     selected_model_vec, selected_penalty_vec);
+  if(status == ERROR_RIGAILL_LOSS_NOT_DECREASING){
+    error("loss not decreasing");
+  }
+  if(status == ERROR_RIGAILL_COMPLEXITY_NOT_INCREASING){
+    error("complexity not increasing");
+  }
+  if(status != 0){
+    error("error code %d", status);
+  }
+}
+ 
 R_CMethodDef cMethods[] = {
   {"modelSelectionQuadratic_interface",
    (DL_FUNC) &modelSelectionQuadratic_interface, 5
    //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
   },
-  {"modelSelectionFwd_interface",
-   (DL_FUNC) &modelSelectionFwd_interface, 6
+  {"modelSelectionRigaill_interface",
+   (DL_FUNC) &modelSelectionRigaill_interface, 5
+   //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
+  },
+  {"modelSelectionLinear_interface",
+   (DL_FUNC) &modelSelectionLinear_interface, 6
    //,{REALSXP, REALSXP, INTSXP, INTSXP, REALSXP}
   },
   {"modelSelection_interface",

@@ -1,6 +1,6 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
-#include "modelSelectionFwd.h"
+#include "modelSelectionLinear.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -14,8 +14,8 @@ double c(int t, int i, int *K, const double *L, const double *C){
 }
 
 // Return value is an error status code defined in
-// modelSelectionFwd.h.
-int modelSelectionFwd
+// modelSelectionLinear.h.
+int modelSelectionLinear
 // This is Algorithm 1 from "Linear time dynamic programming for the
 // exact path of optimal models selected from a finite set." Argument
 // names in this C code are consistent with the variable names /
@@ -52,10 +52,10 @@ int modelSelectionFwd
   int N = *n_models;
   for(int i=1; i < N; i++){
     if(L[i-1] <= L[i]){
-      return ERROR_FWD_LOSS_NOT_DECREASING;
+      return ERROR_LINEAR_LOSS_NOT_DECREASING;
     }
     if(complexity_vec[i] <= complexity_vec[i-1]){ 
-      return ERROR_FWD_COMPLEXITY_NOT_INCREASING;
+      return ERROR_LINEAR_COMPLEXITY_NOT_INCREASING;
     }
   }
   int M = 0; // index of largest selected model.
