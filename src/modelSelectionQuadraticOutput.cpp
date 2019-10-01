@@ -16,25 +16,23 @@ int modelSelectionQuadraticOutput
       return ERROR_QUAD_OUT_COMPLEXITY_NOT_INCREASING;
     }
   }
-  int M = 0, best_k; // index of largest selected model.
+  int M = 0, best_k=0; // index of largest selected model.
   b[0] = INFINITY;
   K[0] = 0;
-  double lambda, min_lambda;
+  double lambda, best_lambda;
   for(int t=1; t<N; t++){
     // In the pseudocode this is the start of Algorithm 2.
-    min_lambda=INFINITY;
-    for(int m=0; m <= M; m++){
-      int k=K[m];
+    best_lambda=INFINITY;
+    for(int i=0; i <= M; i++){
+      int k=K[i];
       lambda = (L[k]-L[t])/(complexity_vec[t]-complexity_vec[k]);
-      if(lambda < min_lambda){
-	min_lambda = lambda;
+      if(lambda < best_lambda && k > best_k){
+	best_lambda = lambda;
 	best_k = k;
       }
     }
-    while(best_k < K[M])M--;
-    M++;
     // In the pseudocode this is the end of Algorithm 2.
-    b[M] = min_lambda;
+    b[M] = best_lambda;
     K[M] = t;
   }
   *n_models = M; 
