@@ -1,39 +1,42 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
-#include "modelSelectionQuadraticInput.h"
+#include "modelSelectionQuadraticSometimes.h"
 #include <math.h>
 #include <stdio.h>
 
-int modelSelectionQuadraticInput
+int modelSelectionQuadraticSometimes
 (const double *L, const double *complexity_vec, int *n_models,
- int *K, double *b){
+ int *K, double *b, int *iterations){
   int N = *n_models;
   for(int i=1; i < N; i++){
     if(L[i-1] <= L[i]){
-      return ERROR_QUAD_IN_LOSS_NOT_DECREASING;
+      return ERROR_QUAD_SOME_LOSS_NOT_DECREASING;
     }
     if(complexity_vec[i] <= complexity_vec[i-1]){ 
-      return ERROR_QUAD_IN_COMPLEXITY_NOT_INCREASING;
+      return ERROR_QUAD_SOME_COMPLEXITY_NOT_INCREASING;
     }
   }
-  int M = 0, best_k; // index of largest selected model.
+  int M = 0, best_i; // index of largest selected model.
   b[0] = INFINITY;
   K[0] = 0;
-  double lambda, min_lambda;
+  iterations[0]=0;
+  double lambda, best_lambda;
   for(int t=1; t<N; t++){
     // In the pseudocode this is the start of Algorithm 2.
-    min_lambda=INFINITY;
-    for(int k=0; k<t; k++){
+    best_lambda=INFINITY;
+    best_i=0;
+    iterations[t]=M;
+    for(int i=0; i <= M; i++){
+      int k=K[i];
       lambda = (L[k]-L[t])/(complexity_vec[t]-complexity_vec[k]);
-      if(lambda < min_lambda){
-	min_lambda = lambda;
-	best_k = k;
+      if(lambda < b[i] && i > best_i){
+	best_lambda = lambda;
+	best_i = i;
       }
     }
-    while(best_k < K[M])M--;
-    M++;
+    M = best_i + 1;
     // In the pseudocode this is the end of Algorithm 2.
-    b[M] = min_lambda;
+    b[M] = best_lambda;
     K[M] = t;
   }
   *n_models = M; 

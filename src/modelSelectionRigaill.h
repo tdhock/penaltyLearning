@@ -4,4 +4,4 @@
 #define ERROR_RIGAILL_COMPLEXITY_NOT_INCREASING 2
 
 int modelSelectionRigaill(const double*, const double*, int*,
-		      int*, double*);
+			  int*, double*, int*);

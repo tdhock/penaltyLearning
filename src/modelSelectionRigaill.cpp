@@ -6,9 +6,11 @@
 
 int modelSelectionRigaill
 (const double *loss_vec, const double *complexity_vec, int *n_models,
- int *selected_model_vec, double *selected_penalty_vec){
+ int *selected_model_vec, double *selected_penalty_vec, int *iterations){
   int N = *n_models;
+  iterations[0]=0;
   for(int i=1; i < N; i++){
+    iterations[i]=0;
     if(loss_vec[i-1] <= loss_vec[i]){
       return ERROR_RIGAILL_LOSS_NOT_DECREASING;
     }
@@ -22,6 +24,7 @@ int modelSelectionRigaill
   while(0 < kc){
     double next_lambda = INFINITY;
     int next_K = 0;
+    iterations[model_i] = kc;
     for(int k=0; k<kc; k++){
       double hit_time =
 	(loss_vec[kc] - loss_vec[k])/(complexity_vec[k]-complexity_vec[kc]);
