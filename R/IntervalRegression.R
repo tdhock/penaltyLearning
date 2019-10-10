@@ -228,7 +228,7 @@ IntervalRegressionCV <- structure(function
         train.features, train.targets, verbose=verbose,
         margin=margin,
         initial.regularization=initial.regularization
-      )#, ...)
+      , ...)
       validation.features <- feature.mat[is.validation, , drop=FALSE]
       pred.log.lambda <- fit$predict(validation.features)
       validation.targets <- target.mat[is.validation, , drop=FALSE]
@@ -767,7 +767,7 @@ IntervalRegressionInternal <- function
 ### iteration if >= 2.
  margin=1,
 ### Margin size hyper-parameter, default 1.
-  biggest.crit=1e6
+  biggest.crit=100
 ### Restart FISTA with a bigger Lipschitz (smaller step size) if crit
 ### gets larger than this.
  ){
