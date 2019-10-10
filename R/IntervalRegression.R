@@ -765,8 +765,11 @@ IntervalRegressionInternal <- function
  verbose=2,
 ### Cat messages: for restarts and at the end if >= 1, and for every
 ### iteration if >= 2.
- margin=1
+ margin=1,
 ### Margin size hyper-parameter, default 1.
+  biggest.crit=1e6
+### Restart FISTA with a bigger Lipschitz (smaller step size) if crit
+### gets larger than this.
  ){
   if(!(
     is.numeric(margin) &&
@@ -876,13 +879,15 @@ IntervalRegressionInternal <- function
 
     if(verbose >= 2){
       cost <- calc.cost(this.iterate)
-      cat(sprintf("%10d cost %10f crit %10.7f\n",
-                  iterate.count,
-                  cost,
-                  stopping.crit))
+      cat(sprintf(
+        "it=%10d cost=%10f crit=%10.7f L=%f\n",
+        iterate.count,
+        cost,
+        stopping.crit,
+        Lipschitz))
     }
     iterate.count <- iterate.count + 1
-    if(any(!is.finite(this.iterate)) || 1e20 < stopping.crit){
+    if(any(!is.finite(this.iterate)) || biggest.crit < stopping.crit){
       if(verbose >= 1){
         cat("restarting with bigger Lipschitz.\n")
       }
