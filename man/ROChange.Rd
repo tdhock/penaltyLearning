@@ -12,7 +12,7 @@ labelError(modelSelection(...), ...)$model.errors -- see examples.}
   \item{predictions}{data.frame with a column named pred.log.lambda, the predicted
 log(penalty) value for each segmentation problem.}
   \item{problem.vars}{character: column names used to identify data set / segmentation
-problem. }
+problem.}
 }
 
 \value{list of results describing ROC curve: roc is a data.table with one
@@ -20,7 +20,7 @@ row for each point on the ROC curve; thresholds is the two rows of
 roc which correspond to the predicted and minimal error
 thresholds; auc.polygon is a data.table with one row for each
 vertex of the polygon used to compute AUC; auc is the numeric Area
-Under the ROC curve, actually computed via geometry::polyarea as
+Under the ROC curve, actually computed via \code{\link[geometry]{polyarea}} as
 the area inside the auc.polygon.}
 
 \author{Toby Dylan Hocking}

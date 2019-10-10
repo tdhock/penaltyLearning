@@ -146,11 +146,7 @@ IntervalRegressionCV <- structure(function
 ### time is linear in the number of elements of margin.vec -- more
 ### values takes more computation time, but yields slightly more
 ### accurate models (if there is enough data).
-  LAPPLY=if(requireNamespace("future.apply")){
-    future.apply::future_lapply
-  }else{
-    lapply
-  },
+  LAPPLY=NULL,
 ### Function to use for parallelization, by default
 ### future.apply::future_lapply if it is available, otherwise
 ### lapply. For debugging with verbose>0 it is useful to specify
@@ -168,6 +164,13 @@ IntervalRegressionCV <- structure(function
       vjust <- upper.limit <- lower <- upper <- fold <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### IntervalRegressionCV: no visible binding for global variable
+  if(is.null(LAPPLY)){
+    LAPPLY <- if(requireNamespace("future.apply")){
+      future.apply::future_lapply
+    }else{
+      lapply
+    }
+  }
   n.observations <- check_features_targets(feature.mat, target.mat)
   stopifnot(is.integer(n.folds))
   stopifnot(is.integer(fold.vec))
