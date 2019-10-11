@@ -13,7 +13,7 @@ regression model, try \code{\link{IntervalRegressionCV}} or
 \usage{IntervalRegressionInternal(features, targets, initial.param.vec, 
     regularization, threshold = 0.001, max.iterations = 1000, 
     weight.vec = NULL, Lipschitz = NULL, verbose = 2, 
-    margin = 1, biggest.crit = 1e+06)}
+    margin = 1, biggest.crit = 100)}
 \arguments{
   \item{features}{Scaled numeric feature matrix (problems x \code{features}). The first
 column/feature should be all ones and will not be regularized.}
