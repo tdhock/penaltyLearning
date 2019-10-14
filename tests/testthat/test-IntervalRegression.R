@@ -2,6 +2,16 @@ library(testthat)
 context("IntervalRegression")
 library(penaltyLearning)
 
+test_that("IRCV converges on small data with prev problems", {
+  data("notConverging", package="penaltyLearning")
+  fit <- with(notConverging, IntervalRegressionCV(
+    X.mat, y.mat, fold.vec=fold.vec,
+    min.obs=nrow(X.mat),
+    LAPPLY=lapply,
+    verbose=0))
+  expect_is(fit, "list")
+})
+
 feature.mat <- structure(c(
   1.79565978525711, 1.79606119914403, 1.71572069625467,
   1.61288792166534, 1.65564225297093, 1.66162385851159, 1.57115110896884,

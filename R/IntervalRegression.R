@@ -102,7 +102,10 @@ IntervalRegressionCV <- structure(function
 (feature.mat,
 ### Numeric feature matrix, n observations x p features.
   target.mat,
-### Numeric target matrix, n observations x 2 limits.
+### Numeric target matrix, n observations x 2 limits. These should be
+### real-valued (possibly negative). If your data are interval
+### censored positive-valued survival times, you need to log them to
+### obtain target.mat.
   n.folds=ifelse(nrow(feature.mat) < 10, 3L, 5L),
 ### Number of cross-validation folds.
   fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat))),
@@ -143,6 +146,16 @@ IntervalRegressionCV <- structure(function
 ### time is linear in the number of elements of margin.vec -- more
 ### values takes more computation time, but yields slightly more
 ### accurate models (if there is enough data).
+  LAPPLY=NULL,
+### Function to use for parallelization, by default
+### future.apply::future_lapply if it is available, otherwise
+### lapply. For debugging with verbose>0 it is useful to specify
+### LAPPLY=lapply in order to interactively see messages, before all
+### parallel processes end.
+  check.unlogged=TRUE,
+### If TRUE, stop with an error if target matrix is non-negative and
+### has any big difference in successive quantiles (this is an
+### indicator that the user probably forgot to log their outputs).
  ...
 ### passed to IntervalRegressionRegularized.
 ){
@@ -151,6 +164,13 @@ IntervalRegressionCV <- structure(function
       vjust <- upper.limit <- lower <- upper <- fold <- NULL
 ### The code above is to avoid CRAN NOTEs like
 ### IntervalRegressionCV: no visible binding for global variable
+  if(is.null(LAPPLY)){
+    LAPPLY <- if(requireNamespace("future.apply")){
+      future.apply::future_lapply
+    }else{
+      lapply
+    }
+  }
   n.observations <- check_features_targets(feature.mat, target.mat)
   stopifnot(is.integer(n.folds))
   stopifnot(is.integer(fold.vec))
@@ -177,6 +197,11 @@ IntervalRegressionCV <- structure(function
   )){
     stop("margin.vec must be a numeric vector of finite margin size parameters")
   }
+  q.vec <- quantile(target.mat[is.finite(target.mat)])
+  big.diff <- q.vec[-1] / q.vec[-length(q.vec)] > 10
+  if(isTRUE(check.unlogged) && all(target.mat >= 0) && any(big.diff)){
+    stop("all targets are non-negative, and there is a big change between quantiles, so outputs are probably un-logged; this function expects real-valued (possibly negative) limits, so please try taking the log of your target matrix, or using check.unlogged=FALSE")
+  }
   fold.limits <- data.table(
     lower=is.finite(target.mat[,1]),
     upper=is.finite(target.mat[,2]),
@@ -189,11 +214,6 @@ IntervalRegressionCV <- structure(function
     stop("some folds have no upper/lower limits; each fold should have at least one upper and one lower limit")
   }
   validation.fold.vec <- unique(fold.vec)
-  LAPPLY <- if(requireNamespace("future.apply")){
-    future.apply::future_lapply
-  }else{
-    lapply
-  }
   validation.data.list <- LAPPLY(validation.fold.vec, function(validation.fold){
     ##print(validation.fold)
     is.validation <- fold.vec == validation.fold
@@ -208,7 +228,7 @@ IntervalRegressionCV <- structure(function
         train.features, train.targets, verbose=verbose,
         margin=margin,
         initial.regularization=initial.regularization
-      )#, ...)
+      , ...)
       validation.features <- feature.mat[is.validation, , drop=FALSE]
       pred.log.lambda <- fit$predict(validation.features)
       validation.targets <- target.mat[is.validation, , drop=FALSE]
@@ -745,8 +765,11 @@ IntervalRegressionInternal <- function
  verbose=2,
 ### Cat messages: for restarts and at the end if >= 1, and for every
 ### iteration if >= 2.
- margin=1
+ margin=1,
 ### Margin size hyper-parameter, default 1.
+  biggest.crit=100
+### Restart FISTA with a bigger Lipschitz (smaller step size) if crit
+### gets larger than this.
  ){
   if(!(
     is.numeric(margin) &&
@@ -856,13 +879,15 @@ IntervalRegressionInternal <- function
 
     if(verbose >= 2){
       cost <- calc.cost(this.iterate)
-      cat(sprintf("%10d cost %10f crit %10.7f\n",
-                  iterate.count,
-                  cost,
-                  stopping.crit))
+      cat(sprintf(
+        "it=%10d cost=%10f crit=%10.7f L=%f\n",
+        iterate.count,
+        cost,
+        stopping.crit,
+        Lipschitz))
     }
     iterate.count <- iterate.count + 1
-    if(any(!is.finite(this.iterate)) || 1e20 < stopping.crit){
+    if(any(!is.finite(this.iterate)) || biggest.crit < stopping.crit){
       if(verbose >= 1){
         cat("restarting with bigger Lipschitz.\n")
       }

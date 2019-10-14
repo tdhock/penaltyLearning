@@ -1,18 +1,18 @@
 \name{largestContinuousMinimumC}
 \alias{largestContinuousMinimumC}
 \title{largestContinuousMinimumC}
-\description{Find the run of minimum cost with the largest size.
+\description{Find the run of minimum \code{cost} with the largest \code{size}.
 This function use a linear time C implementation,
 and is meant for internal use.
-Use targetIntervals for real data.}
+Use \code{\link{targetIntervals}} for real data.}
 \usage{largestContinuousMinimumC(cost, size)}
 \arguments{
-  \item{cost}{numeric vector of cost values.}
-  \item{size}{numeric vector of interval size values.}
+  \item{cost}{numeric vector of \code{cost} values.}
+  \item{size}{numeric vector of interval \code{size} values.}
 }
 
 \value{Integer vector length 2 (start and end of target interval relative
-to cost and size).}
+to \code{cost} and \code{size}).}
 
 \author{Toby Dylan Hocking}
 

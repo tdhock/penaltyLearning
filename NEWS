@@ -5,6 +5,19 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.10.10
+
+stop with an error for IntervalRegressionCV(., unlogged.outputs).
+
+new args for IntervalRegressionCV including LAPPLY which defaults to
+future.apply::future_lapply but can be set to base::lapply for
+debugging.
+
+new notConverging data set and test.
+
+smaller crit before restarting with a larger Lipschitz in
+IntervalRegressionCV.
+
 2019.5.29
 
 ROChange: only return one threshold=="prediction" row, even if the

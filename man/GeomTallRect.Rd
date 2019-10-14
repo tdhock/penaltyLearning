@@ -2,7 +2,7 @@
 \alias{GeomTallRect}
 \docType{data}
 \title{GeomTallRect}
-\description{ggproto object for geom_tallrect}
+\description{ggproto object for \code{\link{geom_tallrect}}}
 \usage{"GeomTallRect"}
 
 
