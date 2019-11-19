@@ -301,3 +301,16 @@ test_that("error for unrecognized labels", {
       model.vars="complexity")
   }, "labels$annotation must be one of annotations$annotation", fixed=TRUE)
 })
+
+test_that("label error works when some model cols are NA", {
+  model.dt <- data.table(prob="five", model="foo", bar=NA)
+  change.dt <- data.table(prob=character(), model=character(), pos=integer())
+  label.dt <- label("1change", 5, 8)
+  err.list <- labelError(
+    model.dt, label.dt, change.dt,
+    problem.vars="prob",
+    label.vars=c('start', 'end'),
+    change.var="pos",
+    model.vars="model")
+  expect_equal(err.list$model.errors$errors, 1)
+})

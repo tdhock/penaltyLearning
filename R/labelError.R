@@ -117,7 +117,7 @@ labelError <- structure(function # Compute incorrect labels
   }
   models.dt <- data.table(models)
   model.labels <- models.dt[labels.info, on=problem.vars, allow.cartesian=TRUE]
-  if(any(is.na(model.labels))){
+  if(any(is.na(model.labels[, model.vars, with=FALSE]))){
     stop("some labels have no models")
   }
   changes.dt <- data.table(changes)
