@@ -3,6 +3,14 @@ context("modelSelection")
 library(penaltyLearning)
 data(oneSkip)
 
+test_that("no error for odd model/loss values", {
+  loss.df <- data.frame(
+    complexity=0:10,
+    loss=c(10:6, 0, 5:1))
+  selection.df <- modelSelection(loss.df)
+  expect_equal(selection.df$complexity, c(5, 0))
+})
+
 test_that("output intervals computed correctly", {
   df <- with(oneSkip$input, modelSelectionC(error, segments, peaks))
   expect_identical(df$model.complexity, oneSkip$output$model.complexity)

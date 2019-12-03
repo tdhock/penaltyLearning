@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2019.12.3
+
+test/fix modelSelection for non-monotonic sequences of loss values.
+
 2019.11.19
 
 labelError is OK with model columns that are missing.

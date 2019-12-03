@@ -261,7 +261,8 @@ modelSelection <- function # Compute exact model selection function
   }
   ord <- order(models[[complexity]], models[[loss]])
   sorted <- models[ord,]
-  keep <- c(TRUE, diff(sorted[[loss]]) < 0)
+  cm <- cummin(sorted[[loss]])
+  keep <- c(TRUE, diff(cm) < 0)
   filtered <- sorted[keep, ]
   loss.vec <- filtered[[loss]]
   complexity.vec <- filtered[[complexity]]
