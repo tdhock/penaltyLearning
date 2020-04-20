@@ -2,7 +2,8 @@
 \alias{predict.IntervalRegression}
 \title{predict IntervalRegression}
 \description{Compute model predictions.}
-\usage{\method{predict}{IntervalRegression}(object, X, ...)}
+\usage{\method{predict}{IntervalRegression}(object, 
+    X, ...)}
 \arguments{
   \item{object}{
 }

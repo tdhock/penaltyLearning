@@ -2,7 +2,8 @@
 \alias{plot.IntervalRegression}
 \title{plot IntervalRegression}
 \description{Plot an IntervalRegression model.}
-\usage{\method{plot}{IntervalRegression}(x, ...)}
+\usage{\method{plot}{IntervalRegression}(x, 
+    ...)}
 \arguments{
   \item{x}{
 }

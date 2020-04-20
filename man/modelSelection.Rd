@@ -8,7 +8,8 @@ solution for every lambda in (min.lambda, max.lambda). Use this
 function after having computed changepoints and \code{loss} values for
 each model, and before using \code{\link{labelError}}. This function uses the
 linear time algorithm implemented in C code (\code{\link{modelSelectionC}}).}
-\usage{modelSelection(models, loss = "loss", complexity = "complexity")}
+\usage{modelSelection(models, 
+    loss = "loss", complexity = "complexity")}
 \arguments{
   \item{models}{data.frame with one row per model. There must be at least two
 columns models[[loss]] and models[[complexity]], but there can

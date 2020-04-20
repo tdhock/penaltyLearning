@@ -3,7 +3,8 @@
 \title{ROC curve for changepoints}
 \description{Compute a Receiver Operating Characteristic curve for a penalty
 function.}
-\usage{ROChange(models, predictions, problem.vars = character())}
+\usage{ROChange(models, predictions, 
+    problem.vars = character())}
 \arguments{
   \item{models}{data.frame describing the number of incorrect labels as a function
 of log(lambda), with columns min.log.lambda, max.log.lambda, fp,
@@ -25,9 +26,9 @@ each vertex of the polygon used to
 compute AUC}
 \item{auc}{numeric Area Under the ROC curve}
 \item{aum}{numeric Area Under Min(FP,FN)}
-\item{aum.subdiff}{data.table with one row for each prediction, and
-columns upper/lower bound for the aum
-sub-differential.}}
+\item{aum.grad}{data.table with one row for each prediction, and
+columns hi/lo bound for the aum
+generalized gradient.}}
 
 \author{Toby Dylan Hocking}
 
@@ -53,7 +54,7 @@ sub-differential.}}
   pred <- data.table(pred.log.lambda=BIC.feature, chromosome=chr.vec)
   ## edit one prediction so that it ends up having the same threshold
   ## as another one, to illustrate an aum sub-differential with
-  ## un-equal lower/upper bounds.
+  ## un-equal lo/hi bounds.
   err.changes <- pro.errors[, {
     .SD[c(NA, diff(errors) != 0), .(min.log.lambda)]
   }, by=chromosome]
@@ -82,30 +83,29 @@ sub-differential.}}
     xlab("log(penalty) constant added to BIC penalty")
 
   ## Plot area under Min(FP,FN).
-  result$roc[, `min(fp,fn)` := ifelse(fp<fn, fp, fn)]
   err.colors <- c(
     "fp"="red",
     "fn"="deepskyblue",
-    "min(fp,fn)"="black")
+    "min.fp.fn"="black")
   err.sizes <- c(
     "fp"=3,
     "fn"=2,
-    "min(fp,fn)"=1)
+    "min.fp.fn"=1)
   roc.tall <- melt(result$roc, measure.vars=names(err.colors))
   area.rects <- data.table(
     chromosome="total",
-    result$roc[0<`min(fp,fn)`])
+    result$roc[0<min.fp.fn])
   (gg.total <- ggplot()+
      geom_vline(
        xintercept=0,
        color="grey")+
      geom_rect(aes(
        xmin=min.thresh, xmax=max.thresh,
-       ymin=0, ymax=`min(fp,fn)`),
+       ymin=0, ymax=min.fp.fn),
        data=area.rects,
        alpha=0.5)+
      geom_text(aes(
-       min.thresh, `min(fp,fn)`/2,
+       min.thresh, min.fp.fn/2,
        label=sprintf(
          "Area Under Min(FP,FN)=\%.3f ",
          result$aum)),
@@ -143,7 +143,7 @@ sub-differential.}}
       0, errors),
       data=data.table(errors=c(1.5, -0.5)))
 
-  print(result$aum.subdiff)
+  print(result$aum.grad)
   if(interactive()){#this can be too long for CRAN.
     ## Plot how Area Under Min(FP,FN) changes with each predicted value.
     aum.dt <- pred[, {
@@ -157,8 +157,8 @@ sub-differential.}}
       }, by=log.pen]
     }, by=chromosome]
     bounds.dt <- melt(
-      result$aum.subdiff,
-      measure.vars=c("lower", "upper"),
+      result$aum.grad,
+      measure.vars=c("lo", "hi"),
       variable.name="bound",
       value.name="slope")[pred, on=.(chromosome)]
     bounds.dt[, intercept := result$aum-slope*pred.log.lambda]
@@ -167,6 +167,9 @@ sub-differential.}}
         slope=slope, intercept=intercept),
         size=1,
         data=bounds.dt)+
+      geom_text(aes(
+        2, 2, label=sprintf("directional derivatives = [\%d, \%d]", lo, hi)),
+        data=result$aum.grad)+
       scale_color_manual(
         values=c(
           predicted="red",
@@ -180,7 +183,7 @@ sub-differential.}}
         data=data.table(type="predicted", pred))+
       theme_bw()+
       theme(panel.spacing=grid::unit(0, "lines"))+
-      facet_wrap("chromosome")+
+      facet_wrap("chromosome", labeller=label_both)+
       coord_equal()+
       xlab("New log(penalty) value for chromosome")+
       ylab("Area Under Min(FP,FN)

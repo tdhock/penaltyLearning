@@ -5,7 +5,8 @@
 This function use a linear time C implementation,
 and is meant for internal use.
 Use \code{\link{targetIntervals}} for real data.}
-\usage{largestContinuousMinimumC(cost, size)}
+\usage{largestContinuousMinimumC(cost, 
+    size)}
 \arguments{
   \item{cost}{numeric vector of \code{cost} values.}
   \item{size}{numeric vector of interval \code{size} values.}

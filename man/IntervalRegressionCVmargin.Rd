@@ -14,8 +14,9 @@ On large (N > 1000 rows) data sets,
 this function should yield a model which is a little
 more accurate than \code{\link{IntervalRegressionCV}}
 (since the margin parameter is optimized).}
-\usage{IntervalRegressionCVmargin(feature.mat, target.mat, 
-    log10.diff = 2, n.margin = 10L, ...)}
+\usage{IntervalRegressionCVmargin(feature.mat, 
+    target.mat, log10.diff = 2, 
+    n.margin = 10L, ...)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix, n observations x p features.}
   \item{target.mat}{Numeric target matrix, n observations x 2 limits.}

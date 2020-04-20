@@ -5,7 +5,8 @@
 This function uses a two pass R implementation,
 and is meant for internal use.
 Use \code{\link{targetIntervals}} for real data.}
-\usage{largestContinuousMinimumR(cost, size)}
+\usage{largestContinuousMinimumR(cost, 
+    size)}
 \arguments{
   \item{cost}{numeric vector of \code{cost} values.}
   \item{size}{numeric vector of interval \code{size} values.}

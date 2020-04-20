@@ -23,7 +23,7 @@ ggcost <- function(){
         log.pen, aum),
         data=gg.dt)+
       theme_bw()+
-      theme(panel.margin=grid::unit(0, "lines"))+
+      theme(panel.spacing=grid::unit(0, "lines"))+
       facet_grid(problem ~ .)+
       coord_equal()
   }
@@ -41,14 +41,16 @@ models <- data.table(
 models[, errors := fp+fn]
 predictions <- data.table(problem=c(1,2), pred.log.lambda=c(1,0))
 ggcost()
-
 test_that("noncvx 1fp[-1,0] 1fn[0,1]", {
   L <- ROChange(models, predictions, "problem")
-  expect_equal(L$aum, 0)
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, c(1,2))
-  expect_equal(L$aum.subdiff$lower, c(-1,0))
-  expect_equal(L$aum.subdiff$upper, c(0,1))
+  ggplot()+geom_segment(aes(
+    min.thresh, min.fp.fn, xend=max.thresh, yend=min.fp.fn),
+    data=L$roc)
+  expect_equal(L$aum, 1)
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, c(1,2))
+  expect_equal(L$aum.grad$lo, c(1,1))
+  expect_equal(L$aum.grad$hi, c(-1,-1))
 })
 
 models <- data.table(
@@ -66,10 +68,10 @@ ggcost()
 test_that("1fp[-1,0] 1fn[0,1]", {
   L <- ROChange(models, predictions, "problem")
   expect_equal(L$aum, 0)
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, c(1,2))
-  expect_equal(L$aum.subdiff$lower, c(-1,0))
-  expect_equal(L$aum.subdiff$upper, c(0,1))
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, c(1,2))
+  expect_equal(L$aum.grad$lo, c(-1,0))
+  expect_equal(L$aum.grad$hi, c(0,1))
 })
 
 predictions <- data.table(problem=c(1,2), pred.log.lambda=c(1, -1))
@@ -77,10 +79,10 @@ ggcost()
 test_that("1fp[0,0] 1fn[0,0]", {
   L <- ROChange(models, predictions, "problem")
   expect_equal(L$aum, 0)
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, c(1,2))
-  expect_equal(L$aum.subdiff$lower, c(0,0))
-  expect_equal(L$aum.subdiff$upper, c(0,0))
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, c(1,2))
+  expect_equal(L$aum.grad$lo, c(0,0))
+  expect_equal(L$aum.grad$hi, c(0,0))
 })
 
 models <- data.table(
@@ -98,10 +100,10 @@ ggcost()
 test_that("1fp[-1,0] 2fn[0,2] 1fp[-1,0]", {
   L <- ROChange(models, predictions, "problem")
   expect_equal(L$aum, 0)
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, 1:3)
-  expect_equal(L$aum.subdiff$lower, c(-1,0,-1))
-  expect_equal(L$aum.subdiff$upper, c(0,2,0))
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, 1:3)
+  expect_equal(L$aum.grad$lo, c(-1,0,-1))
+  expect_equal(L$aum.grad$hi, c(0,2,0))
 })
 
 models <- data.table(
@@ -119,10 +121,10 @@ ggcost()
 test_that("1fp[-1,0] 1fn[0,1] 1fp[-1,0]", {
   L <- ROChange(models, predictions, "problem")
   expect_equal(L$aum, 0)
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, 1:3)
-  expect_equal(L$aum.subdiff$lower, c(-1,0,-1))
-  expect_equal(L$aum.subdiff$upper, c(0,1,0))
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, 1:3)
+  expect_equal(L$aum.grad$lo, c(-1,0,-1))
+  expect_equal(L$aum.grad$hi, c(0,1,0))
 })
 
 models <- data.table(
@@ -140,10 +142,10 @@ ggcost()
 test_that("2fp[-2,0] 1fn[0,1] 2fp2fn(0)[-1,1]", {
   L <- ROChange(models, predictions, "problem")
   expect_equal(L$aum, 0)
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, 1:3)
-  expect_equal(L$aum.subdiff$lower, c(-2,0,-1))
-  expect_equal(L$aum.subdiff$upper, c(0,1,1))
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, 1:3)
+  expect_equal(L$aum.grad$lo, c(-2,0,-1))
+  expect_equal(L$aum.grad$hi, c(0,1,1))
 })
 
 predictions <- data.table(problem=c(1,2,3), pred.log.lambda=c(0,0,1))
@@ -151,10 +153,10 @@ ggcost()
 test_that("2fp[-2,-1] 1fn[0,1] 2fp2fn(1)[1,2]", {
   L <- ROChange(models, predictions, "problem")
   expect_equal(L$aum, 1)
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, 1:3)
-  expect_equal(L$aum.subdiff$lower, c(-2,0,1))
-  expect_equal(L$aum.subdiff$upper, c(-1,1,2))
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, 1:3)
+  expect_equal(L$aum.grad$lo, c(-2,0,1))
+  expect_equal(L$aum.grad$hi, c(-1,1,2))
 })
 
 models <- data.table(
@@ -173,10 +175,10 @@ ggcost()
 
 test_that("4fp(-1)[-3,-2](0)[-2,0] 1fn[0,1] 2fp2fn(0)[-1,1](1)[1,2]", {
   L <- ROChange(models, predictions, "problem")
-  print(L$aum.subdiff)
-  expect_equal(L$aum.subdiff$problem, 1:3)
-  expect_equal(L$aum.subdiff$lower, c(-3,1,1))
-  expect_equal(L$aum.subdiff$upper, c(-2,1,2))
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, 1:3)
+  expect_equal(L$aum.grad$lo, c(-3,1,1))
+  expect_equal(L$aum.grad$hi, c(-2,1,2))
 })
 
 test_that("auc=2 for one error curve with one loop", {

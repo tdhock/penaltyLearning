@@ -3,7 +3,8 @@
 \title{check features targets}
 \description{stop with an informative error if there is a problem with the
 feature or target matrix.}
-\usage{check_features_targets(feature.mat, target.mat)}
+\usage{check_features_targets(feature.mat, 
+    target.mat)}
 \arguments{
   \item{feature.mat}{n x p numeric input feature matrix.}
   \item{target.mat}{n x 2 matrix of target interval limits.}

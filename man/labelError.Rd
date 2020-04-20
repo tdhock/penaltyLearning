@@ -8,9 +8,12 @@ changepoints, loss values, and model selection functions
 computing target intervals of log(penalty) values that predict
 changepoints with minimum incorrect \code{labels} for each problem (see
 \code{\link{targetIntervals}}).}
-\usage{labelError(models, labels, changes, change.var = "chromStart", 
-    label.vars = c("min", "max"), model.vars = "n.segments", 
-    problem.vars = character(0), annotations = change.labels)}
+\usage{labelError(models, labels, 
+    changes, change.var = "chromStart", 
+    label.vars = c("min", 
+        "max"), model.vars = "n.segments", 
+    problem.vars = character(0), 
+    annotations = change.labels)}
 \arguments{
   \item{models}{data.frame with one row per (problem,model) combination, typically
 the output of modelSelection(...). There is a row for each

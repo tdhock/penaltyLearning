@@ -2,7 +2,8 @@
 \alias{featureMatrix}
 \title{featureMatrix}
 \description{Compute a feature matrix (segmentation problems x features).}
-\usage{featureMatrix(data.sequences, problem.vars, data.var)}
+\usage{featureMatrix(data.sequences, 
+    problem.vars, data.var)}
 \arguments{
   \item{data.sequences}{data.frame of sorted sequences of data to segment.}
   \item{problem.vars}{character vector of columns of \code{data.sequences} to treat as

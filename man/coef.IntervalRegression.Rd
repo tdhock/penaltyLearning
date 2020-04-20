@@ -2,7 +2,8 @@
 \alias{coef.IntervalRegression}
 \title{coef IntervalRegression}
 \description{Get the learned coefficients of an IntervalRegression model.}
-\usage{\method{coef}{IntervalRegression}(object, ...)}
+\usage{\method{coef}{IntervalRegression}(object, 
+    ...)}
 \arguments{
   \item{object}{
 }

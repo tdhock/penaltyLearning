@@ -157,45 +157,44 @@ ROChange <- structure(function # ROC curve for changepoints
     fn = cumsum(c(sum(first.dt$fn), fn.diff))
   )]
   ## Compute aum = area under min(fp,fn).
-  thresh.ord[, min.fp.fn := ifelse(fp<fn, fp, fn)]
+  ifelsemin <- function(x, y)ifelse(x<y, x, y)
+  thresh.ord[, min.fp.fn := ifelsemin(fp, fn)]
   aum <- thresh.ord[, sum(ifelse(
     min.fp.fn==0, 0, min.fp.fn*(max.thresh-min.thresh)))]
-  ## To compute the aum sub-differential we need to join total fp/fn
-  ## to the diffs with individual thresholds/problems.
+  ## To compute the directional derivatives of aum we need to join
+  ## total fp/fn to the diffs with individual thresholds/problems.
   pred.with.thresh[thresh.ord, fp.before := fp, on=.(thresh=max.thresh)]
   pred.with.thresh[thresh.ord, fp.after := fp, on=.(thresh=min.thresh)]
   pred.with.thresh[thresh.ord, fn.before := fn, on=.(thresh=max.thresh)]
   pred.with.thresh[thresh.ord, fn.after := fn, on=.(thresh=min.thresh)]
-  ## Compute lower bound of sub-derivatives. The main idea is that the
-  ## lower bound is determined by what happens if the predicted value
+  ## Compute directional derivatives coming from lo values. The
+  ## main idea is that we look at what happens if the predicted value
   ## for a particular problem is decreased, which results in a bigger
   ## threshold. If that threshold/diff is relevant then it will result
   ## in a change in the min after the threshold, relative to the
   ## actual min after the threshold.
   pred.with.thresh[, fp.after.bigger := fp.after-fp.diff]
   pred.with.thresh[, fn.after.bigger := fn.after-fn.diff]
-  pred.with.thresh[, min.after.bigger := ifelse(
-    fp.after.bigger<fn.after.bigger, fp.after.bigger, fn.after.bigger)]
-  pred.with.thresh[, min.after := ifelse(
-    fp.after<fn.after, fp.after, fn.after)]
+  pred.with.thresh[, min.after.bigger := ifelsemin(
+    fp.after.bigger, fn.after.bigger)]
+  pred.with.thresh[, min.after := ifelsemin(fp.after, fn.after)]
   pred.with.thresh[, diff.bigger := min.after - min.after.bigger]
-  ## Compute upper bound of sub-derivatives. analogous. There is some
-  ## repetition here that could be eliminated, but the intent of the
-  ## code would be a lot more difficult to understand.
+  ## Compute directional derivatives coming from higher
+  ## values. analogous. There is some repetition here that could be
+  ## eliminated, but the intent of the code would be a lot more
+  ## difficult to understand.
   pred.with.thresh[, fp.before.smaller := fp.before+fp.diff]
   pred.with.thresh[, fn.before.smaller := fn.before+fn.diff]
-  pred.with.thresh[, min.before.smaller := ifelse(
-    fp.before.smaller<fn.before.smaller, fp.before.smaller, fn.before.smaller)]
-  pred.with.thresh[, min.before := ifelse(
-    fp.before<fn.before, fp.before, fn.before)]
+  pred.with.thresh[, min.before.smaller := ifelsemin(
+    fp.before.smaller, fn.before.smaller)]
+  pred.with.thresh[, min.before := ifelsemin(fp.before, fn.before)]
   pred.with.thresh[, diff.smaller := min.before.smaller - min.before]
   ## Compute TPR/FPR rates for ROC-AUC analysis.
   interval.dt <- thresh.ord[, data.table(
     total.dt,
     min.thresh,
     max.thresh,
-    fp=fp,
-    fn=fn)]
+    fp, fn, min.fp.fn)]
   interval.dt[, errors := fp+fn]
   interval.dt[, FPR := fp/possible.fp]
   interval.dt[, tp := possible.fn - fn]
@@ -234,12 +233,12 @@ ROChange <- structure(function # ROC curve for changepoints
     auc=##<<numeric Area Under the ROC curve
       sum((right$FPR-left$FPR)*(right$TPR+left$TPR)/2),
     aum=aum, ##<< numeric Area Under Min(FP,FN)
-    aum.subdiff=##<< data.table with one row for each prediction, and
-                ##columns upper/lower bound for the aum
-                ##sub-differential.
+    aum.grad=##<< data.table with one row for each prediction, and
+      ##columns hi/lo bound for the aum
+      ##generalized gradient.
       pred.with.thresh[, .(
-        lower=sum(diff.bigger),
-        upper=sum(diff.smaller)
+        lo=sum(diff.bigger),
+        hi=sum(diff.smaller)
       ), by=problem.vars]
   )
   ##end<<
@@ -262,7 +261,7 @@ ROChange <- structure(function # ROC curve for changepoints
   pred <- data.table(pred.log.lambda=BIC.feature, chromosome=chr.vec)
   ## edit one prediction so that it ends up having the same threshold
   ## as another one, to illustrate an aum sub-differential with
-  ## un-equal lower/upper bounds.
+  ## un-equal lo/hi bounds.
   err.changes <- pro.errors[, {
     .SD[c(NA, diff(errors) != 0), .(min.log.lambda)]
   }, by=chromosome]
@@ -291,30 +290,29 @@ ROChange <- structure(function # ROC curve for changepoints
     xlab("log(penalty) constant added to BIC penalty")
 
   ## Plot area under Min(FP,FN).
-  result$roc[, `min(fp,fn)` := ifelse(fp<fn, fp, fn)]
   err.colors <- c(
     "fp"="red",
     "fn"="deepskyblue",
-    "min(fp,fn)"="black")
+    "min.fp.fn"="black")
   err.sizes <- c(
     "fp"=3,
     "fn"=2,
-    "min(fp,fn)"=1)
+    "min.fp.fn"=1)
   roc.tall <- melt(result$roc, measure.vars=names(err.colors))
   area.rects <- data.table(
     chromosome="total",
-    result$roc[0<`min(fp,fn)`])
+    result$roc[0<min.fp.fn])
   (gg.total <- ggplot()+
      geom_vline(
        xintercept=0,
        color="grey")+
      geom_rect(aes(
        xmin=min.thresh, xmax=max.thresh,
-       ymin=0, ymax=`min(fp,fn)`),
+       ymin=0, ymax=min.fp.fn),
        data=area.rects,
        alpha=0.5)+
      geom_text(aes(
-       min.thresh, `min(fp,fn)`/2,
+       min.thresh, min.fp.fn/2,
        label=sprintf(
          "Area Under Min(FP,FN)=%.3f ",
          result$aum)),
@@ -352,7 +350,7 @@ ROChange <- structure(function # ROC curve for changepoints
       0, errors),
       data=data.table(errors=c(1.5, -0.5)))
 
-  print(result$aum.subdiff)
+  print(result$aum.grad)
   if(interactive()){#this can be too long for CRAN.
     ## Plot how Area Under Min(FP,FN) changes with each predicted value.
     aum.dt <- pred[, {
@@ -366,8 +364,8 @@ ROChange <- structure(function # ROC curve for changepoints
       }, by=log.pen]
     }, by=chromosome]
     bounds.dt <- melt(
-      result$aum.subdiff,
-      measure.vars=c("lower", "upper"),
+      result$aum.grad,
+      measure.vars=c("lo", "hi"),
       variable.name="bound",
       value.name="slope")[pred, on=.(chromosome)]
     bounds.dt[, intercept := result$aum-slope*pred.log.lambda]
@@ -376,6 +374,9 @@ ROChange <- structure(function # ROC curve for changepoints
         slope=slope, intercept=intercept),
         size=1,
         data=bounds.dt)+
+      geom_text(aes(
+        2, 2, label=sprintf("directional derivatives = [%d, %d]", lo, hi)),
+        data=result$aum.grad)+
       scale_color_manual(
         values=c(
           predicted="red",
@@ -389,7 +390,7 @@ ROChange <- structure(function # ROC curve for changepoints
         data=data.table(type="predicted", pred))+
       theme_bw()+
       theme(panel.spacing=grid::unit(0, "lines"))+
-      facet_wrap("chromosome")+
+      facet_wrap("chromosome", labeller=label_both)+
       coord_equal()+
       xlab("New log(penalty) value for chromosome")+
       ylab("Area Under Min(FP,FN)

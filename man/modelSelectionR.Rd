@@ -8,7 +8,9 @@ solution for every lambda in (min.lambda, max.lambda). This
 function uses the quadratic time algorithm implemented in R code.
 This function is mostly meant for internal use -- it is instead
 recommended to use \code{\link{modelSelection}}.}
-\usage{modelSelectionR(loss.vec, model.complexity, model.id)}
+\usage{modelSelectionR(loss.vec, 
+    model.complexity, 
+    model.id)}
 \arguments{
   \item{loss.vec}{numeric vector: loss L_i}
   \item{model.complexity}{numeric vector: model complexity K_i}
