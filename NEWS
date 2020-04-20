@@ -5,7 +5,7 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
-2019.8.30 PR#14
+20xx.y.z PR#14
 
 ROC curve reversed if necessary in AUC computation. i.e. ROChange no
 longer assumes that small thresholds mean lots of fp/tp.
@@ -16,6 +16,27 @@ ROChange returns aum (Area Under Min{fp,fn}) and aum.subdiff
 (sub-differential) for predicted values.
 
 ROC curve thresholds sorted increasing rather than decreasing.
+
+2019.12.3
+
+test/fix modelSelection for non-monotonic sequences of loss values.
+
+2019.11.19
+
+labelError is OK with model columns that are missing.
+
+2019.10.10
+
+stop with an error for IntervalRegressionCV(., unlogged.outputs).
+
+new args for IntervalRegressionCV including LAPPLY which defaults to
+future.apply::future_lapply but can be set to base::lapply for
+debugging.
+
+new notConverging data set and test.
+
+smaller crit before restarting with a larger Lipschitz in
+IntervalRegressionCV.
 
 2019.5.29 PR#13
 

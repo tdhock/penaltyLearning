@@ -13,7 +13,7 @@ regression model, try \code{\link{IntervalRegressionCV}} or
 \usage{IntervalRegressionInternal(features, targets, initial.param.vec, 
     regularization, threshold = 0.001, max.iterations = 1000, 
     weight.vec = NULL, Lipschitz = NULL, verbose = 2, 
-    margin = 1)}
+    margin = 1, biggest.crit = 100)}
 \arguments{
   \item{features}{Scaled numeric feature matrix (problems x \code{features}). The first
 column/feature should be all ones and will not be regularized.}
@@ -30,6 +30,8 @@ mean of the squared L2-norms of the rows of the feature matrix.}
   \item{verbose}{Cat messages: for restarts and at the end if >= 1, and for every
 iteration if >= 2.}
   \item{margin}{Margin size hyper-parameter, default 1.}
+  \item{biggest.crit}{Restart FISTA with a bigger \code{Lipschitz} (smaller step size) if crit
+gets larger than this.}
 }
 
 \value{Numeric vector of scaled weights w of the affine function f_w(X) =

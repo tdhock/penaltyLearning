@@ -17,10 +17,14 @@ to parallelize on validation.fold and margin.}
     10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
     verbose = 0, min.observations = 10, reg.type = "min", 
     incorrect.labels.db = NULL, initial.regularization = 0.001, 
-    margin.vec = 1, ...)}
+    margin.vec = 1, LAPPLY = NULL, check.unlogged = TRUE, 
+    ...)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix, n observations x p features.}
-  \item{target.mat}{Numeric target matrix, n observations x 2 limits.}
+  \item{target.mat}{Numeric target matrix, n observations x 2 limits. These should be
+real-valued (possibly negative). If your data are interval
+censored positive-valued survival times, you need to log them to
+obtain \code{target.mat}.}
   \item{n.folds}{Number of cross-validation folds.}
   \item{fold.vec}{Integer vector of fold id numbers.}
   \item{verbose}{numeric: 0 for silent, bigger numbers (1 or 2) for more output.}
@@ -53,6 +57,14 @@ many labels per data sequence.}
 time is linear in the number of elements of \code{margin.vec} -- more
 values takes more computation time, but yields slightly more
 accurate models (if there is enough data).}
+  \item{LAPPLY}{Function to use for parallelization, by default
+\code{\link[future.apply]{future_lapply}} if it is available, otherwise
+lapply. For debugging with verbose>0 it is useful to specify
+LAPPLY=lapply in order to interactively see messages, before all
+parallel processes end.}
+  \item{check.unlogged}{If TRUE, stop with an error if target matrix is non-negative and
+has any big difference in successive quantiles (this is an
+indicator that the user probably forgot to log their outputs).}
   \item{\dots}{passed to \code{\link{IntervalRegressionRegularized}}.}
 }
 
