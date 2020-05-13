@@ -16,10 +16,8 @@ echo Editing $RELEASE for CRAN submission
 ## Suggests.
 grep -v PeakSegDP penaltyLearning/DESCRIPTION > $RELEASE/DESCRIPTION
 rm $RELEASE/tests/testthat/test-IntervalRegression.R
-rm $RELEASE/tests/testthat/test-labelError.R
-rm $RELEASE/tests/testthat/test-modelSelection.R
 rm $RELEASE/tests/testthat/test-peaks.R
-rm $RELEASE/tests/testthat/test-ROChange.R
+rm $RELEASE/tests/testthat/test-ROChange-jointseg.R
 rm -rf $RELEASE/vignettes
 
 echo Building $RELEASE
