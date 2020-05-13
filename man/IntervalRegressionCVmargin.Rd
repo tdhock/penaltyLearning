@@ -43,7 +43,10 @@ parameter will be 0.3 (two factors of 10 smaller than 30).}
 \examples{
 if(interactive()){
   library(penaltyLearning)
-  data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+  data(
+    "neuroblastomaProcessed",
+    package="penaltyLearning",
+    envir=environment())
   if(require(future)){
     plan(multiprocess)
   }

@@ -22,9 +22,15 @@ these columns should be removed before model training.}
 
 \examples{
 
-data(neuroblastoma, package="neuroblastoma", envir=environment())
-library(penaltyLearning)
-one <- subset(neuroblastoma$profiles, profile.id \%in\% c(1,2))
-f.mat <- featureMatrix(one, c("profile.id", "chromosome"), "logratio")
+test.df <- data.frame(
+  id=rep(1:2, each=10),
+  x=rnorm(20))
+penaltyLearning::featureMatrix(test.df, "id", "x")
+if(requireNamespace("neuroblastoma")){
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
+  one <- subset(neuroblastoma$profiles, profile.id \%in\% c(1,2))
+  f.mat <- penaltyLearning::featureMatrix(
+    one, c("profile.id", "chromosome"), "logratio")
+}
 
 }

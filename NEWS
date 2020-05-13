@@ -5,15 +5,18 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
-20xx.y.z PR#14
+2020.5.13 PR#14
+
+Remove dependency on Segmentor3IsBack, which was removed from CRAN in
+May 2020.
 
 ROC curve reversed if necessary in AUC computation. i.e. ROChange no
 longer assumes that small thresholds mean lots of fp/tp.
 
 no longer need geometry for AUC computation.
 
-ROChange returns aum (Area Under Min{fp,fn}) and aum.subdiff
-(sub-differential) for predicted values.
+ROChange returns aum (Area Under Min{fp,fn}) and aum.grad
+(directional derivatives) for predicted values.
 
 ROC curve thresholds sorted increasing rather than decreasing.
 

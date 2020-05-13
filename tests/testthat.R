@@ -1,2 +1,3 @@
-library(testthat)
-test_check("penaltyLearning")
+if(require(testthat)){
+  test_check("penaltyLearning")
+}

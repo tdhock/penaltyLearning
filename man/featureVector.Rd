@@ -19,9 +19,12 @@ labels (see \code{\link{targetIntervals}}).}
 
 \examples{
 
-data(neuroblastoma, package="neuroblastoma", envir=environment())
-
-one <- subset(neuroblastoma$profiles, profile.id=="1" & chromosome=="1")
-(f.vec <- featureVector(one$logratio))
+x <- rnorm(10)
+penaltyLearning::featureVector(x)
+if(requireNamespace("neuroblastoma")){
+  data(neuroblastoma, package="neuroblastoma", envir=environment())
+  one <- subset(neuroblastoma$profiles, profile.id=="1" & chromosome=="1")
+  (f.vec <- penaltyLearning::featureVector(one$logratio))
+}
 
 }
