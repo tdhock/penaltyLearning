@@ -76,22 +76,14 @@ simple.err <- rbind(
     errors=c(1, 0), labels=1,
     fn=0, possible.fn=0,
     fp=c(1, 0), possible.fp=1))
+ok.pred <- data.table(
+  pid=81,
+  chromosome=paste(1:2),
+  pred.log.lambda=0)
+pvars <- c("chromosome", "pid")
 test_that("only one prediction row even when prediction is on threshold", {
   L <- ROChange(simple.err, ok.pred, pvars)
   pred.dt <- L$thresholds[threshold=="predicted"]
   expect_equal(nrow(pred.dt), 1)
-})
-
-two.pred <- rbind(ok.pred, ok.pred)
-test_that("two predictions for the same problem is an error", {
-  expect_error({
-    ROChange(error.list$model.errors, two.pred, pvars)
-  }, "more than one prediction per problem")
-})
-
-test_that("error for missing columns in model table", {
-  expect_error({
-    ROChange(data.table(chromosome="foo"), pred, "chromosome")
-  }, "models should have columns")
 })
 
