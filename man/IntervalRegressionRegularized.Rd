@@ -8,9 +8,11 @@ regularization parameter; instead, it returns regression models
 for a range of regularization parameters, and it is up to you to
 select which one to use. For automatic regularization parameter
 selection, use \code{\link{IntervalRegressionCV}}.}
-\usage{IntervalRegressionRegularized(feature.mat, target.mat, 
-    initial.regularization = 0.001, factor.regularization = 1.2, 
-    verbose = 0, margin = 1, ...)}
+\usage{IntervalRegressionRegularized(feature.mat, 
+    target.mat, initial.regularization = 0.001, 
+    factor.regularization = 1.2, 
+    verbose = 0, margin = 1, 
+    ...)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix.}
   \item{target.mat}{Numeric target matrix.}

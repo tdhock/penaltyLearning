@@ -1,7 +1,6 @@
 useDynLib(penaltyLearning)
 exportPattern("^[[:alpha:]]")
 import(data.table)
-import(geometry)
 import(ggplot2)
 import(data.table)
 importFrom("stats", "sd")

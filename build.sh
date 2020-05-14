@@ -11,10 +11,14 @@ echo Copying $PKG to $RELEASE
 rm -rf $RELEASE
 cp -r $PKG $RELEASE
 
-# echo Editing $RELEASE for CRAN submission
-# grep -v Remotes $PKG/DESCRIPTION > $RELEASE/DESCRIPTION
-# rm $RELEASE/tests/testthat/*
-# cp $PKG/tests/testthat/test-CRAN*.R $RELEASE/tests/testthat
+echo Editing $RELEASE for CRAN submission
+## remove long running tests and the packages that they use in
+## Suggests.
+grep -v PeakSegDP penaltyLearning/DESCRIPTION > $RELEASE/DESCRIPTION
+rm $RELEASE/tests/testthat/test-IntervalRegression.R
+rm $RELEASE/tests/testthat/test-peaks.R
+rm $RELEASE/tests/testthat/test-ROChange-jointseg.R
+rm -rf $RELEASE/vignettes
 
 echo Building $RELEASE
 RCMD="R --vanilla CMD"
@@ -26,3 +30,6 @@ $RCMD INSTALL $PKG_TGZ
 
 echo Checking $PKG_TGZ
 $RCMD check --as-cran $PKG_TGZ
+
+echo Checking without any Suggests
+R -e "if('check_without_suggests' %in% ls())check_without_suggests('$PKG_TGZ')"

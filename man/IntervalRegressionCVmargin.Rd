@@ -14,8 +14,9 @@ On large (N > 1000 rows) data sets,
 this function should yield a model which is a little
 more accurate than \code{\link{IntervalRegressionCV}}
 (since the margin parameter is optimized).}
-\usage{IntervalRegressionCVmargin(feature.mat, target.mat, 
-    log10.diff = 2, n.margin = 10L, ...)}
+\usage{IntervalRegressionCVmargin(feature.mat, 
+    target.mat, log10.diff = 2, 
+    n.margin = 10L, ...)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix, n observations x p features.}
   \item{target.mat}{Numeric target matrix, n observations x 2 limits.}
@@ -42,7 +43,10 @@ parameter will be 0.3 (two factors of 10 smaller than 30).}
 \examples{
 if(interactive()){
   library(penaltyLearning)
-  data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+  data(
+    "neuroblastomaProcessed",
+    package="penaltyLearning",
+    envir=environment())
   if(require(future)){
     plan(multiprocess)
   }

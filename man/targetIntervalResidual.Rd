@@ -4,7 +4,8 @@
 \description{Compute residual of predicted penalties with respect to target
 intervals. This function is useful for visualizing the errors in a
 plot of log(penalty) versus a feature.}
-\usage{targetIntervalResidual(target.mat, pred)}
+\usage{targetIntervalResidual(target.mat, 
+    pred)}
 \arguments{
   \item{target.mat}{n x 2 numeric matrix: target intervals of log(penalty) values that
 yield minimal incorrect labels.}

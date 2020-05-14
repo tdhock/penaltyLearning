@@ -4,7 +4,8 @@
 \description{Compute target intervals of log(penalty) values that result in
 predicted changepoint \code{models} with minimum incorrect labels.
 Use this function after \code{\link{labelError}}, and before IntervalRegression*.}
-\usage{targetIntervals(models, problem.vars)}
+\usage{targetIntervals(models, 
+    problem.vars)}
 \arguments{
   \item{models}{data.table with columns errors, min.log.lambda, max.log.lambda,
 typically labelError()$model.errors.}

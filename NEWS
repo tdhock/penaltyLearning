@@ -5,6 +5,21 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2020.5.13 PR#14
+
+Remove dependency on Segmentor3IsBack, which was removed from CRAN in
+May 2020.
+
+ROC curve reversed if necessary in AUC computation. i.e. ROChange no
+longer assumes that small thresholds mean lots of fp/tp.
+
+no longer need geometry for AUC computation.
+
+ROChange returns aum (Area Under Min{fp,fn}) and aum.grad
+(directional derivatives) for predicted values.
+
+ROC curve thresholds sorted increasing rather than decreasing.
+
 2019.12.3
 
 test/fix modelSelection for non-monotonic sequences of loss values.
@@ -26,13 +41,13 @@ new notConverging data set and test.
 smaller crit before restarting with a larger Lipschitz in
 IntervalRegressionCV.
 
-2019.5.29
+2019.5.29 PR#13
 
 ROChange: only return one threshold=="prediction" row, even if the
 predicted threshold=0 happens to be exactly on the border between two
 models.
 
-2019.5.28
+2019.5.28 PR#12
 
 ROChange: informative error / test when there is more than one
 prediction per problem.

@@ -48,10 +48,13 @@ featureVector <- structure(function
 ### Numeric vector of features.
 }, ex=function(){
 
-  data(neuroblastoma, package="neuroblastoma", envir=environment())
-
-  one <- subset(neuroblastoma$profiles, profile.id=="1" & chromosome=="1")
-  (f.vec <- featureVector(one$logratio))
+  x <- rnorm(10)
+  penaltyLearning::featureVector(x)
+  if(requireNamespace("neuroblastoma")){
+    data(neuroblastoma, package="neuroblastoma", envir=environment())
+    one <- subset(neuroblastoma$profiles, profile.id=="1" & chromosome=="1")
+    (f.vec <- penaltyLearning::featureVector(one$logratio))
+  }
 
 })
 
@@ -99,9 +102,15 @@ featureMatrix <- structure(function
 ### these columns should be removed before model training.
 }, ex=function(){
 
-  data(neuroblastoma, package="neuroblastoma", envir=environment())
-  library(penaltyLearning)
-  one <- subset(neuroblastoma$profiles, profile.id %in% c(1,2))
-  f.mat <- featureMatrix(one, c("profile.id", "chromosome"), "logratio")
+  test.df <- data.frame(
+    id=rep(1:2, each=10),
+    x=rnorm(20))
+  penaltyLearning::featureMatrix(test.df, "id", "x")
+  if(requireNamespace("neuroblastoma")){
+    data(neuroblastoma, package="neuroblastoma", envir=environment())
+    one <- subset(neuroblastoma$profiles, profile.id %in% c(1,2))
+    f.mat <- penaltyLearning::featureMatrix(
+      one, c("profile.id", "chromosome"), "logratio")
+  }
 
 })

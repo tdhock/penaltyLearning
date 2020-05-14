@@ -8,7 +8,9 @@ solution for every lambda in (min.lambda, max.lambda). This
 function uses the linear time algorithm implemented in C code.
 This function is mostly meant for internal use -- it is instead
 recommended to use \code{\link{modelSelection}}.}
-\usage{modelSelectionC(loss.vec, model.complexity, model.id)}
+\usage{modelSelectionC(loss.vec, 
+    model.complexity, 
+    model.id)}
 \arguments{
   \item{loss.vec}{numeric vector: loss L_i}
   \item{model.complexity}{numeric vector: model complexity K_i}
@@ -30,13 +32,12 @@ values.}
 
 \examples{
 
-library(penaltyLearning)
-data(neuroblastoma, package="neuroblastoma", envir=environment())
-pro <- subset(neuroblastoma$profiles, profile.id==1 & chromosome=="X")
-max.segments <- 20
-fit <- Segmentor3IsBack::Segmentor(pro$logratio, 2, max.segments)
-seg.vec <- 1:max.segments
-exact.df <- modelSelectionC(fit@likelihood, seg.vec, seg.vec)
+loss.vec <- c(
+  -9.9, -12.8, -19.2, -22.1, -24.5, -26.1, -28.5, -30.1, -32.2, 
+  -33.7, -35.2, -36.8, -38.2, -39.5, -40.7, -41.8, -42.8, -43.9, 
+  -44.9, -45.8)
+seg.vec <- seq_along(loss.vec)
+exact.df <- penaltyLearning::modelSelectionC(loss.vec, seg.vec, seg.vec)
 ## Solve the optimization using grid search.
 L.grid <- with(exact.df,{
   seq(min(max.log.lambda)-1,

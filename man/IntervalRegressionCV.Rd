@@ -13,11 +13,17 @@ but yields more accurate models).
 If the future package is available,
 two levels of future_lapply are used
 to parallelize on validation.fold and margin.}
-\usage{IntervalRegressionCV(feature.mat, target.mat, n.folds = ifelse(nrow(feature.mat) < 
-    10, 3L, 5L), fold.vec = sample(rep(1:n.folds, l = nrow(feature.mat))), 
-    verbose = 0, min.observations = 10, reg.type = "min", 
-    incorrect.labels.db = NULL, initial.regularization = 0.001, 
-    margin.vec = 1, LAPPLY = NULL, check.unlogged = TRUE, 
+\usage{IntervalRegressionCV(feature.mat, 
+    target.mat, n.folds = ifelse(nrow(feature.mat) < 
+        10, 3L, 5L), 
+    fold.vec = sample(rep(1:n.folds, 
+        l = nrow(feature.mat))), 
+    verbose = 0, min.observations = 10, 
+    reg.type = "min", 
+    incorrect.labels.db = NULL, 
+    initial.regularization = 0.001, 
+    margin.vec = 1, LAPPLY = NULL, 
+    check.unlogged = TRUE, 
     ...)}
 \arguments{
   \item{feature.mat}{Numeric feature matrix, n observations x p features.}

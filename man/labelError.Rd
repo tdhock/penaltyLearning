@@ -8,9 +8,12 @@ changepoints, loss values, and model selection functions
 computing target intervals of log(penalty) values that predict
 changepoints with minimum incorrect \code{labels} for each problem (see
 \code{\link{targetIntervals}}).}
-\usage{labelError(models, labels, changes, change.var = "chromStart", 
-    label.vars = c("min", "max"), model.vars = "n.segments", 
-    problem.vars = character(0), annotations = change.labels)}
+\usage{labelError(models, labels, 
+    changes, change.var = "chromStart", 
+    label.vars = c("min", 
+        "max"), model.vars = "n.segments", 
+    problem.vars = character(0), 
+    annotations = change.labels)}
 \arguments{
   \item{models}{data.frame with one row per (problem,model) combination, typically
 the output of modelSelection(...). There is a row for each
@@ -43,7 +46,7 @@ between start=10 and end=20 means that any predicted changepoint
 at 11, ..., 20 is a false positive.}
   \item{model.vars}{character: column names used to identify model complexity. The
 default "n.segments" is for change-point \code{models} such as in the
-Segmentor3IsBack and changepoint packages.}
+jointseg and changepoint packages.}
   \item{problem.vars}{character: column names used to identify data set / segmentation
 problem, should be present in all three data tables (\code{models},
 \code{labels}, \code{changes}).}
@@ -67,89 +70,21 @@ and \code{\link{ROChange}}).}
 
 \examples{
 
-if(interactive()){
-
-  library(penaltyLearning)
-  library(data.table)
-  data(neuroblastoma, package="neuroblastoma", envir=environment())
-  pro4 <- subset(neuroblastoma$profiles, profile.id==4)
-  ann4 <- subset(neuroblastoma$annotations, profile.id==4)
-  label <- function(annotation, min, max){
-    data.table(profile.id=4, chromosome="14", min, max, annotation)
-  }
-  ann <- rbind(
-    ann4,
-    label("1change", 70e6, 80e6),
-    label("0changes", 20e6, 60e6))
-  max.segments <- 5
-  segs.list <- list()
-  models.list <- list()
-  for(chr in unique(ann$chromosome)){
-    pro <- subset(pro4, chromosome==chr)
-    fit <- Segmentor3IsBack::Segmentor(
-      pro$logratio, model=2, Kmax=max.segments)
-    model.df <- data.frame(loss=fit@likelihood, n.segments=1:max.segments)
-    models.list[[chr]] <- data.table(chromosome=chr, model.df)
-    for(n.segments in 1:max.segments){
-      end <- fit@breaks[n.segments, 1:n.segments]
-      data.before.change <- end[-n.segments]
-      data.after.change <- data.before.change+1
-      pos.before.change <- as.integer(
-        (pro$position[data.before.change]+pro$position[data.after.change])/2)
-      start <- c(1, data.after.change)
-      chromStart <- c(pro$position[1], pos.before.change)
-      chromEnd <- c(pos.before.change, max(pro$position))
-      segs.list[[paste(chr, n.segments)]] <- data.table(
-        chromosome=chr,
-        n.segments,
-        start,
-        end,
-        chromStart,
-        chromEnd,
-        mean=fit@parameters[n.segments, 1:n.segments])
-    }
-  }
-  segs <- do.call(rbind, segs.list)
-  models <- do.call(rbind, models.list)
-
-  changes <- segs[1 < start,]
-  error.list <- labelError(
-    models, ann, changes,
-    problem.vars="chromosome", # for all three data sets.
-    model.vars="n.segments", # for changes and selection.
-    change.var="chromStart", # column of changes with breakpoint position.
-    label.vars=c("min", "max")) # limit of labels in ann.
-
-  library(ggplot2)
-  ggplot()+
-    theme_bw()+
-    theme_no_space()+
-    facet_grid(n.segments ~ chromosome, scales="free", space="free")+
-    scale_x_continuous(breaks=c(100, 200))+
-    scale_linetype_manual("error type",
-                          values=c(correct=0,
-                            "false negative"=3,
-                            "false positive"=1))+
-    scale_fill_manual("label", values=change.colors)+
-    geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6),
-                  color="grey",
-                  fill=NA,
-                  data=error.list$label.errors)+
-    geom_tallrect(aes(xmin=min/1e6, xmax=max/1e6,
-                      fill=annotation, linetype=status),
-                  data=error.list$label.errors)+
-    geom_point(aes(position/1e6, logratio),
-               data=subset(pro4, chromosome \%in\% ann$chromosome),
-               shape=1)+
-    geom_segment(aes(chromStart/1e6, mean, xend=chromEnd/1e6, yend=mean),
-                 data=segs,
-                 color="green",
-                 size=1)+
-    geom_vline(aes(xintercept=chromStart/1e6),
-               data=changes,
-               linetype="dashed",
-               color="green")
-
+label <- function(annotation, min, max){
+  data.frame(profile.id=4, chrom="chr14", min, max, annotation)
 }
+label.df <- rbind(
+  label("1change", 70e6, 80e6),
+  label("0changes", 20e6, 60e6))
+model.df <- data.frame(chrom="chr14", n.segments=1:3)
+change.df <- data.frame(chrom="chr14", rbind(
+  data.frame(n.segments=2, changepoint=75e6),
+  data.frame(n.segments=3, changepoint=c(75e6, 50e6))))
+penaltyLearning::labelError(
+  model.df, label.df, change.df,
+  problem.vars="chrom", # for all three data sets.
+  model.vars="n.segments", # for changes and selection.
+  change.var="changepoint", # column of changes with breakpoint position.
+  label.vars=c("min", "max")) # limit of labels in ann.
 
 }

@@ -1,6 +1,6 @@
 ### ggplot2 theme element for no space between panels.
 theme_no_space <- function(...){
-  tryCatch({
+  tryCatch({#old ggplot2 errors for panel.spacing
     theme(panel.spacing=grid::unit(0, "lines"), ...)
   }, error=function(e){
     theme(panel.margin=grid::unit(0, "lines"), ...)

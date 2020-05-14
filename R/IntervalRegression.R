@@ -74,7 +74,10 @@ IntervalRegressionCVmargin <- structure(function
 }, ex=function() {
   if(interactive()){
     library(penaltyLearning)
-    data("neuroblastomaProcessed", package="penaltyLearning", envir=environment())
+    data(
+      "neuroblastomaProcessed",
+      package="penaltyLearning",
+      envir=environment())
     if(require(future)){
       plan(multiprocess)
     }

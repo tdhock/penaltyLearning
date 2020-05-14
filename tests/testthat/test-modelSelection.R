@@ -84,57 +84,6 @@ test_that("error for bad column names", {
   }, "loss must be a column name of models")
 })
 
-library(neuroblastoma)
-library(Segmentor3IsBack)
-data(neuroblastoma)
-one <- subset(neuroblastoma$profiles, profile.id==599 & chromosome=="14")
-max.segments <- 1000
-fit <- Segmentor(one$logratio, model=2, Kmax=max.segments)
-lik.df <- data.frame(lik=fit@likelihood, segments=1:max.segments)
-pathR <- with(lik.df, modelSelectionR(lik, segments, segments))
-pathC <- with(lik.df, modelSelectionC(lik, segments, segments))
-compare.cols <- c("min.lambda", "max.lambda", "model.id")
-test_that("C code agrees with R code for big data set", {
-  expect_identical(pathR[, compare.cols], pathC[, compare.cols])
-})
-
-test_that("no zero-width intervals for big data set", {
-  same <- subset(pathC, min.lambda==max.lambda)
-  expect_equal(nrow(same), 0)
-})
-
-## This is a data set with n=9 data points to segments, but only 8
-## unique data points.
-small <- subset(neuroblastoma$profiles, profile.id==203 & chromosome=="Y")
-max.segments <- 9
-fit <- Segmentor(small$logratio, model=2, Kmax=max.segments)
-rss.vec <- rep(NA, max.segments)
-for(n.segments in 1:max.segments){
-  end <- fit@breaks[n.segments, 1:n.segments]
-  seg.mean.vec <- fit@parameters[n.segments, 1:n.segments]
-  data.before.change <- end[-n.segments]
-  data.after.change <- data.before.change+1
-  pos.before.change <- as.integer(
-    (small$position[data.before.change]+small$position[data.after.change])/2)
-  start <- c(1, data.after.change)
-  data.mean.vec <- rep(seg.mean.vec, end-start+1)
-  rss.vec[n.segments] <- sum((small$logratio-data.mean.vec)^2)
-}
-loss.df <- data.frame(
-  n.segments=1:max.segments,
-  lik=fit@likelihood,
-  loss=rss.vec)
-test_that("biggest n.segments=8 for rss loss", {
-  selection.df <- modelSelection(
-    loss.df, complexity="n.segments")
-  expect_equal(max(selection.df$n.segments), 8)
-})
-test_that("biggest n.segments=8 for lik loss", {
-  selection.df <- modelSelection(
-    loss.df, complexity="n.segments", loss="lik")
-  expect_equal(max(selection.df$n.segments), 8)
-})
-
 ## trivial.
 loss.vec <- c(5,4,4)
 model.complexity <- c(1,2,3)
