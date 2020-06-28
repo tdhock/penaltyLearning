@@ -163,10 +163,21 @@ ROChange <- structure(function # ROC curve for changepoints
     min.fp.fn==0, 0, min.fp.fn*(max.thresh-min.thresh)))]
   ## To compute the directional derivatives of aum we need to join
   ## total fp/fn to the diffs with individual thresholds/problems.
-  pred.with.thresh[thresh.ord, fp.before := fp, on=.(thresh=max.thresh)]
-  pred.with.thresh[thresh.ord, fp.after := fp, on=.(thresh=min.thresh)]
-  pred.with.thresh[thresh.ord, fn.before := fn, on=.(thresh=max.thresh)]
-  pred.with.thresh[thresh.ord, fn.after := fn, on=.(thresh=min.thresh)]
+  before.after.vec <- c(
+    "min"="after",
+    "max"="before")
+  for(min.or.max in names(before.after.vec)){
+    before.or.after <- before.after.vec[[min.or.max]]
+    min.or.max.thresh <- paste0(min.or.max, ".thresh")
+    L <- function(f)structure(
+      list(as.symbol(f)),
+      names=paste0(f, ".", before.or.after))
+    call.list <- c(as.symbol(":="), L("fp"), L("fn"))
+    lang.obj <- substitute(
+      pred.with.thresh[thresh.ord, ASSIGNMENT, on=c(thresh=min.or.max.thresh)],
+      list(ASSIGNMENT=as.call(call.list)))
+    eval(lang.obj)
+  }
   ## Compute directional derivatives coming from lo values. The
   ## main idea is that we look at what happens if the predicted value
   ## for a particular problem is decreased, which results in a bigger
