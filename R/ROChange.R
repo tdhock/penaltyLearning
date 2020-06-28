@@ -161,18 +161,18 @@ ROChange <- structure(function # ROC curve for changepoints
   thresh.ord[, min.fp.fn := ifelsemin(fp, fn)]
   aum <- thresh.ord[, sum(ifelse(
     min.fp.fn==0, 0, min.fp.fn*(max.thresh-min.thresh)))]
-  ## To compute the directional derivatives of aum we need to join
-  ## total fp/fn to the diffs with individual thresholds/problems.
-  pred.with.thresh[thresh.ord, fp.before := fp, on=.(thresh=max.thresh)]
-  pred.with.thresh[thresh.ord, fp.after := fp, on=.(thresh=min.thresh)]
-  pred.with.thresh[thresh.ord, fn.before := fn, on=.(thresh=max.thresh)]
-  pred.with.thresh[thresh.ord, fn.after := fn, on=.(thresh=min.thresh)]
   ## Compute directional derivatives coming from lo values. The
   ## main idea is that we look at what happens if the predicted value
   ## for a particular problem is decreased, which results in a bigger
   ## threshold. If that threshold/diff is relevant then it will result
   ## in a change in the min after the threshold, relative to the
   ## actual min after the threshold.
+  pred.with.thresh[thresh.ord, `:=`(
+    ## To compute the directional derivatives of aum we need to join
+    ## total fp/fn to the diffs with individual thresholds/problems.
+    fp.after = fp,
+    fn.after = fn
+  ), on=.(thresh=min.thresh)]
   pred.with.thresh[, fp.after.bigger := fp.after-fp.diff]
   pred.with.thresh[, fn.after.bigger := fn.after-fn.diff]
   pred.with.thresh[, min.after.bigger := ifelsemin(
@@ -183,6 +183,10 @@ ROChange <- structure(function # ROC curve for changepoints
   ## values. analogous. There is some repetition here that could be
   ## eliminated, but the intent of the code would be a lot more
   ## difficult to understand.
+  pred.with.thresh[thresh.ord, `:=`(
+    fp.before = fp,
+    fn.before = fn
+  ), on=.(thresh=max.thresh)]
   pred.with.thresh[, fp.before.smaller := fp.before+fp.diff]
   pred.with.thresh[, fn.before.smaller := fn.before+fn.diff]
   pred.with.thresh[, min.before.smaller := ifelsemin(
