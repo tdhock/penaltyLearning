@@ -53,6 +53,33 @@ test_that("noncvx 1fp[-1,0] 1fn[0,1]", {
   expect_equal(L$aum.grad$hi, c(-1,-1))
 })
 
+if(FALSE){
+  ## An example with no change in total fp at one threshold for which
+  ## two individual problems have changes (one up, one down).
+  models <- data.table(
+    fp=c(1, 0, 0, 1, 0, 0, 0),
+    fn=c(0, 0, 0, 0, 0, 0, 1),
+    possible.fn=c(0,0,0,0,0,1,1),
+    possible.fp=c(1,1,1,1,1,0,0),
+    min.log.lambda=c(-Inf,0,-Inf,0,1,-Inf,1),
+    max.log.lambda=c(0,Inf,0,1,Inf,1,Inf),
+    labels=1,
+    problem=c(1,1,2,2,2,3,3))
+  models[, errors := fp+fn]
+  predictions <- data.table(problem=c(1,2,3), pred.log.lambda=0)
+  ggcost()
+  L <- ROChange(models, predictions, "problem")
+  L$aum.grad
+  ggplot()+
+    geom_segment(aes(
+      min.thresh, value,
+      xend=max.thresh, yend=value),
+      data=melt(L$roc, measure.vars=c("fp", "fn")))+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "lines"))+
+    facet_grid(variable ~ .)
+}
+
 models <- data.table(
   fp=c(1, 0, 0, 0),
   fn=c(0, 0, 0, 1),
