@@ -154,8 +154,7 @@ ROChange <- structure(function # ROC curve for changepoints
     fn = cumsum(c(sum(first.dt$fn), fn.tot.diff))
   )]
   ## Compute aum = area under min(fp,fn). 
-  ifelsemin <- function(x, y)ifelse(x<y, x, y)
-  fp.fn.totals[, min.fp.fn := ifelsemin(fp, fn)]
+  fp.fn.totals[, min.fp.fn := pmin(fp, fn)]
   aum <- fp.fn.totals[, sum(ifelse(
     min.fp.fn==0, 0, min.fp.fn*(max.thresh-min.thresh)))]
   ## Compute directional derivatives coming from lo and hi values. The
@@ -196,7 +195,7 @@ ROChange <- structure(function # ROC curve for changepoints
     ## here we compute Min(FP,FN) adjacent to the totals, on the other
     ## side of thresh, when we apply fp.prb.diff,fn.prb.diff for each
     ## thresh/problem.
-    fp.fn.join[, min.adj := ifelsemin(fp.adj, fn.adj)]
+    fp.fn.join[, min.adj := pmin(fp.adj, fn.adj)]
     ## finally we check to see how much Min(FP,FN) would change via
     ## fp.prb.diff,fn.prb.diff at each thresh/problem. this amounts to
     ## computing min.after-min.before the thresh.
