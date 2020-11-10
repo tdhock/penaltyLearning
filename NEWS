@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2020.11.10 PR#19
+
+reduce repetition in ROChange aum computation.
+
 2020.5.13 PR#14
 
 Remove dependency on Segmentor3IsBack, which was removed from CRAN in
