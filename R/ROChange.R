@@ -17,7 +17,7 @@ ROChange <- structure(function # ROC curve for changepoints
     log.lambda <- pred.log.lambda <- errors <- FPR <- tp <- TPR <-
       error.percent <- min.thresh <- max.thresh <- max.log.lambda <-
         next.min <- problems <- n.inconsistent <- min.fp.fn <-
-          . <- min.adj <- fp.adj <- fn.adj <- fp.tot.diff <- fn.tot.diff <- 
+          . <- min.adj <- fp.adj <- fn.adj <- fp.tot.diff <- fn.tot.diff <-
             deriv.min <- deriv.max <-NULL
 ### The code above is to avoid CRAN NOTEs like
 ### ROChange: no visible binding for global variable
@@ -146,14 +146,13 @@ ROChange <- structure(function # ROC curve for changepoints
     fp.tot.diff=sum(fp.prb.diff),
     fn.tot.diff=sum(fn.prb.diff)
   ), by=thresh]
-
   fp.fn.totals <- uniq.thresh[, data.table(
     min.thresh=c(-Inf, thresh),
     max.thresh=c(thresh, Inf),
     fp = cumsum(c(sum(first.dt$fp), fp.tot.diff)),
     fn = cumsum(c(sum(first.dt$fn), fn.tot.diff))
   )]
-  ## Compute aum = area under min(fp,fn). 
+  ## Compute aum = area under min(fp,fn).
   fp.fn.totals[, min.fp.fn := pmin(fp, fn)]
   aum <- fp.fn.totals[, sum(ifelse(
     min.fp.fn==0, 0, min.fp.fn*(max.thresh-min.thresh)))]
@@ -231,8 +230,9 @@ ROChange <- structure(function # ROC curve for changepoints
       TPR=c(if(!has00)0, TPR, if(!has11)1, 0)
       )
   }]
-  left <- roc.polygon[-.N]
-  right <- roc.polygon[-1]
+  # if this is a sequence from q=1 to Q subscripts are:
+  left <- roc.polygon[-.N] # _q
+  right <- roc.polygon[-1] # _{q+1}
   ##value<< named list of results:
   list(
     roc=interval.dt, ##<< a data.table with one row for each point on
@@ -252,10 +252,10 @@ ROChange <- structure(function # ROC curve for changepoints
     aum.grad=##<< data.table with one row for each prediction, and
       ##columns hi/lo bound for the aum
       ##generalized gradient.
-      fp.fn.problems[, .(
-        lo=sum(deriv.min),
-        hi=sum(deriv.max)
-      ), by=problem.vars]
+      fp.fn.problems[pred, .(
+        lo=sum(deriv.min, na.rm=TRUE),
+        hi=sum(deriv.max, na.rm=TRUE)
+      ), by=.EACHI, on=problem.vars]
   )
   ##end<<
 }, ex=function(){

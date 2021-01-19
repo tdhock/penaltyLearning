@@ -5,9 +5,12 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
-2020.11.10 PR#19
+2021.1.19 PR#19
 
 reduce repetition in ROChange aum computation.
+
+aum.grad has a row with zeros even for problems with no change in
+error rates (previously there was no row).
 
 2020.5.13 PR#14
 
