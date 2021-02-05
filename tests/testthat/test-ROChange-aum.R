@@ -5,10 +5,9 @@ library(data.table)
 
 ggcost <- function(){
   if(interactive() && require("ggplot2")){
-    prob.vec <- unique(models$problem)
-    gg.dt <- data.table(problem=prob.vec)[, {
+    pred.dt <- data.table(predictions)
+    gg.dt <- data.table(problem=pred.dt$problem)[, {
       data.table(log.pen=seq(-2, 2, by=0.5))[, {
-        pred.dt <- data.table(predictions)
         pred.dt$pred.log.lambda[problem] <- log.pen
         with(
           ROChange(models, pred.dt, "problem"),
@@ -83,6 +82,45 @@ test_that("1fp[0,0] 1fn[0,0]", {
   expect_equal(L$aum.grad$problem, c(1,2))
   expect_equal(L$aum.grad$lo, c(0,0))
   expect_equal(L$aum.grad$hi, c(0,0))
+})
+
+models <- data.table(
+  fp=c(1, 0, 0, 0, 0, 0),
+  fn=c(0, 0, 0, 1, 0, 0),
+  possible.fn=c(0,0,1,1,1,1),
+  possible.fp=c(1,1,0,0,0,1),
+  min.log.lambda=c(-Inf,0,-Inf,0,1, -Inf),
+  max.log.lambda=c(0,Inf,0,1,Inf, Inf),
+  labels=1,
+  problem=c(1,1,2,2,2,3))
+models[, errors := fp+fn]
+predictions <- data.table(problem=c(1,2,3), pred.log.lambda=0)
+ggcost()
+test_that("1fp[-1,0] 1fn[0,1], no change", {
+  L <- ROChange(models, predictions, "problem")
+  expect_equal(L$aum, 0)
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, c(1,2,3))
+  expect_equal(L$aum.grad$lo, c(-1,0,0))
+  expect_equal(L$aum.grad$hi, c(0,1,0))
+})
+
+predictions <- data.table(problem=c(1,2), pred.log.lambda=c(1, -1))
+ggcost()
+test_that("three problems but two predictions", {
+  L <- ROChange(models, predictions, "problem")
+  expect_equal(L$aum, 0)
+  print(L$aum.grad)
+  expect_equal(L$aum.grad$problem, c(1,2))
+  expect_equal(L$aum.grad$lo, c(0,0))
+  expect_equal(L$aum.grad$hi, c(0,0))
+})
+
+predictions <- data.table(problem=c(1,2,2), pred.log.lambda=c(1, -1,0))
+test_that("three models, three predictions with problem", {
+  expect_error({
+    ROChange(models, predictions, "problem")
+  }, "more than one prediction per problem")
 })
 
 models <- data.table(

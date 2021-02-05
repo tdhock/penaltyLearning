@@ -17,11 +17,8 @@ ROChange <- structure(function # ROC curve for changepoints
     log.lambda <- pred.log.lambda <- errors <- FPR <- tp <- TPR <-
       error.percent <- min.thresh <- max.thresh <- max.log.lambda <-
         next.min <- problems <- n.inconsistent <- min.fp.fn <-
-          . <- fp.before <- fp.after <- fn.before <- fn.after <-
-            fp.after.bigger <- fn.after.bigger <- min.after.bigger <-
-              min.after <- diff.bigger <- fp.before.smaller <-
-                fn.before.smaller <- min.before.smaller <- min.before <-
-                  diff.smaller <- NULL
+          . <- min.adj <- fp.adj <- fn.adj <- fp.tot.diff <- fn.tot.diff <-
+            deriv.min <- deriv.max <-NULL
 ### The code above is to avoid CRAN NOTEs like
 ### ROChange: no visible binding for global variable
   if(!(
@@ -135,62 +132,80 @@ ROChange <- structure(function # ROC curve for changepoints
     stop("no positive labels")
   }
   thresh.dt <- err[order(min.log.lambda), {
-    fp.diff <- diff(fp)
-    fn.diff <- diff(fn)
-    any.change <- fp.diff != 0 | fn.diff != 0
+    fp.prb.diff <- diff(fp)
+    fn.prb.diff <- diff(fn)
+    any.change <- fp.prb.diff != 0 | fn.prb.diff != 0
     data.table(
       log.lambda=max.log.lambda[c(any.change, FALSE)],
-      fp.diff=as.numeric(fp.diff[any.change]),
-      fn.diff=as.numeric(fn.diff[any.change]))
+      fp.prb.diff=as.numeric(fp.prb.diff[any.change]),
+      fn.prb.diff=as.numeric(fn.prb.diff[any.change]))
   }, by=problem.vars]
-  pred.with.thresh <- thresh.dt[pred, on=problem.vars, nomatch=0L]
-  pred.with.thresh[, thresh := log.lambda - pred.log.lambda]
-  uniq.thresh <- pred.with.thresh[order(thresh), list(
-    fp.diff=sum(fp.diff),
-    fn.diff=sum(fn.diff)
+  fp.fn.problems <- thresh.dt[pred, on=problem.vars, nomatch=0L]
+  fp.fn.problems[, thresh := log.lambda - pred.log.lambda]
+  uniq.thresh <- fp.fn.problems[order(thresh), list(
+    fp.tot.diff=sum(fp.prb.diff),
+    fn.tot.diff=sum(fn.prb.diff)
   ), by=thresh]
-
-  thresh.ord <- uniq.thresh[, data.table(
+  fp.fn.totals <- uniq.thresh[, data.table(
     min.thresh=c(-Inf, thresh),
     max.thresh=c(thresh, Inf),
-    fp = cumsum(c(sum(first.dt$fp), fp.diff)),
-    fn = cumsum(c(sum(first.dt$fn), fn.diff))
+    fp = cumsum(c(sum(first.dt$fp), fp.tot.diff)),
+    fn = cumsum(c(sum(first.dt$fn), fn.tot.diff))
   )]
   ## Compute aum = area under min(fp,fn).
-  ifelsemin <- function(x, y)ifelse(x<y, x, y)
-  thresh.ord[, min.fp.fn := ifelsemin(fp, fn)]
-  aum <- thresh.ord[, sum(ifelse(
+  fp.fn.totals[, min.fp.fn := pmin(fp, fn)]
+  aum <- fp.fn.totals[, sum(ifelse(
     min.fp.fn==0, 0, min.fp.fn*(max.thresh-min.thresh)))]
-  ## To compute the directional derivatives of aum we need to join
-  ## total fp/fn to the diffs with individual thresholds/problems.
-  pred.with.thresh[thresh.ord, fp.before := fp, on=.(thresh=max.thresh)]
-  pred.with.thresh[thresh.ord, fp.after := fp, on=.(thresh=min.thresh)]
-  pred.with.thresh[thresh.ord, fn.before := fn, on=.(thresh=max.thresh)]
-  pred.with.thresh[thresh.ord, fn.after := fn, on=.(thresh=min.thresh)]
-  ## Compute directional derivatives coming from lo values. The
+  ## Compute directional derivatives coming from lo and hi values. The
   ## main idea is that we look at what happens if the predicted value
   ## for a particular problem is decreased, which results in a bigger
   ## threshold. If that threshold/diff is relevant then it will result
   ## in a change in the min after the threshold, relative to the
   ## actual min after the threshold.
-  pred.with.thresh[, fp.after.bigger := fp.after-fp.diff]
-  pred.with.thresh[, fn.after.bigger := fn.after-fn.diff]
-  pred.with.thresh[, min.after.bigger := ifelsemin(
-    fp.after.bigger, fn.after.bigger)]
-  pred.with.thresh[, min.after := ifelsemin(fp.after, fn.after)]
-  pred.with.thresh[, diff.bigger := min.after - min.after.bigger]
-  ## Compute directional derivatives coming from higher
-  ## values. analogous. There is some repetition here that could be
-  ## eliminated, but the intent of the code would be a lot more
-  ## difficult to understand.
-  pred.with.thresh[, fp.before.smaller := fp.before+fp.diff]
-  pred.with.thresh[, fn.before.smaller := fn.before+fn.diff]
-  pred.with.thresh[, min.before.smaller := ifelsemin(
-    fp.before.smaller, fn.before.smaller)]
-  pred.with.thresh[, min.before := ifelsemin(fp.before, fn.before)]
-  pred.with.thresh[, diff.smaller := min.before.smaller - min.before]
+  pos.or.neg.vec <- c(min=-1, max=1)
+  for(min.or.max in names(pos.or.neg.vec)){
+    pos.or.neg <- pos.or.neg.vec[[min.or.max]]
+    ## To compute the directional derivatives of aum we need to join
+    ## fp.fn.totals(min.thresh,max.thresh,fp,fn) to the diffs with
+    ## individual thresholds/problems, fp.fn.problems(
+    ## problem,log.lambda,fp.prb.diff,fn.prb.diff,pred.log.lambda,thresh)
+    fp.fn.join <- fp.fn.totals[
+      fp.fn.problems,
+      .(fp, fn, min.fp.fn, fp.prb.diff, fn.prb.diff),
+      on=structure("thresh", names=paste0(min.or.max, ".thresh"))]
+    ## changes fp.prb.diff,fn.prb.diff occur at thresh.
+    ## fp,fn are the totals in (min.thresh,max.thresh).
+    ## by joining min.thresh or max.thresh = thresh,
+    ## we get the total fp/fn after or before thresh.
+    for(fX in c("fp", "fn")){
+      ## here we compute what happens to the fp/fn adjacent to the
+      ## totals, on the other side of thresh, when we apply
+      ## fp.prb.diff,fn.prb.diff for each thresh/problem.  e.g. when
+      ## min.or.max=="min" the fp/fn columns give the total fp/fn
+      ## after the thresh where there is a change in the problem fp/fn
+      ## curve, and so here we compute the fp/fn before the thresh.
+      set(
+        fp.fn.join,
+        j=paste0(fX, ".adj"),
+        value=fp.fn.join[[fX]]+
+          pos.or.neg*fp.fn.join[[paste0(fX, ".prb.diff")]]
+      )
+    }
+    ## here we compute Min(FP,FN) adjacent to the totals, on the other
+    ## side of thresh, when we apply fp.prb.diff,fn.prb.diff for each
+    ## thresh/problem.
+    fp.fn.join[, min.adj := pmin(fp.adj, fn.adj)]
+    ## finally we check to see how much Min(FP,FN) would change via
+    ## fp.prb.diff,fn.prb.diff at each thresh/problem. this amounts to
+    ## computing min.after-min.before the thresh.
+    set(
+      fp.fn.problems,
+      j=paste0("deriv.", min.or.max),
+      value=fp.fn.join[, pos.or.neg*(min.adj - min.fp.fn)]
+    )
+  }
   ## Compute TPR/FPR rates for ROC-AUC analysis.
-  interval.dt <- thresh.ord[, data.table(
+  interval.dt <- fp.fn.totals[, data.table(
     total.dt,
     min.thresh,
     max.thresh,
@@ -215,8 +230,9 @@ ROChange <- structure(function # ROC curve for changepoints
       TPR=c(if(!has00)0, TPR, if(!has11)1, 0)
       )
   }]
-  left <- roc.polygon[-.N]
-  right <- roc.polygon[-1]
+  # if this is a sequence from q=1 to Q subscripts are:
+  left <- roc.polygon[-.N] # _q
+  right <- roc.polygon[-1] # _{q+1}
   ##value<< named list of results:
   list(
     roc=interval.dt, ##<< a data.table with one row for each point on
@@ -236,10 +252,10 @@ ROChange <- structure(function # ROC curve for changepoints
     aum.grad=##<< data.table with one row for each prediction, and
       ##columns hi/lo bound for the aum
       ##generalized gradient.
-      pred.with.thresh[, .(
-        lo=sum(diff.bigger),
-        hi=sum(diff.smaller)
-      ), by=problem.vars]
+      fp.fn.problems[pred, .(
+        lo=sum(deriv.min, na.rm=TRUE),
+        hi=sum(deriv.max, na.rm=TRUE)
+      ), by=.EACHI, on=problem.vars]
   )
   ##end<<
 }, ex=function(){

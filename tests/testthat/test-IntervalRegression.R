@@ -65,6 +65,7 @@ set.seed(1)
 test_that("threshold argument passed to IntervalRegressionInternal", {
   fit <- IntervalRegressionCV(
     train.feature.mat, train.target.mat, threshold=0.1)
+  expect_is(fit, "list")
 })
 
 no.lower <- train.target.mat[,1] == -Inf
