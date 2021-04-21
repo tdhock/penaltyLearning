@@ -5,6 +5,10 @@ tests/support for flsa and HMM?
 - option to not stop in labelError if there is the same number of
   changes in two models.
 
+2021.4.21
+
+Stop with an error for non-finite predictions.
+
 2021.1.19 PR#19
 
 reduce repetition in ROChange aum computation.

@@ -52,6 +52,13 @@ test_that("noncvx 1fp[-1,0] 1fn[0,1]", {
   expect_equal(L$aum.grad$hi, c(-1,-1))
 })
 
+predictions <- data.table(problem=c(1,2), pred.log.lambda=c(0, Inf))
+test_that("1fp[-1,0] 1fn[0,1]", {
+  expect_error({
+    ROChange(models, predictions, "problem")
+  }, "all predictions must be finite")
+})
+
 models <- data.table(
   fp=c(1, 0, 0, 0),
   fn=c(0, 0, 0, 1),

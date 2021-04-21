@@ -51,6 +51,9 @@ ROChange <- structure(function # ROC curve for changepoints
   )){
     stop("predictions should be a data.frame with at least one row and a column named pred.log.lambda")
   }
+  if(!all(is.finite(predictions[["pred.log.lambda"]]))){
+    stop("all predictions must be finite")
+  }
   pred <- data.table(predictions)
   bad.pred <- pred[, list(
     problems=.N
