@@ -1,6 +1,7 @@
-Algorithms for supervised learning of penalty functions for change detection
+Algorithms for supervised learning of penalty functions for
+change-point detection
 
-[[https://travis-ci.org/tdhock/penaltyLearning][https://travis-ci.org/tdhock/penaltyLearning.png?branch=master]]
+[[https://github.com/tdhock/penaltyLearning/actions][https://github.com/tdhock/penaltyLearning/workflows/R-CMD-check/badge.svg]]
 
 This R package provides a practical implementation of the algorithms
 described in our ICML'13 paper, [[http://jmlr.org/proceedings/papers/v28/hocking13.html][Learning Sparse Penalties for
