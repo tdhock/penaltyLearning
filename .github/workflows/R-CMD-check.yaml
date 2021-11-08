@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: r-lib/actions/setup-tinytex@v1
+      - uses: r-lib/actions/setup-tinytex@master
       
       - uses: r-lib/actions/setup-pandoc@v1
 
