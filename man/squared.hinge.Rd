@@ -4,10 +4,8 @@
 \description{The squared hinge loss.}
 \usage{squared.hinge(x, e = 1)}
 \arguments{
-  \item{x}{
-}
-  \item{e}{
-}
+  \item{x}{x }
+  \item{e}{e }
 }
 
 

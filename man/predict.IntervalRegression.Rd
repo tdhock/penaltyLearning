@@ -5,12 +5,9 @@
 \usage{\method{predict}{IntervalRegression}(object, 
     X, ...)}
 \arguments{
-  \item{object}{
-}
-  \item{X}{
-}
-  \item{\dots}{
-}
+  \item{object}{object }
+  \item{X}{X }
+  \item{\dots}{\dots }
 }
 
 \value{numeric matrix of predicted log(penalty) values.}

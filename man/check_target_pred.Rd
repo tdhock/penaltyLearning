@@ -6,10 +6,8 @@ target matrix or predicted values.}
 \usage{check_target_pred(target.mat, 
     pred)}
 \arguments{
-  \item{target.mat}{
-}
-  \item{pred}{
-}
+  \item{target.mat}{target.mat }
+  \item{pred}{pred }
 }
 
 \value{number of observations.}

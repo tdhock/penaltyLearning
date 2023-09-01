@@ -6,14 +6,10 @@
     min.changes, max.changes, 
     color)}
 \arguments{
-  \item{annotation}{
-}
-  \item{min.changes}{
-}
-  \item{max.changes}{
-}
-  \item{color}{
-}
+  \item{annotation}{annotation }
+  \item{min.changes}{min.changes }
+  \item{max.changes}{max.changes }
+  \item{color}{color }
 }
 
 

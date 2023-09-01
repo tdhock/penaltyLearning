@@ -10,22 +10,14 @@ y range, useful for clickSelects background elements.}
     show.legend = NA, 
     inherit.aes = TRUE)}
 \arguments{
-  \item{mapping}{
-}
-  \item{data}{
-}
-  \item{stat}{
-}
-  \item{position}{
-}
-  \item{\dots}{
-}
-  \item{na.rm}{
-}
-  \item{show.legend}{
-}
-  \item{inherit.aes}{
-}
+  \item{mapping}{mapping }
+  \item{data}{data }
+  \item{stat}{stat }
+  \item{position}{position }
+  \item{\dots}{\dots }
+  \item{na.rm}{na.rm }
+  \item{show.legend}{show.legend }
+  \item{inherit.aes}{inherit.aes }
 }
 
 
