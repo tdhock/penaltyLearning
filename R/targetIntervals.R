@@ -215,6 +215,8 @@ targetIntervals <- structure(function # Compute target intervals
 ### IntervalRegression* functions.
 }, ex=function(){
 
+  data.table::setDTthreads(1)
+
   library(penaltyLearning)
   data(neuroblastomaProcessed, envir=environment())
   targets.dt <- targetIntervals(
