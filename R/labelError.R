@@ -90,9 +90,9 @@ labelError <- structure(function # Compute incorrect labels
   }
   if(!(
     is.character(model.vars) &&
-    0 < length(model.vars) &&
-    model.vars %in% names(models) &&
-    model.vars %in% names(changes)
+      0 < length(model.vars) &&
+      all(model.vars %in% names(models)) &&
+      all(model.vars %in% names(changes))
   )){
     stop("model.vars should be a column name of both models and changes (ID for model complexity, typically the number of changepoints or segments)")
   }
