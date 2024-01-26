@@ -4,8 +4,7 @@
 \description{ggplot2 theme element for no space between panels.}
 \usage{theme_no_space(...)}
 \arguments{
-  \item{\dots}{
-}
+  \item{\dots}{\dots }
 }
 
 

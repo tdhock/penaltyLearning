@@ -5,10 +5,8 @@
 \usage{\method{coef}{IntervalRegression}(object, 
     ...)}
 \arguments{
-  \item{object}{
-}
-  \item{\dots}{
-}
+  \item{object}{object }
+  \item{\dots}{\dots }
 }
 
 \value{numeric matrix [features x regularizations] of learned weights (on

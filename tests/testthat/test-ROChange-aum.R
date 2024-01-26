@@ -259,3 +259,33 @@ test_that("auc=2 for one error curve with one loop", {
   expect_equal(L$auc, 2)
 })
 
+
+d <- function(min.log.lambda, fp, fn){
+  data.table(min.log.lambda, fp, fn)
+}
+profile <- function(..., possible.fp, possible.fn, errors, labels){
+  dt <- do.call(rbind, list(...))
+  if(missing(possible.fp))possible.fp <- max(dt$fp)
+  if(missing(possible.fn))possible.fn <- max(dt$fn)
+  errors <- dt[, fp+fn]
+  if(missing(labels))labels <- max(errors)
+  dt[, data.table(
+    min.log.lambda,
+    max.log.lambda=c(min.log.lambda[-1], Inf),
+    fp, fn, errors, possible.fp, possible.fn, labels)]
+}
+
+test_that("aum not -Inf", {
+  err <- profile(
+    d(-Inf, 0, 10),
+    d(2, 8/3, 8/3),
+    d(5, 10, 8/3),
+    d(7, 10, 25/3),
+    d(8, 5/3, 25/3),
+    d(9, 5/3, 8/3),
+    d(10, 10, 0))
+  pred.dt <- data.table(problem=1, pred.log.lambda=0)
+  p <- data.table(problem=1, err)
+  roc.list <- penaltyLearning::ROChange(p, pred.dt, problem.vars="problem")
+  expect_true(all(roc.list$roc$fn >= 0))
+})

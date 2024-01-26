@@ -27,6 +27,8 @@ IntervalRegression* functions.}
 
 \examples{
 
+data.table::setDTthreads(1)
+
 library(penaltyLearning)
 data(neuroblastomaProcessed, envir=environment())
 targets.dt <- targetIntervals(

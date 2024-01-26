@@ -124,6 +124,7 @@ ROChange <- structure(function # ROC curve for changepoints
     }
   }
   first.dt <- err[min.log.lambda==-Inf]
+  last.dt <- err[max.log.lambda==Inf]
   total.dt <- first.dt[, list(
     labels=sum(labels),
     possible.fp=sum(possible.fp),
@@ -153,7 +154,7 @@ ROChange <- structure(function # ROC curve for changepoints
     min.thresh=c(-Inf, thresh),
     max.thresh=c(thresh, Inf),
     fp = cumsum(c(sum(first.dt$fp), fp.tot.diff)),
-    fn = cumsum(c(sum(first.dt$fn), fn.tot.diff))
+    fn = rev(cumsum(rev(c(-fn.tot.diff, sum(last.dt$fn)))))
   )]
   ## Compute aum = area under min(fp,fn).
   fp.fn.totals[, min.fp.fn := pmin(fp, fn)]

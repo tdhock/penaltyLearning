@@ -21,10 +21,12 @@ ann.trivial <- rbind(
   label("0changes", 2, 6))
 models <- data.table(
   prob="five",
+  algo="opart",
   complexity=c(-1, -3, -5, -6))
 changes <- data.table(
   prob="five",
   pos=c(1, 7, 1, 6, 17, 11),
+  algo="opart",
   complexity=c(-3, -5, -5, -6, -6, -6))
 test_that("labelError throws informative errors", {
   expect_error({
@@ -71,6 +73,12 @@ test_that("labelError throws informative errors", {
                change.var="pos",
                model.vars="complexity")
   }, "label start must be less than end", fixed=TRUE)
+  expect_error({
+    labelError(models, ann.trivial, changes, problem.vars="prob",
+               label.vars=c("start","end"),
+               change.var="pos",
+               model.vars=c("foo","complexity"))
+  }, "model.vars should be a column name of both models and changes (ID for model complexity, typically the number of changepoints or segments)", fixed=TRUE)
 })
 
 trivial.list <- labelError(
@@ -78,7 +86,7 @@ trivial.list <- labelError(
   problem.vars="prob",
   label.vars=c("start", "end"),
   change.var="pos",
-  model.vars="complexity")
+  model.vars=c("algo","complexity"))
 test_that("1 TP for complexity=-5, 2 errors for -6", {
   trivial.list$model.errors[, {
     expect_equal(complexity, c(-1, -3, -5, -6))

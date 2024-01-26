@@ -5,10 +5,8 @@
 \usage{\method{print}{IntervalRegression}(x, 
     ...)}
 \arguments{
-  \item{x}{
-}
-  \item{\dots}{
-}
+  \item{x}{x }
+  \item{\dots}{\dots }
 }
 
 
