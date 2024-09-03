@@ -15,7 +15,7 @@ data to segment).}
 \value{Numeric feature matrix. Some entries may be missing or infinite;
 these columns should be removed before model training.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

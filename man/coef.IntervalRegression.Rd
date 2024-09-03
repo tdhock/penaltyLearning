@@ -13,7 +13,7 @@
 the original feature scale), can be used for prediction via
 cbind(1,features) \%*\% weights.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

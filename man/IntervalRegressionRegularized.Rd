@@ -30,7 +30,7 @@ fit$predict(feature.matrix) to get a matrix of predicted log
 penalty values. The param.mat is the n.features * n.regularization
 numeric matrix of optimal coefficients (on the original scale).}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

@@ -25,7 +25,7 @@ optimal penalty constants, on the original and log scale; the
 other columns (and rownames) are taken from \code{models}. This should be
 used as the \code{models} argument of \code{\link{labelError}}.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

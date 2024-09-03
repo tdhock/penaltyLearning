@@ -17,7 +17,7 @@ yield minimal incorrect labels.}
 
 \value{list describing ROC curves, same as \code{\link{ROChange}}.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

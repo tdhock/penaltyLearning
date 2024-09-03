@@ -35,7 +35,7 @@ parameter will be 0.3 (two factors of 10 smaller than 30).}
 
 \value{Model fit list from \code{\link{IntervalRegressionCV}}.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

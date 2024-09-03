@@ -25,7 +25,7 @@ optimal penalty constants, on the original and log scale;
 identifiers (also used for row names); and model.loss are the C_i
 values.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

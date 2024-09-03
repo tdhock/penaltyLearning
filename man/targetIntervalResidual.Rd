@@ -17,7 +17,7 @@ yield minimal incorrect labels.}
 changepoints), and predictions that are too low (below
 target.mat[,1]) get negative residuals.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 
