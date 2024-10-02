@@ -12,7 +12,7 @@ labels (see \code{\link{targetIntervals}}).}
 
 \value{Numeric vector of features.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

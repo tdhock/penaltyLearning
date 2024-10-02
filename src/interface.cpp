@@ -12,10 +12,10 @@ void largestContinuousMinimum_interface
   int status = largestContinuousMinimum
     (*n_data, cost_vec, size_vec, index_vec);
   if(status==ERROR_SIZES_MUST_BE_POSITIVE){
-    error("sizes must be positive");
+    Rf_error("sizes must be positive");
   }
   if(status != 0){
-    error("error code %d", status);
+    Rf_error("error code %d", status);
   }
 }
 
@@ -25,13 +25,13 @@ void modelSelection_interface
  ){
   int status = modelSelection(loss, complexity, *n_models, before, lambda);
   if(status == ERROR_LOSS_NOT_DECREASING){
-    error("loss not decreasing");
+    Rf_error("loss not decreasing");
   }
   if(status == ERROR_COMPLEXITY_NOT_INCREASING){
-    error("complexity not increasing");
+    Rf_error("complexity not increasing");
   }
   if(status != 0){
-    error("error code %d", status);
+    Rf_error("error code %d", status);
   }
 }
    
@@ -44,13 +44,13 @@ void modelSelectionFwd_interface
     (loss_vec, complexity_vec, n_models,
      selected_model_vec, selected_penalty_vec, loop_eval_vec);
   if(status == ERROR_FWD_LOSS_NOT_DECREASING){
-    error("loss not decreasing");
+    Rf_error("loss not decreasing");
   }
   if(status == ERROR_FWD_COMPLEXITY_NOT_INCREASING){
-    error("complexity not increasing");
+    Rf_error("complexity not increasing");
   }
   if(status != 0){
-    error("error code %d", status);
+    Rf_error("error code %d", status);
   }
 }
   
@@ -62,13 +62,13 @@ void modelSelectionQuadratic_interface
     (loss_vec, complexity_vec, n_models,
      selected_model_vec, selected_penalty_vec);
   if(status == ERROR_QUAD_LOSS_NOT_DECREASING){
-    error("loss not decreasing");
+    Rf_error("loss not decreasing");
   }
   if(status == ERROR_QUAD_COMPLEXITY_NOT_INCREASING){
-    error("complexity not increasing");
+    Rf_error("complexity not increasing");
   }
   if(status != 0){
-    error("error code %d", status);
+    Rf_error("error code %d", status);
   }
 }
  

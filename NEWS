@@ -1,8 +1,12 @@
+Changes in version 2024.9.3
+
+- change error() to Rf_error() for R-4.5 R_NO_REMAP.
+
 Changes in version 2024.1.25
 
 - now ok to have length(models.vars)>1 (was an un-informative error 'length = 2' in coercion to 'logical(1)' in recent versions of R).
 
-oChanges in version 2023.8.31
+Changes in version 2023.8.31
 
 - update un-exported fun arg docs to avoid CRAN NOTE.
 

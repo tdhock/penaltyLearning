@@ -20,7 +20,7 @@ results in the minimum incorrect labels for that problem. This can
 be used to create the target.mat parameter of the
 IntervalRegression* functions.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

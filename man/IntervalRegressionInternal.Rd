@@ -42,7 +42,7 @@ gets larger than this.}
 X \%*\% w for a scaled feature matrix X with the first row entirely
 ones.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

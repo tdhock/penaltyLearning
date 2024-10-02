@@ -15,7 +15,7 @@ Use \code{\link{targetIntervals}} for real data.}
 \value{Integer vector length 2 (start and end of target interval relative
 to \code{cost} and \code{size}).}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

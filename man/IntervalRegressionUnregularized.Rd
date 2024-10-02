@@ -12,7 +12,7 @@ interval regression model.}
 \value{List representing fit model, see
 help(\code{\link{IntervalRegressionRegularized}}) for details.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

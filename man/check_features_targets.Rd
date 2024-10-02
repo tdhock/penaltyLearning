@@ -12,7 +12,7 @@ feature or target matrix.}
 
 \value{number of observations/rows.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

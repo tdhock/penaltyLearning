@@ -63,7 +63,7 @@ particular label; model.errors has one row per model, with columns
 for computing target intervals and ROC curves (see \code{\link{targetIntervals}}
 and \code{\link{ROChange}}).}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

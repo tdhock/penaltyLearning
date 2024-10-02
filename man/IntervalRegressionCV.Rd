@@ -76,7 +76,7 @@ indicator that the user probably forgot to log their outputs).}
 
 \value{List representing regularized linear model.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 
